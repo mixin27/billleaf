@@ -5,6 +5,7 @@ import { Button } from "@workspace/ui/components/button"
 import { Input } from "@workspace/ui/components/input"
 import { Skeleton } from "@workspace/ui/components/skeleton"
 import { Textarea } from "@workspace/ui/components/textarea"
+import Link from "next/link"
 import * as React from "react"
 import { Controller, useForm } from "react-hook-form"
 import { toast } from "sonner"
@@ -15,7 +16,7 @@ import { Field, FormSection } from "@/components/form/field"
 import { ApiError, errorMessage } from "@/lib/api"
 
 import { useUpdateWorkspaceProfile } from "../api/mutations"
-import { useWorkspaceProfile } from "../api/queries"
+import { useMe, useWorkspaceProfile } from "../api/queries"
 import { LogoUploader } from "./logo-uploader"
 
 /** Form values are all strings; converted to the API shape on submit. */
@@ -79,6 +80,8 @@ function timeZones(): string[] {
 
 export function WorkspaceProfileForm() {
   const profile = useWorkspaceProfile()
+  const me = useMe()
+  const branded = me.data?.plan.features.customBranding ?? true
   const update = useUpdateWorkspaceProfile()
   const { can } = usePermissions()
   const readOnly = !can("workspace.update")
@@ -128,6 +131,21 @@ export function WorkspaceProfileForm() {
           description="Shown as the sender on quotes, invoices and receipts."
         >
           <LogoUploader profile={profile.data} disabled={readOnly} />
+          {branded ? null : (
+            <p className="rounded-md border border-dashed p-3 text-sm text-muted-foreground sm:col-span-2">
+              Your logo and brand color appear on documents with the Pro and
+              Team plans. On Free, documents use the default look with a
+              &ldquo;Made with Billleaf&rdquo; note.{" "}
+              {me.data?.permissions.includes("billing.read") ? (
+                <Link
+                  className="underline"
+                  href={`/${me.data.workspace?.slug}/settings/billing`}
+                >
+                  See plans
+                </Link>
+              ) : null}
+            </p>
+          )}
           <Field
             label="Workspace name"
             htmlFor="name"

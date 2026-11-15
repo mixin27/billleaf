@@ -5,12 +5,14 @@ import {
   meSchema,
   PERMISSIONS,
   permissionSchema,
+  PLANS,
 } from "@workspace/contracts"
 import { organization } from "@workspace/db"
 import { Session, type UserSession } from "@thallesp/nestjs-better-auth"
 import { eq } from "drizzle-orm"
 import { createZodDto, ZodResponse } from "nestjs-zod"
 
+import { EntitlementsService } from "../../billing/entitlements.service.js"
 import { RequestContext } from "../../common/context/request-context.js"
 import { RequireWorkspace } from "../../common/decorators/require-permission.decorator.js"
 import { InjectDb, type Database } from "../../core/database/database.module.js"
@@ -23,7 +25,8 @@ class PermissionDto extends createZodDto(permissionSchema) {}
 export class MeController {
   constructor(
     @InjectDb() private readonly db: Database,
-    private readonly ctx: RequestContext
+    private readonly ctx: RequestContext,
+    private readonly entitlements: EntitlementsService
   ) {}
 
   /** Current user, active workspace and effective permissions (for UI gating). */
@@ -31,6 +34,7 @@ export class MeController {
   @RequireWorkspace()
   @ZodResponse({ status: 200, type: MeDto })
   async me(@Session() session: UserSession): Promise<Me> {
+    const plan = await this.entitlements.plan()
     const [ws] = await this.db
       .select({
         id: organization.id,
@@ -49,6 +53,7 @@ export class MeController {
       },
       workspace: ws ?? null,
       permissions: [...this.ctx.permissions],
+      plan: { key: plan, features: { ...PLANS[plan].features } },
     }
   }
 

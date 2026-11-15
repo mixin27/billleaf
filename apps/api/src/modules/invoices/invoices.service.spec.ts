@@ -136,6 +136,9 @@ function setup(
       documentFooter: null,
       brandColor: null,
     }),
+    documentBranding: vi
+      .fn()
+      .mockResolvedValue({ brandColor: null, logo: null, footer: null }),
   }
   const numbering = { next: vi.fn().mockResolvedValue("INV-0001") }
   const mail = { send: vi.fn() }
@@ -147,7 +150,9 @@ function setup(
     profile as never,
     numbering as never,
     mail as never,
-    audit as never
+    audit as never,
+    { assertWithinLimit: vi.fn() } as never,
+    { invoicesPerMonth: vi.fn().mockResolvedValue(0) } as never
   )
   return { service, repo, numbering, mail, tx }
 }

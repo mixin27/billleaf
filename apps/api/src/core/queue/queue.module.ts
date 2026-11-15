@@ -7,6 +7,7 @@ import { ENV, type Env } from "../config/env.js"
 export const QUEUES = {
   email: "email",
   recurring: "recurring",
+  billing: "billing",
 } as const
 
 /**
@@ -31,7 +32,8 @@ export const QUEUES = {
     }),
     BullModule.registerQueue(
       { name: QUEUES.email },
-      { name: QUEUES.recurring }
+      { name: QUEUES.recurring },
+      { name: QUEUES.billing }
     ),
   ],
   exports: [BullModule],

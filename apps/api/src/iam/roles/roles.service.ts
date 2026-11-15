@@ -10,6 +10,7 @@ import type {
   UpdateRoleInput,
 } from "@workspace/contracts"
 
+import { EntitlementsService } from "../../billing/entitlements.service.js"
 import { RequestContext } from "../../common/context/request-context.js"
 import { AuditService } from "../audit/audit.service.js"
 import { PermissionResolver } from "../permissions/permission-resolver.service.js"
@@ -44,7 +45,8 @@ export class RolesService {
     private readonly repo: RolesRepository,
     private readonly resolver: PermissionResolver,
     private readonly audit: AuditService,
-    private readonly ctx: RequestContext
+    private readonly ctx: RequestContext,
+    private readonly entitlements: EntitlementsService
   ) {}
 
   async list(): Promise<Role[]> {
@@ -58,6 +60,7 @@ export class RolesService {
   }
 
   async create(input: CreateRoleInput): Promise<Role> {
+    await this.entitlements.assertFeature("customRoles")
     const slug = slugify(input.name)
     if (!slug) throw new BadRequestException("Invalid role name")
     if (await this.repo.slugExists(slug)) {
@@ -79,6 +82,7 @@ export class RolesService {
     if (!existing) throw new NotFoundException("Role not found")
     if (existing.isLocked)
       throw new BadRequestException("This role cannot be modified")
+    await this.entitlements.assertFeature("customRoles")
 
     const role = await this.repo.update(
       id,

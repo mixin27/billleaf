@@ -164,6 +164,118 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  "/v1/billing": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["BillingController_overview_v1"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/billing/checkout": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["BillingController_checkout_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/billing/change-plan": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["BillingController_changePlan_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/billing/portal": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["BillingController_portal_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/billing/test/session": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["BillingController_testSession_v1"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/billing/test/checkout": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["BillingController_testCheckout_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/billing/test/portal": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["BillingController_testPortal_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   "/health/live": {
     parameters: {
       query?: never
@@ -1170,6 +1282,16 @@ export interface components {
         | "payment.record"
         | "payment.refund"
       )[]
+      plan: {
+        /** @enum {string} */
+        key: "free" | "pro" | "team"
+        features: {
+          customBranding: boolean
+          recurringInvoices: boolean
+          timeTracking: boolean
+          customRoles: boolean
+        }
+      }
     }
     PermissionDto_Output: {
       /** @enum {string} */
@@ -1418,6 +1540,55 @@ export interface components {
       email: string
       /** Format: uuid */
       roleId: string
+    }
+    BillingOverviewDto_Output: {
+      /** @enum {string} */
+      planKey: "free" | "pro" | "team"
+      /** @enum {string} */
+      effectivePlanKey: "free" | "pro" | "team"
+      /** @enum {string} */
+      status: "active" | "trialing" | "past_due" | "canceled"
+      /** @enum {string|null} */
+      interval: "month" | "year" | null
+      cancelAtPeriodEnd: boolean
+      /** Format: date-time */
+      currentPeriodEnd: string | null
+      checkoutAvailable: boolean
+      canManage: boolean
+      provider: string
+      usage: {
+        members: number
+        clients: number
+        invoicesPerMonth: number
+        storageMb: number
+      }
+    }
+    CheckoutDto: {
+      /** @enum {string} */
+      planKey: "pro" | "team"
+      /** @enum {string} */
+      interval: "month" | "year"
+    }
+    BillingRedirectDto_Output: {
+      url: string
+    }
+    TestSessionDto_Output: {
+      /** @enum {string} */
+      kind: "checkout" | "portal"
+      /** @enum {string} */
+      planKey: "free" | "pro" | "team"
+      /** @enum {string|null} */
+      interval: "month" | "year" | null
+      workspaceName: string
+    }
+    TestCheckoutDto: {
+      session: string
+    }
+    TestPortalDto: {
+      session: string
+      /** @enum {string} */
+      action:
+        "cancel" | "resume" | "payment_failed" | "payment_recovered" | "end_now"
     }
     WorkspaceProfileDto_Output: {
       workspaceId: string
@@ -2892,6 +3063,157 @@ export interface operations {
           [name: string]: unknown
         }
         content?: never
+      }
+    }
+  }
+  BillingController_overview_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["BillingOverviewDto_Output"]
+        }
+      }
+    }
+  }
+  BillingController_checkout_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CheckoutDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["BillingRedirectDto_Output"]
+        }
+      }
+    }
+  }
+  BillingController_changePlan_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CheckoutDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["BillingOverviewDto_Output"]
+        }
+      }
+    }
+  }
+  BillingController_portal_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["BillingRedirectDto_Output"]
+        }
+      }
+    }
+  }
+  BillingController_testSession_v1: {
+    parameters: {
+      query: {
+        session: string
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["TestSessionDto_Output"]
+        }
+      }
+    }
+  }
+  BillingController_testCheckout_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["TestCheckoutDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["BillingOverviewDto_Output"]
+        }
+      }
+    }
+  }
+  BillingController_testPortal_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["TestPortalDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["BillingOverviewDto_Output"]
+        }
       }
     }
   }

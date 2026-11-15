@@ -21,7 +21,7 @@
 | ------------------- | --------------------------------------------------------------------------------------------------------- |
 | `email`             | verification, invitations, invoice/quote/receipt delivery (react-email from `@workspace/emails` → Resend) |
 | `pdf`               | render quote/invoice/receipt PDFs → R2                                                                    |
-| `billing`           | process provider webhooks, sync subscriptions                                                             |
+| `billing`           | retry provider webhook events that failed to apply on receipt (normally applied inline)                   |
 | `maintenance`       | workspace hard-delete, exports, cleanup of expired invitations/sessions                                   |
 | `recurring`         | hourly job scheduler sweep: generate due recurring invoices per workspace (idempotent)                    |
 | `outbound-webhooks` | customer integrations (Phase 3)                                                                           |

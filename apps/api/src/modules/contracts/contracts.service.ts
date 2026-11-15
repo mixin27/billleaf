@@ -325,9 +325,7 @@ export class ContractsService {
               date: formatDocDate(c.signedAt, profile.locale),
             }
           : null,
-      footer: profile.documentFooter,
-      brandColor: profile.brandColor,
-      logo: await this.profile.logoImage(),
+      ...(await this.profile.documentBranding()),
     })
     return { filename: `${c.number ?? "contract-draft"}.pdf`, content }
   }

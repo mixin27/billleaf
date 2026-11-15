@@ -1,4 +1,9 @@
 import { ForbiddenException, Injectable } from "@nestjs/common"
+import {
+  effectivePlan,
+  FEATURE_LABELS,
+  LIMIT_LABELS,
+} from "@workspace/contracts"
 import { workspaceSubscriptions } from "@workspace/db"
 import { eq } from "drizzle-orm"
 
@@ -8,7 +13,9 @@ import { type FeatureKey, type LimitKey, PLANS, type PlanKey } from "./plans.js"
 
 /**
  * What the workspace's PLAN allows (distinct from RBAC, which is what a
- * MEMBER may do). Services call `assertWithinLimit` before creating records.
+ * MEMBER may do). Services call `assertWithinLimit` before creating records
+ * and `assertFeature` before using paid features. Errors carry
+ * `plan_limit_reached` / `feature_not_in_plan` so the web can offer an upgrade.
  */
 @Injectable()
 export class EntitlementsService {
@@ -17,25 +24,41 @@ export class EntitlementsService {
     private readonly ctx: RequestContext
   ) {}
 
-  async plan(): Promise<PlanKey> {
+  async subscription() {
     const [row] = await this.db
-      .select({ planKey: workspaceSubscriptions.planKey })
+      .select()
       .from(workspaceSubscriptions)
       .where(eq(workspaceSubscriptions.workspaceId, this.ctx.workspaceId))
       .limit(1)
-    const key = (row?.planKey ?? "free") as PlanKey
-    return key in PLANS ? key : "free"
+    return row ?? null
+  }
+
+  /** The plan whose entitlements apply right now. */
+  async plan(now = new Date()): Promise<PlanKey> {
+    return effectivePlan(await this.subscription(), now)
   }
 
   async hasFeature(feature: FeatureKey) {
     return PLANS[await this.plan()].features[feature]
   }
 
-  async assertWithinLimit(limit: LimitKey, currentUsage: number) {
-    const max = PLANS[await this.plan()].limits[limit]
-    if (max !== null && currentUsage >= max) {
+  async assertFeature(feature: FeatureKey) {
+    const plan = await this.plan()
+    if (!PLANS[plan].features[feature]) {
       throw new ForbiddenException({
-        message: `Plan limit reached for ${limit}`,
+        message: `${FEATURE_LABELS[feature]} isn't included in the ${PLANS[plan].name} plan. Upgrade to use it.`,
+        code: "feature_not_in_plan",
+      })
+    }
+  }
+
+  /** Throws when adding `adding` more would exceed the plan's limit. */
+  async assertWithinLimit(limit: LimitKey, currentUsage: number, adding = 1) {
+    const plan = await this.plan()
+    const max = PLANS[plan].limits[limit]
+    if (max !== null && currentUsage + adding > max) {
+      throw new ForbiddenException({
+        message: `The ${PLANS[plan].name} plan includes up to ${max} ${LIMIT_LABELS[limit]}. Upgrade to add more.`,
         code: "plan_limit_reached",
       })
     }

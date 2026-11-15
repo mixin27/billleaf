@@ -18,6 +18,8 @@ import {
 } from "@workspace/contracts"
 import { documentEmail } from "@workspace/emails"
 
+import { EntitlementsService } from "../../billing/entitlements.service.js"
+import { UsageService } from "../../billing/usage.service.js"
 import { AuditService } from "../../iam/audit/audit.service.js"
 import { MailService } from "../../mail/mail.service.js"
 import { ClientsRepository } from "../clients/clients.repository.js"
@@ -104,7 +106,9 @@ export class InvoicesService {
     private readonly profile: WorkspaceProfileService,
     private readonly numbering: DocumentNumberingService,
     private readonly mail: MailService,
-    private readonly audit: AuditService
+    private readonly audit: AuditService,
+    private readonly entitlements: EntitlementsService,
+    private readonly usage: UsageService
   ) {}
 
   private async today() {
@@ -250,6 +254,11 @@ export class InvoicesService {
 
   async issue(id: string): Promise<Invoice> {
     const profile = await this.profile.get()
+    // Soft limit: concurrent issues may overshoot by a few, never block drafts.
+    await this.entitlements.assertWithinLimit(
+      "invoicesPerMonth",
+      await this.usage.invoicesPerMonth(profile.timezone)
+    )
     await this.repo.database.transaction(async (tx) => {
       const invoice = await this.repo.findById(id, tx, { forUpdate: true })
       if (!invoice) throw new NotFoundException("Invoice not found")
@@ -392,9 +401,7 @@ export class InvoicesService {
       amountDue: invoice.amountDue,
       notes: invoice.notes,
       terms: invoice.terms,
-      footer: profile.documentFooter,
-      brandColor: profile.brandColor,
-      logo: await this.profile.logoImage(),
+      ...(await this.profile.documentBranding()),
     })
     return { filename: `${invoice.number ?? "invoice-draft"}.pdf`, content }
   }
