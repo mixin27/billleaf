@@ -10,10 +10,13 @@ import {
   documentTotals,
   nextOccurrence,
   type RecurringInvoice,
+  type RecurringList,
+  type RecurringStatus,
   type RecurringRunResult,
   type UpdateRecurringInvoiceInput,
 } from "@workspace/contracts"
 
+import { type PageArgs } from "../../common/pagination.js"
 import { EntitlementsService } from "../../billing/entitlements.service.js"
 import { AuditService } from "../../iam/audit/audit.service.js"
 import { ClientsRepository } from "../clients/clients.repository.js"
@@ -90,8 +93,16 @@ export class RecurringService {
     await this.entitlements.assertFeature("recurringInvoices")
   }
 
-  async list(): Promise<RecurringInvoice[]> {
-    return (await this.repo.list()).map(toRecurringDto)
+  async list(
+    query: PageArgs & { status?: RecurringStatus; q?: string }
+  ): Promise<RecurringList> {
+    const { items, total } = await this.repo.list(query)
+    return {
+      items: items.map(toRecurringDto),
+      total,
+      page: query.page,
+      pageSize: query.pageSize,
+    }
   }
 
   async get(id: string): Promise<RecurringInvoice> {

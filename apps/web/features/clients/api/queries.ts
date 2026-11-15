@@ -1,35 +1,25 @@
 "use client"
 
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
+import type { ListClientsQuery } from "@workspace/contracts"
+
+import { useQuery } from "@tanstack/react-query"
 
 import { useWorkspaceStore } from "@/features/workspace"
 import { api, unwrap } from "@/lib/api"
 
 import { clientKeys, type ClientFilters } from "./keys"
 
-const PAGE_SIZE = 25
-
-/** Paginated client list (keyset cursor from the API). */
-export function useClients(filters: ClientFilters, pageSize = PAGE_SIZE) {
+/**
+ * One page of the list (server-side paging, sorting and filters). Pickers
+ * pass `pageSize: 100`.
+ */
+export function useClients(query: ListClientsQuery, enabled = true) {
   const workspaceId = useWorkspaceStore((s) => s.workspace?.id)
-  return useInfiniteQuery({
-    queryKey: [...clientKeys.list(workspaceId, filters), pageSize],
-    queryFn: ({ pageParam }) =>
-      unwrap(
-        api.GET("/v1/clients", {
-          params: {
-            query: {
-              q: filters.q || undefined,
-              status: filters.status,
-              limit: pageSize,
-              cursor: pageParam ?? undefined,
-            },
-          },
-        })
-      ),
-    initialPageParam: null as string | null,
-    getNextPageParam: (last) => last.nextCursor,
-    enabled: Boolean(workspaceId),
+  return useQuery({
+    queryKey: [...clientKeys.all(workspaceId), "list", query],
+    queryFn: () =>
+      unwrap(api.GET("/v1/clients", { params: { query: query as never } })),
+    enabled: Boolean(workspaceId) && enabled,
     placeholderData: (prev) => prev,
   })
 }

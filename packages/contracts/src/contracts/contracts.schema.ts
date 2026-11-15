@@ -1,7 +1,7 @@
 import { z } from "zod"
 
 import { optionalText } from "../common/locale.js"
-import { cursorPaginationQuerySchema, paginated } from "../common/pagination.js"
+import { paged, pageQuerySchema, sortQuery } from "../common/pagination.js"
 import { partySnapshotSchema } from "../documents/line-items.js"
 
 /**
@@ -137,12 +137,19 @@ export const voidContractSchema = z.object({
   reason: optionalText(500),
 })
 
-export const listContractsQuerySchema = cursorPaginationQuerySchema.extend({
+export const listContractsQuerySchema = pageQuerySchema.extend({
+  sort: sortQuery([
+    "title",
+    "number",
+    "clientName",
+    "effectiveDate",
+    "createdAt",
+  ]),
   status: contractStatusSchema.optional(),
   clientId: z.uuid().optional(),
   q: z.string().trim().max(100).optional(),
 })
 export type ListContractsQuery = z.input<typeof listContractsQuerySchema>
 
-export const contractListSchema = paginated(contractSummarySchema)
+export const contractListSchema = paged(contractSummarySchema)
 export type ContractList = z.infer<typeof contractListSchema>

@@ -18,6 +18,7 @@ import {
 } from "@workspace/contracts"
 import { documentEmail } from "@workspace/emails"
 
+import { type PageArgs } from "../../common/pagination.js"
 import { EntitlementsService } from "../../billing/entitlements.service.js"
 import { UsageService } from "../../billing/usage.service.js"
 import { AuditService } from "../../iam/audit/audit.service.js"
@@ -115,16 +116,21 @@ export class InvoicesService {
     return todayIn((await this.profile.get()).timezone)
   }
 
-  async list(query: {
-    status?: InvoiceDisplayStatus
-    clientId?: string
-    q?: string
-    cursor?: string
-    limit: number
-  }): Promise<InvoiceList> {
+  async list(
+    query: PageArgs & {
+      status?: InvoiceDisplayStatus
+      clientId?: string
+      q?: string
+    }
+  ): Promise<InvoiceList> {
     const today = await this.today()
-    const { items, nextCursor } = await this.repo.list({ ...query, today })
-    return { items: items.map((i) => toInvoiceSummary(i, today)), nextCursor }
+    const { items, total } = await this.repo.list({ ...query, today })
+    return {
+      items: items.map((i) => toInvoiceSummary(i, today)),
+      total,
+      page: query.page,
+      pageSize: query.pageSize,
+    }
   }
 
   async get(id: string): Promise<Invoice> {

@@ -1,33 +1,25 @@
 "use client"
 
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
+import type { ListQuotesQuery } from "@workspace/contracts"
+
+import { useQuery } from "@tanstack/react-query"
 
 import { useWorkspaceStore } from "@/features/workspace"
 import { api, unwrap } from "@/lib/api"
 
 import { quoteKeys, type QuoteFilters } from "./keys"
 
-export function useQuotes(filters: QuoteFilters, pageSize = 25) {
+/**
+ * One page of the list (server-side paging, sorting and filters). Pickers
+ * pass `pageSize: 100`.
+ */
+export function useQuotes(query: ListQuotesQuery, enabled = true) {
   const workspaceId = useWorkspaceStore((s) => s.workspace?.id)
-  return useInfiniteQuery({
-    queryKey: [...quoteKeys.list(workspaceId, filters), pageSize],
-    queryFn: ({ pageParam }) =>
-      unwrap(
-        api.GET("/v1/quotes", {
-          params: {
-            query: {
-              status: filters.status,
-              clientId: filters.clientId,
-              q: filters.q || undefined,
-              limit: pageSize,
-              cursor: pageParam ?? undefined,
-            },
-          },
-        })
-      ),
-    initialPageParam: null as string | null,
-    getNextPageParam: (last) => last.nextCursor,
-    enabled: Boolean(workspaceId),
+  return useQuery({
+    queryKey: [...quoteKeys.all(workspaceId), "list", query],
+    queryFn: () =>
+      unwrap(api.GET("/v1/quotes", { params: { query: query as never } })),
+    enabled: Boolean(workspaceId) && enabled,
     placeholderData: (prev) => prev,
   })
 }

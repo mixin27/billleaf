@@ -102,8 +102,8 @@ export function RecurringEditor({ schedule }: { schedule?: RecurringInvoice }) {
   const router = useRouter()
   const slug = useWorkspaceStore((s) => s.workspace?.slug)
   const profile = useWorkspaceProfile()
-  const clients = useClients({ status: "active" }, 100)
-  const clientOptions = clients.data?.pages.flatMap((p) => p.items) ?? []
+  const clients = useClients({ status: "active", pageSize: 100 })
+  const clientOptions = clients.data?.items ?? []
   const create = useCreateRecurring()
   const update = useUpdateRecurring(schedule?.id ?? "")
 

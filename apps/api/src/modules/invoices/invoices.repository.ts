@@ -11,7 +11,7 @@ import {
 import {
   and,
   asc,
-  desc,
+  count,
   eq,
   gt,
   gte,
@@ -24,6 +24,7 @@ import {
 } from "drizzle-orm"
 
 import { RequestContext } from "../../common/context/request-context.js"
+import { offsetOf, orderBy, type PageArgs } from "../../common/pagination.js"
 import { InjectDb, type Database } from "../../core/database/database.module.js"
 import type { StoredLine } from "../documents/line-values.js"
 
@@ -88,14 +89,14 @@ export class InvoicesRepository {
     }
   }
 
-  async list(opts: {
-    status?: InvoiceDisplayStatus
-    clientId?: string
-    q?: string
-    cursor?: string
-    limit: number
-    today: string
-  }): Promise<{ items: InvoiceWithRefs[]; nextCursor: string | null }> {
+  async list(
+    opts: PageArgs & {
+      status?: InvoiceDisplayStatus
+      clientId?: string
+      q?: string
+      today: string
+    }
+  ): Promise<{ items: InvoiceWithRefs[]; total: number }> {
     const filters: SQL[] = [this.scope()]
     if (opts.status) filters.push(this.statusFilter(opts.status, opts.today))
     if (opts.clientId) filters.push(eq(invoices.clientId, opts.clientId))
@@ -109,20 +110,39 @@ export class InvoicesRepository {
         )!
       )
     }
-    if (opts.cursor) filters.push(lt(invoices.id, opts.cursor))
-    const rows = await this.db
-      .select({ invoice: invoices, clientName: clients.name })
-      .from(invoices)
-      .innerJoin(clients, eq(clients.id, invoices.clientId))
-      .where(and(...filters))
-      .orderBy(desc(invoices.id))
-      .limit(opts.limit + 1)
-    const items = rows
-      .slice(0, opts.limit)
-      .map((r) => ({ ...r.invoice, clientName: r.clientName }))
+    const where = and(...filters)
+    const [rows, [counted]] = await Promise.all([
+      this.db
+        .select({ invoice: invoices, clientName: clients.name })
+        .from(invoices)
+        .innerJoin(clients, eq(clients.id, invoices.clientId))
+        .where(where)
+        .orderBy(
+          ...orderBy(
+            opts.sort,
+            {
+              number: invoices.number,
+              clientName: sql`lower(${clients.name})`,
+              issueDate: invoices.issueDate,
+              dueDate: invoices.dueDate,
+              total: invoices.total,
+              amountDue: sql`${invoices.total} - ${invoices.amountPaid}`,
+              createdAt: invoices.createdAt,
+            },
+            invoices.id
+          )
+        )
+        .limit(opts.pageSize)
+        .offset(offsetOf(opts.page, opts.pageSize)),
+      this.db
+        .select({ n: count() })
+        .from(invoices)
+        .innerJoin(clients, eq(clients.id, invoices.clientId))
+        .where(where),
+    ])
     return {
-      items,
-      nextCursor: rows.length > opts.limit ? items[items.length - 1]!.id : null,
+      items: rows.map((r) => ({ ...r.invoice, clientName: r.clientName })),
+      total: counted?.n ?? 0,
     }
   }
 

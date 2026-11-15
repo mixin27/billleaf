@@ -27,8 +27,8 @@ export function ClientQuotes({
 }) {
   const slug = useWorkspaceStore((s) => s.workspace?.slug)
   const locale = useWorkspaceProfile().data?.locale
-  const quotes = useQuotes({ clientId }, 10)
-  const rows = quotes.data?.pages[0]?.items ?? []
+  const quotes = useQuotes({ clientId, pageSize: 10 })
+  const rows = quotes.data?.items ?? []
 
   return (
     <Card>

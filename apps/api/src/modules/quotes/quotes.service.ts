@@ -16,6 +16,7 @@ import {
 import { formatMoney, type PartySnapshot } from "@workspace/contracts"
 import { documentEmail } from "@workspace/emails"
 
+import { type PageArgs } from "../../common/pagination.js"
 import { AuditService } from "../../iam/audit/audit.service.js"
 import { MailService } from "../../mail/mail.service.js"
 import { ClientsRepository } from "../clients/clients.repository.js"
@@ -105,18 +106,23 @@ export class QuotesService {
     return todayIn((await this.profile.get()).timezone)
   }
 
-  async list(query: {
-    status?: QuoteStatus
-    clientId?: string
-    q?: string
-    cursor?: string
-    limit: number
-  }): Promise<QuoteList> {
-    const [{ items, nextCursor }, today] = await Promise.all([
+  async list(
+    query: PageArgs & {
+      status?: QuoteStatus
+      clientId?: string
+      q?: string
+    }
+  ): Promise<QuoteList> {
+    const [{ items, total }, today] = await Promise.all([
       this.repo.list(query),
       this.today(),
     ])
-    return { items: items.map((q) => toQuoteSummary(q, today)), nextCursor }
+    return {
+      items: items.map((q) => toQuoteSummary(q, today)),
+      total,
+      page: query.page,
+      pageSize: query.pageSize,
+    }
   }
 
   async get(id: string): Promise<Quote> {

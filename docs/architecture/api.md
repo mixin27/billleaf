@@ -46,7 +46,7 @@ apps/api/src/
 - DTOs are Zod schemas from `@workspace/contracts` (via `nestjs-zod`), giving validation + OpenAPI from one source.
 - OpenAPI served at `/docs` (Scalar UI) in non-production; JSON spec consumed by `pnpm gen:api-client` → `packages/api-client` (openapi-typescript + openapi-fetch).
 - Errors: **RFC 9457 `application/problem+json`** (`type`, `title`, `status`, `detail`, `instance`, plus `errors[]` for validation).
-- Pagination: **cursor-based** (`?cursor=&limit=`, response `{ items, nextCursor }`).
+- Pagination: **numbered pages** (`?page=&pageSize=` 1–100, response `{ items, total, page, pageSize }`) with **server-side sorting** `?sort=field:asc|desc`, restricted per resource by `sortQuery([...])` in the contract (unknown fields → 422). Repositories build `ORDER BY` with `orderBy()` from `common/pagination.ts` (nulls last, `id` tiebreak, text sorted case-insensitively) and count with the same filters. Lists that used to page by cursor moved to this in the data-tables change.
 - Idempotency: `Idempotency-Key` header required on payment and webhook-triggering endpoints.
 - Rate limiting: `@nestjs/throttler` backed by Valkey; stricter on auth endpoints.
 

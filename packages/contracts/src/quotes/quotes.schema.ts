@@ -1,7 +1,7 @@
 import { z } from "zod"
 
 import { currencyCodeSchema } from "../common/money.js"
-import { cursorPaginationQuerySchema, paginated } from "../common/pagination.js"
+import { paged, pageQuerySchema, sortQuery } from "../common/pagination.js"
 import { optionalText } from "../common/locale.js"
 import {
   lineItemInputSchema,
@@ -91,12 +91,20 @@ export const updateQuoteSchema = z
   .partial()
 export type UpdateQuoteInput = z.input<typeof updateQuoteSchema>
 
-export const listQuotesQuerySchema = cursorPaginationQuerySchema.extend({
+export const listQuotesQuerySchema = pageQuerySchema.extend({
+  sort: sortQuery([
+    "number",
+    "clientName",
+    "issueDate",
+    "validUntil",
+    "total",
+    "createdAt",
+  ]),
   status: quoteStatusSchema.optional(),
   clientId: z.uuid().optional(),
   q: z.string().trim().max(100).optional(),
 })
 export type ListQuotesQuery = z.input<typeof listQuotesQuerySchema>
 
-export const quoteListSchema = paginated(quoteSummarySchema)
+export const quoteListSchema = paged(quoteSummarySchema)
 export type QuoteList = z.infer<typeof quoteListSchema>

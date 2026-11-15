@@ -6,9 +6,10 @@ import {
   receipts,
   type Transaction,
 } from "@workspace/db"
-import { and, desc, eq, ilike, lt, or, type SQL } from "drizzle-orm"
+import { and, count, eq, ilike, or, type SQL, sql } from "drizzle-orm"
 
 import { RequestContext } from "../../common/context/request-context.js"
+import { offsetOf, orderBy, type PageArgs } from "../../common/pagination.js"
 import { InjectDb, type Database } from "../../core/database/database.module.js"
 
 export type PaymentRow = typeof payments.$inferSelect
@@ -64,14 +65,14 @@ export class PaymentsRepository {
     }
   }
 
-  async list(opts: {
-    invoiceId?: string
-    clientId?: string
-    status?: PaymentRow["status"]
-    q?: string
-    cursor?: string
-    limit: number
-  }): Promise<{ items: PaymentWithRefs[]; nextCursor: string | null }> {
+  async list(
+    opts: PageArgs & {
+      invoiceId?: string
+      clientId?: string
+      status?: PaymentRow["status"]
+      q?: string
+    }
+  ): Promise<{ items: PaymentWithRefs[]; total: number }> {
     const filters: SQL[] = [this.scope()]
     if (opts.invoiceId) filters.push(eq(payments.invoiceId, opts.invoiceId))
     if (opts.clientId) filters.push(eq(payments.clientId, opts.clientId))
@@ -87,15 +88,35 @@ export class PaymentsRepository {
         )!
       )
     }
-    if (opts.cursor) filters.push(lt(payments.id, opts.cursor))
-    const rows = await this.selectWithRefs()
-      .where(and(...filters))
-      .orderBy(desc(payments.id))
-      .limit(opts.limit + 1)
-    const items = rows.slice(0, opts.limit).map(PaymentsRepository.flatten)
+    const where = and(...filters)
+    const [rows, [counted]] = await Promise.all([
+      this.selectWithRefs()
+        .where(where)
+        .orderBy(
+          ...orderBy(
+            opts.sort,
+            {
+              paidOn: payments.paidOn,
+              amount: payments.amount,
+              clientName: sql`lower(${clients.name})`,
+              createdAt: payments.createdAt,
+            },
+            payments.id
+          )
+        )
+        .limit(opts.pageSize)
+        .offset(offsetOf(opts.page, opts.pageSize)),
+      this.db
+        .select({ n: count() })
+        .from(payments)
+        .innerJoin(clients, eq(clients.id, payments.clientId))
+        .innerJoin(invoices, eq(invoices.id, payments.invoiceId))
+        .leftJoin(receipts, eq(receipts.paymentId, payments.id))
+        .where(where),
+    ])
     return {
-      items,
-      nextCursor: rows.length > opts.limit ? items[items.length - 1]!.id : null,
+      items: rows.map(PaymentsRepository.flatten),
+      total: counted?.n ?? 0,
     }
   }
 

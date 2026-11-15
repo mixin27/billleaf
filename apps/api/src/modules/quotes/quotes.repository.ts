@@ -6,9 +6,10 @@ import {
   quotes,
   type Transaction,
 } from "@workspace/db"
-import { and, asc, count, desc, eq, ilike, lt, or, type SQL } from "drizzle-orm"
+import { and, asc, count, eq, ilike, or, type SQL, sql } from "drizzle-orm"
 
 import { RequestContext } from "../../common/context/request-context.js"
+import { offsetOf, orderBy, type PageArgs } from "../../common/pagination.js"
 import { InjectDb, type Database } from "../../core/database/database.module.js"
 
 export type QuoteRow = typeof quotes.$inferSelect
@@ -45,13 +46,13 @@ export class QuotesRepository {
     return eq(quotes.workspaceId, this.ctx.workspaceId)
   }
 
-  async list(opts: {
-    status?: QuoteRow["status"]
-    clientId?: string
-    q?: string
-    cursor?: string
-    limit: number
-  }): Promise<{ items: QuoteWithClient[]; nextCursor: string | null }> {
+  async list(
+    opts: PageArgs & {
+      status?: QuoteRow["status"]
+      clientId?: string
+      q?: string
+    }
+  ): Promise<{ items: QuoteWithClient[]; total: number }> {
     const filters: SQL[] = [this.scope()]
     if (opts.status) filters.push(eq(quotes.status, opts.status))
     if (opts.clientId) filters.push(eq(quotes.clientId, opts.clientId))
@@ -65,20 +66,38 @@ export class QuotesRepository {
         )!
       )
     }
-    if (opts.cursor) filters.push(lt(quotes.id, opts.cursor))
-    const rows = await this.db
-      .select({ quote: quotes, clientName: clients.name })
-      .from(quotes)
-      .innerJoin(clients, eq(clients.id, quotes.clientId))
-      .where(and(...filters))
-      .orderBy(desc(quotes.id))
-      .limit(opts.limit + 1)
-    const items = rows
-      .slice(0, opts.limit)
-      .map((r) => ({ ...r.quote, clientName: r.clientName }))
+    const where = and(...filters)
+    const [rows, [counted]] = await Promise.all([
+      this.db
+        .select({ quote: quotes, clientName: clients.name })
+        .from(quotes)
+        .innerJoin(clients, eq(clients.id, quotes.clientId))
+        .where(where)
+        .orderBy(
+          ...orderBy(
+            opts.sort,
+            {
+              number: quotes.number,
+              clientName: sql`lower(${clients.name})`,
+              issueDate: quotes.issueDate,
+              validUntil: quotes.validUntil,
+              total: quotes.total,
+              createdAt: quotes.createdAt,
+            },
+            quotes.id
+          )
+        )
+        .limit(opts.pageSize)
+        .offset(offsetOf(opts.page, opts.pageSize)),
+      this.db
+        .select({ n: count() })
+        .from(quotes)
+        .innerJoin(clients, eq(clients.id, quotes.clientId))
+        .where(where),
+    ])
     return {
-      items,
-      nextCursor: rows.length > opts.limit ? items[items.length - 1]!.id : null,
+      items: rows.map((r) => ({ ...r.quote, clientName: r.clientName })),
+      total: counted?.n ?? 0,
     }
   }
 

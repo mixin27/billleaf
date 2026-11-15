@@ -74,6 +74,18 @@ Every page starts with **`PageHeader`** (`components/page-header.tsx`):
 
 **List pages:** `PageHeader` → toolbar (search, filters, view options, primary "New …" on the right) → table → pagination. Empty states are a dashed box with one sentence on what the thing is and the primary action. With filters active, say "No matching …" and offer to reset.
 
+**Data tables** (`components/data-table`, TanStack Table v9 in manual mode):
+
+- **State:** `useDataTableState()` keeps page, size, sort and search in the URL. Fetch with `{ ...table.query, ...filters }` and pass `data`, `total` and `state` to `<DataTable>`.
+- **Columns:** define them with `columnsFor<Row>()`.
+  - A column is sortable only with `enableSorting: true`, and its id must be an API sort field.
+  - Use `<DataTableColumnHeader>` for sortable headers.
+  - `meta.label` puts the column in the View menu; `meta.hideBelow` hides it on small screens; `meta.align: "right"` for amounts.
+- **Toolbar:** `<DataTableToolbar>` takes search, filters (`DataTableSelectFilter` for a status) and actions such as "New …".
+- **Empty states:** use `DataTableEmpty`.
+- **Rows:** `getRowHref` opens the row on click or Enter; ⌘-click opens it in a new tab.
+- **Small screens:** fold secondary info under the first column (e.g. the client under the number) instead of scrolling sideways.
+
 **Detail pages:** `PageHeader` (number/name + status badge, related-record links in `meta`) → key facts as a `dl` grid → the document or body → related lists.
 
 **Forms:** `Field` (label, hint, error) in a responsive grid (`sm:grid-cols-2 lg:grid-cols-3`). Long text spans full width. Actions go bottom-right: Cancel (outline) then Save (primary). Validate inline and toast only on submit errors.

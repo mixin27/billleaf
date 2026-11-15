@@ -91,8 +91,8 @@ export function ContractEditor({
 }) {
   const router = useRouter()
   const slug = useWorkspaceStore((s) => s.workspace?.slug)
-  const clients = useClients({ status: "active" }, 100)
-  const clientOptions = clients.data?.pages.flatMap((p) => p.items) ?? []
+  const clients = useClients({ status: "active", pageSize: 100 })
+  const clientOptions = clients.data?.items ?? []
   const templates = useContractTemplates()
   const fromQuote = useQuote(initialQuoteId ?? "")
   const create = useCreateContract()
@@ -131,18 +131,18 @@ export function ContractEditor({
     if (!getValues("title")) setValue("title", q.title ?? "")
   }, [contract, fromQuote.data, setValue, getValues])
 
-  const quotes = useQuotes({ clientId: clientId || undefined }, 50)
-  const projects = useProjects({ clientId: clientId || undefined }, 50)
+  const quotes = useQuotes({ clientId: clientId || undefined, pageSize: 50 })
+  const projects = useProjects({
+    clientId: clientId || undefined,
+    pageSize: 50,
+  })
   const quoteItems = Object.fromEntries(
-    (quotes.data?.pages.flatMap((p) => p.items) ?? [])
+    (quotes.data?.items ?? [])
       .filter((q) => q.status !== "draft")
       .map((q) => [q.id, `${q.number}${q.title ? ` · ${q.title}` : ""}`])
   )
   const projectItems = Object.fromEntries(
-    (projects.data?.pages.flatMap((p) => p.items) ?? []).map((p) => [
-      p.id,
-      p.name,
-    ])
+    (projects.data?.items ?? []).map((p) => [p.id, p.name])
   )
 
   const [templateId, setTemplateId] = React.useState("")

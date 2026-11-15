@@ -1620,3 +1620,66 @@ describe("SaaS billing", () => {
     expect(row!.error).toMatch(/Unknown workspace/)
   })
 })
+
+describe("list pagination and sorting", () => {
+  it("pages with totals, sorts by allowed fields only, and keeps filters", async () => {
+    const owner = new Client(t)
+    await owner.signUp("Pager")
+    const ws = await owner.createWorkspace("Paging")
+    await t.db
+      .update(workspaceSubscriptions)
+      .set({ planKey: "pro" })
+      .where(eq(workspaceSubscriptions.workspaceId, ws.id))
+    for (const name of ["Charlie Co", "alpha Co", "Bravo Co"]) {
+      await owner.post("/v1/clients", { name })
+    }
+    const names = (r: { body: { items: { name: string }[] } }) =>
+      r.body.items.map((c) => c.name)
+
+    // Default client order is name A→Z, case-insensitive.
+    const first = await owner.get("/v1/clients?pageSize=2")
+    expect(first.body).toMatchObject({ total: 3, page: 1, pageSize: 2 })
+    expect(names(first)).toEqual(["alpha Co", "Bravo Co"])
+    const second = await owner.get("/v1/clients?pageSize=2&page=2")
+    expect(names(second)).toEqual(["Charlie Co"])
+    expect(
+      names(await owner.get("/v1/clients?sort=name:desc&pageSize=10"))
+    ).toEqual(["Charlie Co", "Bravo Co", "alpha Co"])
+    // Past the end: empty page, total still known.
+    expect((await owner.get("/v1/clients?page=9")).body).toMatchObject({
+      items: [],
+      total: 3,
+    })
+    // Search narrows the total.
+    expect((await owner.get("/v1/clients?q=bra")).body.total).toBe(1)
+
+    // Only whitelisted fields; malformed or unknown → 422.
+    expect((await owner.get("/v1/clients?sort=archivedAt:asc")).status).toBe(
+      422
+    )
+    expect((await owner.get("/v1/clients?sort=name")).status).toBe(422)
+    expect((await owner.get("/v1/clients?pageSize=500")).status).toBe(422)
+
+    // Invoices sort by a computed column (amount due) and by client name.
+    const clients = (await owner.get("/v1/clients?pageSize=10")).body.items
+    for (const [i, c] of clients.entries()) {
+      await owner.post("/v1/invoices", {
+        clientId: c.id,
+        lines: [
+          { description: "Work", quantity: 1, unitPrice: (i + 1) * 10_000 },
+        ],
+      })
+    }
+    const byTotal = (
+      await owner.get("/v1/invoices?sort=amountDue:desc")
+    ).body.items.map((i: { total: number }) => i.total)
+    expect(byTotal).toEqual([30_000, 20_000, 10_000])
+    const byClient = (
+      await owner.get("/v1/invoices?sort=clientName:asc&pageSize=2")
+    ).body
+    expect(byClient.total).toBe(3)
+    expect(
+      byClient.items.map((i: { clientName: string }) => i.clientName)
+    ).toEqual(["alpha Co", "Bravo Co"])
+  })
+})

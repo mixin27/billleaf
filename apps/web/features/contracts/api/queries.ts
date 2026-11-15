@@ -1,33 +1,25 @@
 "use client"
 
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
+import type { ListContractsQuery } from "@workspace/contracts"
+
+import { useQuery } from "@tanstack/react-query"
 
 import { useWorkspaceStore } from "@/features/workspace"
 import { api, unwrap } from "@/lib/api"
 
 import { contractKeys, type ContractFilters } from "./keys"
 
-export function useContracts(filters: ContractFilters, pageSize = 25) {
+/**
+ * One page of the list (server-side paging, sorting and filters). Pickers
+ * pass `pageSize: 100`.
+ */
+export function useContracts(query: ListContractsQuery, enabled = true) {
   const workspaceId = useWorkspaceStore((s) => s.workspace?.id)
-  return useInfiniteQuery({
-    queryKey: contractKeys.list(workspaceId, filters, pageSize),
-    queryFn: ({ pageParam }) =>
-      unwrap(
-        api.GET("/v1/contracts", {
-          params: {
-            query: {
-              status: filters.status,
-              clientId: filters.clientId,
-              q: filters.q || undefined,
-              limit: pageSize,
-              cursor: pageParam ?? undefined,
-            },
-          },
-        })
-      ),
-    initialPageParam: null as string | null,
-    getNextPageParam: (last) => last.nextCursor,
-    enabled: Boolean(workspaceId),
+  return useQuery({
+    queryKey: [...contractKeys.all(workspaceId), "list", query],
+    queryFn: () =>
+      unwrap(api.GET("/v1/contracts", { params: { query: query as never } })),
+    enabled: Boolean(workspaceId) && enabled,
     placeholderData: (prev) => prev,
   })
 }

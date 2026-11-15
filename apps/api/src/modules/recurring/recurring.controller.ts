@@ -8,11 +8,14 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
 } from "@nestjs/common"
 import { ApiTags } from "@nestjs/swagger"
 import {
   createRecurringInvoiceSchema,
+  listRecurringQuerySchema,
   recurringInvoiceSchema,
+  recurringListSchema,
   recurringRunResultSchema,
   updateRecurringInvoiceSchema,
 } from "@workspace/contracts"
@@ -23,6 +26,8 @@ import { RequirePermission } from "../../common/decorators/require-permission.de
 import { RecurringService } from "./recurring.service.js"
 
 class RecurringDto extends createZodDto(recurringInvoiceSchema) {}
+class RecurringListDto extends createZodDto(recurringListSchema) {}
+class ListRecurringQueryDto extends createZodDto(listRecurringQuerySchema) {}
 class CreateRecurringDto extends createZodDto(createRecurringInvoiceSchema) {}
 class UpdateRecurringDto extends createZodDto(updateRecurringInvoiceSchema) {}
 class RunResultDto extends createZodDto(recurringRunResultSchema) {}
@@ -50,9 +55,9 @@ export class RecurringController {
 
   @Get()
   @RequirePermission("invoice.read")
-  @ZodResponse({ status: 200, type: [RecurringDto] })
-  list() {
-    return this.recurring.list()
+  @ZodResponse({ status: 200, type: RecurringListDto })
+  list(@Query() query: ListRecurringQueryDto) {
+    return this.recurring.list(query as never)
   }
 
   @Get(":id")

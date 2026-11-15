@@ -1,18 +1,25 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
+import type { ListRecurringQuery } from "@workspace/contracts"
 
 import { useWorkspaceStore } from "@/features/workspace"
 import { api, unwrap } from "@/lib/api"
 
 import { recurringKeys } from "./keys"
 
-export function useRecurringInvoices() {
+export function useRecurringInvoices(query: ListRecurringQuery) {
   const workspaceId = useWorkspaceStore((s) => s.workspace?.id)
   return useQuery({
-    queryKey: recurringKeys.list(workspaceId),
-    queryFn: () => unwrap(api.GET("/v1/recurring-invoices")),
+    queryKey: [...recurringKeys.list(workspaceId), query],
+    queryFn: () =>
+      unwrap(
+        api.GET("/v1/recurring-invoices", {
+          params: { query: query as never },
+        })
+      ),
     enabled: Boolean(workspaceId),
+    placeholderData: (prev) => prev,
   })
 }
 

@@ -7,7 +7,7 @@ import {
   optionalUrl,
 } from "../common/locale.js"
 import { currencyCodeSchema } from "../common/money.js"
-import { cursorPaginationQuerySchema, paginated } from "../common/pagination.js"
+import { paged, pageQuerySchema, sortQuery } from "../common/pagination.js"
 
 export const clientTypeSchema = z.enum(["company", "individual"])
 export const clientStatusSchema = z.enum(["active", "archived"])
@@ -88,13 +88,14 @@ export type CreateClientInput = z.input<typeof createClientSchema>
 export const updateClientSchema = z.object(clientFields).partial()
 export type UpdateClientInput = z.input<typeof updateClientSchema>
 
-export const listClientsQuerySchema = cursorPaginationQuerySchema.extend({
+export const listClientsQuerySchema = pageQuerySchema.extend({
+  sort: sortQuery(["name", "email", "createdAt"]),
   q: z.string().trim().max(100).optional(),
   status: clientStatusSchema.default("active"),
 })
 export type ListClientsQuery = z.input<typeof listClientsQuerySchema>
 
-export const clientListSchema = paginated(clientSchema)
+export const clientListSchema = paged(clientSchema)
 export type ClientList = z.infer<typeof clientListSchema>
 
 export const createClientContactSchema = z.object({

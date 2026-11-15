@@ -23,6 +23,7 @@ import {
 } from "@workspace/contracts"
 import { documentEmail } from "@workspace/emails"
 
+import { type PageArgs } from "../../common/pagination.js"
 import { AuditService } from "../../iam/audit/audit.service.js"
 import { MailService } from "../../mail/mail.service.js"
 import { ClientsRepository } from "../clients/clients.repository.js"
@@ -114,18 +115,20 @@ export class ContractsService {
 
   // ── Contracts ──────────────────────────────────────────────────────────
 
-  async list(query: {
-    status?: ContractStatus
-    clientId?: string
-    q?: string
-    cursor?: string
-    limit?: number
-  }): Promise<ContractList> {
-    const { items, nextCursor } = await this.repo.list({
-      ...query,
-      limit: query.limit ?? 25,
-    })
-    return { items: items.map(toContractSummary), nextCursor }
+  async list(
+    query: PageArgs & {
+      status?: ContractStatus
+      clientId?: string
+      q?: string
+    }
+  ): Promise<ContractList> {
+    const { items, total } = await this.repo.list(query)
+    return {
+      items: items.map(toContractSummary),
+      total,
+      page: query.page,
+      pageSize: query.pageSize,
+    }
   }
 
   async get(id: string): Promise<Contract> {

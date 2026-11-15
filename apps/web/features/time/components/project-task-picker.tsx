@@ -23,8 +23,8 @@ export function ProjectTaskPicker({
   taskId: string | null
   onChange: (v: { projectId: string | null; taskId: string | null }) => void
 }) {
-  const projects = useProjects({ status: "active" }, 100)
-  const options = projects.data?.pages.flatMap((p) => p.items) ?? []
+  const projects = useProjects({ status: "active", pageSize: 100 })
+  const options = projects.data?.items ?? []
   const tasks = useTasks(projectId ?? "")
   const openTasks = projectId
     ? (tasks.data ?? []).filter((t) => t.status !== "done" || t.id === taskId)

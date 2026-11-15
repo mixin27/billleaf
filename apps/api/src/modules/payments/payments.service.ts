@@ -14,6 +14,7 @@ import {
 } from "@workspace/contracts"
 import { documentEmail } from "@workspace/emails"
 
+import { type PageArgs } from "../../common/pagination.js"
 import { RequestContext } from "../../common/context/request-context.js"
 import { AuditService } from "../../iam/audit/audit.service.js"
 import { MailService } from "../../mail/mail.service.js"
@@ -74,16 +75,21 @@ export class PaymentsService {
     private readonly audit: AuditService
   ) {}
 
-  async list(query: {
-    invoiceId?: string
-    clientId?: string
-    status?: PaymentStatus
-    q?: string
-    cursor?: string
-    limit: number
-  }): Promise<PaymentList> {
-    const { items, nextCursor } = await this.repo.list(query)
-    return { items: items.map(toPaymentDto), nextCursor }
+  async list(
+    query: PageArgs & {
+      invoiceId?: string
+      clientId?: string
+      status?: PaymentStatus
+      q?: string
+    }
+  ): Promise<PaymentList> {
+    const { items, total } = await this.repo.list(query)
+    return {
+      items: items.map(toPaymentDto),
+      total,
+      page: query.page,
+      pageSize: query.pageSize,
+    }
   }
 
   async get(id: string): Promise<Payment> {
