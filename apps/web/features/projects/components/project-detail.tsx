@@ -41,6 +41,7 @@ import { useProject } from "../api/queries"
 import { ProjectFormDialog } from "./project-form-dialog"
 import { ProjectStatusBadge } from "./project-status-badge"
 import { TaskBoard } from "./task-board"
+import { PageHeader } from "@/components/page-header"
 
 export function ProjectDetail({ projectId }: { projectId: string }) {
   const project = useProject(projectId)
@@ -87,110 +88,114 @@ function ProjectView({ project }: { project: Project }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <Link
-            href={`/${slug}/projects`}
-            className="text-sm text-muted-foreground hover:underline"
-          >
-            ← Projects
-          </Link>
-          <h1 className="mt-1 flex items-center gap-2 text-2xl font-semibold tracking-tight">
-            {project.name}
-            <ProjectStatusBadge
-              status={project.status}
-              overdue={project.isOverdue}
-            />
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {project.clientId ? (
-              <Link
-                className="underline"
-                href={`/${slug}/clients/${project.clientId}`}
-              >
-                {project.clientName}
-              </Link>
-            ) : (
-              "Internal project"
-            )}
-            {project.quoteId ? (
-              <>
-                {" · from "}
+      <PageHeader
+        title={project.name}
+        badge={
+          <ProjectStatusBadge
+            status={project.status}
+            overdue={project.isOverdue}
+          />
+        }
+        meta={
+          <>
+            <p className="text-sm text-muted-foreground">
+              {project.clientId ? (
                 <Link
                   className="underline"
-                  href={`/${slug}/quotes/${project.quoteId}`}
+                  href={`/${slug}/clients/${project.clientId}`}
                 >
-                  {project.quoteNumber}
+                  {project.clientName}
                 </Link>
-              </>
-            ) : null}
-          </p>
-        </div>
-        {can("project.update") || can("project.delete") ? (
-          <div className="flex gap-2">
-            {can("project.update") ? (
-              <>
-                {project.status === "active" ? (
-                  <Button
-                    variant="outline"
-                    onClick={() => setStatus("completed")}
-                    disabled={update.isPending}
+              ) : (
+                "Internal project"
+              )}
+              {project.quoteId ? (
+                <>
+                  {" · from "}
+                  <Link
+                    className="underline"
+                    href={`/${slug}/quotes/${project.quoteId}`}
                   >
-                    Mark completed
-                  </Button>
-                ) : project.status !== "archived" ? (
-                  <Button
-                    variant="outline"
-                    onClick={() => setStatus("active")}
-                    disabled={update.isPending}
-                  >
-                    Reopen
-                  </Button>
-                ) : null}
-                <Button variant="outline" onClick={() => setEditing(true)}>
-                  Edit
-                </Button>
-              </>
-            ) : null}
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={<Button variant="outline">More</Button>}
-              />
-              <DropdownMenuContent align="end">
+                    {project.quoteNumber}
+                  </Link>
+                </>
+              ) : null}
+            </p>
+          </>
+        }
+        actions={
+          <>
+            {can("project.update") || can("project.delete") ? (
+              <div className="flex gap-2">
                 {can("project.update") ? (
                   <>
-                    {project.status !== "on_hold" ? (
-                      <DropdownMenuItem onClick={() => setStatus("on_hold")}>
-                        Put on hold
-                      </DropdownMenuItem>
+                    {project.status === "active" ? (
+                      <Button
+                        variant="outline"
+                        onClick={() => setStatus("completed")}
+                        disabled={update.isPending}
+                      >
+                        Mark completed
+                      </Button>
+                    ) : project.status !== "archived" ? (
+                      <Button
+                        variant="outline"
+                        onClick={() => setStatus("active")}
+                        disabled={update.isPending}
+                      >
+                        Reopen
+                      </Button>
                     ) : null}
-                    {project.status !== "archived" ? (
-                      <DropdownMenuItem onClick={() => setStatus("archived")}>
-                        Archive
-                      </DropdownMenuItem>
-                    ) : (
-                      <DropdownMenuItem onClick={() => setStatus("active")}>
-                        Restore
-                      </DropdownMenuItem>
-                    )}
+                    <Button variant="outline" onClick={() => setEditing(true)}>
+                      Edit
+                    </Button>
                   </>
                 ) : null}
-                {can("project.delete") ? (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      variant="destructive"
-                      onClick={() => setConfirmDelete(true)}
-                    >
-                      Delete project
-                    </DropdownMenuItem>
-                  </>
-                ) : null}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        ) : null}
-      </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    render={<Button variant="outline">More</Button>}
+                  />
+                  <DropdownMenuContent align="end">
+                    {can("project.update") ? (
+                      <>
+                        {project.status !== "on_hold" ? (
+                          <DropdownMenuItem
+                            onClick={() => setStatus("on_hold")}
+                          >
+                            Put on hold
+                          </DropdownMenuItem>
+                        ) : null}
+                        {project.status !== "archived" ? (
+                          <DropdownMenuItem
+                            onClick={() => setStatus("archived")}
+                          >
+                            Archive
+                          </DropdownMenuItem>
+                        ) : (
+                          <DropdownMenuItem onClick={() => setStatus("active")}>
+                            Restore
+                          </DropdownMenuItem>
+                        )}
+                      </>
+                    ) : null}
+                    {can("project.delete") ? (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          variant="destructive"
+                          onClick={() => setConfirmDelete(true)}
+                        >
+                          Delete project
+                        </DropdownMenuItem>
+                      </>
+                    ) : null}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            ) : null}
+          </>
+        }
+      />
 
       <Card>
         <CardContent>

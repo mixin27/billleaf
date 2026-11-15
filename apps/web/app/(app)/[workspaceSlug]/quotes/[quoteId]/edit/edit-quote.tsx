@@ -5,6 +5,7 @@ import Link from "next/link"
 
 import { QuoteEditor, useQuote } from "@/features/quotes"
 import { useWorkspaceStore } from "@/features/workspace"
+import { PageHeader } from "@/components/page-header"
 
 export function EditQuote({ quoteId }: { quoteId: string }) {
   const quote = useQuote(quoteId)
@@ -24,9 +25,7 @@ export function EditQuote({ quoteId }: { quoteId: string }) {
   }
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold tracking-tight">
-        Edit draft quote
-      </h1>
+      <PageHeader title="Edit draft quote" />
       <QuoteEditor quote={quote.data} />
     </div>
   )

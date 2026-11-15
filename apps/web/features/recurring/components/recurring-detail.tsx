@@ -38,6 +38,7 @@ import {
 } from "../api/mutations"
 import { useRecurringHistory, useRecurringInvoice } from "../api/queries"
 import { RecurringStatusBadge } from "./recurring-status-badge"
+import { PageHeader } from "@/components/page-header"
 
 export function RecurringDetail({ id }: { id: string }) {
   const schedule = useRecurringInvoice(id)
@@ -118,58 +119,54 @@ function RecurringDetailView({ schedule: r }: { schedule: RecurringInvoice }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <Link
-            href={`/${slug}/invoices/recurring`}
-            className="text-sm text-muted-foreground hover:underline"
-          >
-            ← Recurring invoices
-          </Link>
-          <h1 className="mt-1 flex flex-wrap items-center gap-2 text-2xl font-semibold tracking-tight">
-            {r.title ||
-              `${r.clientName} — ${describeRecurrence(r.every, r.unit).toLowerCase()}`}
-            <RecurringStatusBadge status={r.status} />
-          </h1>
-        </div>
-        {canManage ? (
-          <div className="flex flex-wrap gap-2">
-            {r.status === "active" ? (
-              <>
-                <Button onClick={() => setDialog("run")}>Run now</Button>
-                <Button
-                  variant="outline"
-                  disabled={update.isPending}
-                  onClick={() => setStatus("paused")}
-                >
-                  Pause
+      <PageHeader
+        title={
+          r.title ||
+          `${r.clientName} — ${describeRecurrence(r.every, r.unit).toLowerCase()}`
+        }
+        badge={<RecurringStatusBadge status={r.status} />}
+        actions={
+          <>
+            {canManage ? (
+              <div className="flex flex-wrap gap-2">
+                {r.status === "active" ? (
+                  <>
+                    <Button onClick={() => setDialog("run")}>Run now</Button>
+                    <Button
+                      variant="outline"
+                      disabled={update.isPending}
+                      onClick={() => setStatus("paused")}
+                    >
+                      Pause
+                    </Button>
+                  </>
+                ) : r.status === "paused" ? (
+                  <Button
+                    disabled={update.isPending}
+                    onClick={() => setStatus("active")}
+                  >
+                    Resume
+                  </Button>
+                ) : null}
+                {r.status !== "ended" ? (
+                  <Button
+                    variant="outline"
+                    nativeButton={false}
+                    render={
+                      <Link href={`/${slug}/invoices/recurring/${r.id}/edit`} />
+                    }
+                  >
+                    Edit
+                  </Button>
+                ) : null}
+                <Button variant="outline" onClick={() => setDialog("delete")}>
+                  Delete
                 </Button>
-              </>
-            ) : r.status === "paused" ? (
-              <Button
-                disabled={update.isPending}
-                onClick={() => setStatus("active")}
-              >
-                Resume
-              </Button>
+              </div>
             ) : null}
-            {r.status !== "ended" ? (
-              <Button
-                variant="outline"
-                nativeButton={false}
-                render={
-                  <Link href={`/${slug}/invoices/recurring/${r.id}/edit`} />
-                }
-              >
-                Edit
-              </Button>
-            ) : null}
-            <Button variant="outline" onClick={() => setDialog("delete")}>
-              Delete
-            </Button>
-          </div>
-        ) : null}
-      </div>
+          </>
+        }
+      />
 
       {r.lastError ? (
         <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">

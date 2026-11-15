@@ -29,6 +29,8 @@ import { formatDate, money } from "@/lib/format"
 import { useDashboard } from "../api"
 import { BarList, ColumnChart } from "./bar-charts"
 import { StatTile } from "./stat-tile"
+import { PageHeader } from "@/components/page-header"
+import { WeekTimeCard } from "@/features/time"
 
 type Amounts = { currency: string; amount: number }[]
 
@@ -62,37 +64,34 @@ export function Dashboard() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            {me.data
-              ? `Welcome back, ${me.data.user.name.split(" ")[0]}`
-              : "Dashboard"}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {formatDate(d.today, locale)}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Can permission="quote.create">
-            <Button
-              variant="outline"
-              nativeButton={false}
-              render={<Link href={`${base}/quotes/new`} />}
-            >
-              New quote
-            </Button>
-          </Can>
-          <Can permission="invoice.create">
-            <Button
-              nativeButton={false}
-              render={<Link href={`${base}/invoices/new`} />}
-            >
-              New invoice
-            </Button>
-          </Can>
-        </div>
-      </div>
+      <PageHeader
+        title={
+          me.data ? `Welcome back, ${me.data.user.name.split(" ")[0]}` : "Home"
+        }
+        breadcrumb={null}
+        description={formatDate(d.today, locale)}
+        actions={
+          <>
+            <Can permission="quote.create">
+              <Button
+                variant="outline"
+                nativeButton={false}
+                render={<Link href={`${base}/quotes/new`} />}
+              >
+                New quote
+              </Button>
+            </Can>
+            <Can permission="invoice.create">
+              <Button
+                nativeButton={false}
+                render={<Link href={`${base}/invoices/new`} />}
+              >
+                New invoice
+              </Button>
+            </Can>
+          </>
+        }
+      />
 
       {isEmpty ? <GettingStarted base={base} /> : null}
 
@@ -150,6 +149,10 @@ export function Dashboard() {
           />
         ) : null}
       </div>
+
+      <Can permission="time.track">
+        <WeekTimeCard today={d.today} />
+      </Can>
 
       {d.receivables && d.receivables.draftCount > 0 ? (
         <p className="text-sm">

@@ -52,6 +52,7 @@ import {
 } from "../api/mutations"
 import { useInvoice } from "../api/queries"
 import { InvoiceStatusBadge } from "./invoice-status-badge"
+import { PageHeader } from "@/components/page-header"
 
 export function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
   const invoice = useInvoice(invoiceId)
@@ -109,122 +110,122 @@ function InvoiceDetailView({ invoice }: { invoice: Invoice }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <Link
-            href={`/${slug}/invoices`}
-            className="text-sm text-muted-foreground hover:underline"
-          >
-            ← Invoices
-          </Link>
-          <h1 className="mt-1 flex items-center gap-2 text-2xl font-semibold tracking-tight">
-            {invoice.number ?? "Draft invoice"}
-            <InvoiceStatusBadge status={invoice.displayStatus} />
-          </h1>
-          {invoice.title ? (
-            <p className="text-sm text-muted-foreground">{invoice.title}</p>
-          ) : null}
-          <p className="mt-1 text-xs text-muted-foreground">
-            {invoice.recurringId ? (
-              <>
-                <Link
-                  className="underline"
-                  href={`/${slug}/invoices/recurring/${invoice.recurringId}`}
-                >
-                  Recurring schedule
-                </Link>
-                {" · "}
-              </>
+      <PageHeader
+        title={invoice.number ?? "Draft invoice"}
+        badge={<InvoiceStatusBadge status={invoice.displayStatus} />}
+        meta={
+          <>
+            {invoice.title ? (
+              <p className="text-sm text-muted-foreground">{invoice.title}</p>
             ) : null}
-            {invoice.quoteId ? (
-              <>
-                From quote{" "}
-                <Link
-                  className="underline"
-                  href={`/${slug}/quotes/${invoice.quoteId}`}
-                >
-                  {invoice.quoteNumber}
-                </Link>
-                {" · "}
-              </>
-            ) : null}
-            {invoice.lastSentAt
-              ? `Last emailed to ${invoice.lastSentTo} on ${formatDate(invoice.lastSentAt, locale)}`
-              : issued
-                ? "Not emailed yet"
+            <p className="mt-1 text-xs text-muted-foreground">
+              {invoice.recurringId ? (
+                <>
+                  <Link
+                    className="underline"
+                    href={`/${slug}/invoices/recurring/${invoice.recurringId}`}
+                  >
+                    Recurring schedule
+                  </Link>
+                  {" · "}
+                </>
+              ) : null}
+              {invoice.quoteId ? (
+                <>
+                  From quote{" "}
+                  <Link
+                    className="underline"
+                    href={`/${slug}/quotes/${invoice.quoteId}`}
+                  >
+                    {invoice.quoteNumber}
+                  </Link>
+                  {" · "}
+                </>
+              ) : null}
+              {invoice.lastSentAt
+                ? `Last emailed to ${invoice.lastSentTo} on ${formatDate(invoice.lastSentAt, locale)}`
+                : issued
+                  ? "Not emailed yet"
+                  : null}
+              {invoice.status === "void" && invoice.voidReason
+                ? `Voided: ${invoice.voidReason}`
                 : null}
-            {invoice.status === "void" && invoice.voidReason
-              ? `Voided: ${invoice.voidReason}`
-              : null}
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {draft && can("invoice.update") ? (
-            <Button
-              variant="outline"
-              nativeButton={false}
-              render={<Link href={`/${slug}/invoices/${invoice.id}/edit`} />}
-            >
-              Edit
-            </Button>
-          ) : null}
-          {draft && can("invoice.send") ? (
-            <Button
-              onClick={() => setDialog("issue")}
-              disabled={action.isPending}
-            >
-              Issue invoice
-            </Button>
-          ) : null}
-          {issued && invoice.amountDue > 0 && can("payment.record") ? (
-            <Button variant="outline" onClick={() => setDialog("pay")}>
-              Record payment
-            </Button>
-          ) : null}
-          {issued && can("invoice.send") ? (
-            <Button onClick={() => setDialog("send")}>
-              {invoice.lastSentAt ? "Send again" : "Send"}
-            </Button>
-          ) : null}
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={<Button variant="outline">More</Button>}
-            />
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                onClick={() =>
-                  openPdf(`/v1/invoices/${invoice.id}/pdf`).catch((e) =>
-                    toast.error(errorMessage(e))
-                  )
-                }
-              >
-                Download PDF
-              </DropdownMenuItem>
-              {can("invoice.create") ? (
-                <DropdownMenuItem onClick={() => run("duplicate")}>
-                  Duplicate
-                </DropdownMenuItem>
-              ) : null}
-              {issued && invoice.amountPaid === 0 && can("invoice.void") ? (
-                <DropdownMenuItem
-                  variant="destructive"
-                  onClick={() => setDialog("void")}
-                >
-                  Void invoice
-                </DropdownMenuItem>
-              ) : null}
+            </p>
+          </>
+        }
+        actions={
+          <>
+            <div className="flex flex-wrap gap-2">
               {draft && can("invoice.update") ? (
-                <DropdownMenuItem
-                  variant="destructive"
-                  onClick={() => setDialog("delete")}
+                <Button
+                  variant="outline"
+                  nativeButton={false}
+                  render={
+                    <Link href={`/${slug}/invoices/${invoice.id}/edit`} />
+                  }
                 >
-                  Delete draft
-                </DropdownMenuItem>
+                  Edit
+                </Button>
               ) : null}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
+              {draft && can("invoice.send") ? (
+                <Button
+                  onClick={() => setDialog("issue")}
+                  disabled={action.isPending}
+                >
+                  Issue invoice
+                </Button>
+              ) : null}
+              {issued && invoice.amountDue > 0 && can("payment.record") ? (
+                <Button variant="outline" onClick={() => setDialog("pay")}>
+                  Record payment
+                </Button>
+              ) : null}
+              {issued && can("invoice.send") ? (
+                <Button onClick={() => setDialog("send")}>
+                  {invoice.lastSentAt ? "Send again" : "Send"}
+                </Button>
+              ) : null}
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={<Button variant="outline">More</Button>}
+                />
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onClick={() =>
+                      openPdf(`/v1/invoices/${invoice.id}/pdf`).catch((e) =>
+                        toast.error(errorMessage(e))
+                      )
+                    }
+                  >
+                    Download PDF
+                  </DropdownMenuItem>
+                  {can("invoice.create") ? (
+                    <DropdownMenuItem onClick={() => run("duplicate")}>
+                      Duplicate
+                    </DropdownMenuItem>
+                  ) : null}
+                  {issued && invoice.amountPaid === 0 && can("invoice.void") ? (
+                    <DropdownMenuItem
+                      variant="destructive"
+                      onClick={() => setDialog("void")}
+                    >
+                      Void invoice
+                    </DropdownMenuItem>
+                  ) : null}
+                  {draft && can("invoice.update") ? (
+                    <DropdownMenuItem
+                      variant="destructive"
+                      onClick={() => setDialog("delete")}
+                    >
+                      Delete draft
+                    </DropdownMenuItem>
+                  ) : null}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </>
+        }
+      />
 
       <DocumentSheet
         issuer={invoice.issuerSnapshot ?? toParty(profile.data)}

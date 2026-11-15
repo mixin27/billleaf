@@ -5,6 +5,7 @@ import Link from "next/link"
 
 import { InvoiceEditor, useInvoice } from "@/features/invoices"
 import { useWorkspaceStore } from "@/features/workspace"
+import { PageHeader } from "@/components/page-header"
 
 export function EditInvoice({ invoiceId }: { invoiceId: string }) {
   const invoice = useInvoice(invoiceId)
@@ -24,9 +25,7 @@ export function EditInvoice({ invoiceId }: { invoiceId: string }) {
   }
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold tracking-tight">
-        Edit draft invoice
-      </h1>
+      <PageHeader title="Edit draft invoice" />
       <InvoiceEditor invoice={invoice.data} />
     </div>
   )

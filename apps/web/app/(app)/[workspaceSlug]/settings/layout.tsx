@@ -1,4 +1,5 @@
 import { SettingsNav } from "@/components/layout/settings-nav"
+import { PageHeader } from "@/components/page-header"
 
 export default function SettingsLayout({
   children,
@@ -7,7 +8,7 @@ export default function SettingsLayout({
 }) {
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
+      <PageHeader title="Settings" />
       <SettingsNav />
       {children}
     </div>

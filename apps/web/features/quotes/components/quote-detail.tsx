@@ -43,6 +43,7 @@ import {
 } from "../api/mutations"
 import { useQuote } from "../api/queries"
 import { QuoteStatusBadge } from "./quote-status-badge"
+import { PageHeader } from "@/components/page-header"
 
 export function QuoteDetail({ quoteId }: { quoteId: string }) {
   const quote = useQuote(quoteId)
@@ -100,143 +101,146 @@ function QuoteDetailView({ quote }: { quote: Quote }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <Link
-            href={`/${slug}/quotes`}
-            className="text-sm text-muted-foreground hover:underline"
-          >
-            ← Quotes
-          </Link>
-          <h1 className="mt-1 flex items-center gap-2 text-2xl font-semibold tracking-tight">
-            {quote.number ?? "Draft quote"}
-            <QuoteStatusBadge quote={quote} />
-          </h1>
-          {quote.title ? (
-            <p className="text-sm text-muted-foreground">{quote.title}</p>
-          ) : null}
-          {quote.invoiceId ? (
-            <p className="mt-1 text-sm">
-              Invoiced as{" "}
-              <Link
-                className="underline"
-                href={`/${slug}/invoices/${quote.invoiceId}`}
-              >
-                {quote.invoiceNumber ?? "draft invoice"}
-              </Link>
-            </p>
-          ) : null}
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {draft && can("quote.update") ? (
-            <Button
-              variant="outline"
-              nativeButton={false}
-              render={<Link href={`/${slug}/quotes/${quote.id}/edit`} />}
-            >
-              Edit
-            </Button>
-          ) : null}
-          {draft && can("quote.send") ? (
-            <Button
-              onClick={() => setConfirm("send")}
-              disabled={action.isPending}
-            >
-              Mark as sent
-            </Button>
-          ) : null}
-          {!draft && can("quote.send") ? (
-            <Button variant="outline" onClick={() => setEmailing(true)}>
-              Email
-            </Button>
-          ) : null}
-          {quote.status === "sent" && can("quote.update") ? (
-            <>
-              <Button
-                variant="outline"
-                onClick={() => run("decline")}
-                disabled={action.isPending}
-              >
-                Declined
-              </Button>
-              <Button onClick={() => run("accept")} disabled={action.isPending}>
-                Accepted
-              </Button>
-            </>
-          ) : null}
-          {quote.status === "accepted" &&
-          !quote.invoiceId &&
-          can("invoice.create") ? (
-            <Button
-              disabled={convert.isPending}
-              onClick={() =>
-                convert.mutate(undefined, {
-                  onSuccess: (inv) => {
-                    toast.success("Draft invoice created from quote")
-                    router.push(`/${slug}/invoices/${inv.id}`)
-                  },
-                  onError: (e) => toast.error(errorMessage(e)),
-                })
-              }
-            >
-              Create invoice
-            </Button>
-          ) : null}
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={<Button variant="outline">More</Button>}
-            />
-            <DropdownMenuContent align="end">
-              {quote.status === "accepted" && can("project.create") ? (
-                <DropdownMenuItem
+      <PageHeader
+        title={quote.number ?? "Draft quote"}
+        badge={<QuoteStatusBadge quote={quote} />}
+        meta={
+          <>
+            {quote.title ? (
+              <p className="text-sm text-muted-foreground">{quote.title}</p>
+            ) : null}
+            {quote.invoiceId ? (
+              <p className="mt-1 text-sm">
+                Invoiced as{" "}
+                <Link
+                  className="underline"
+                  href={`/${slug}/invoices/${quote.invoiceId}`}
+                >
+                  {quote.invoiceNumber ?? "draft invoice"}
+                </Link>
+              </p>
+            ) : null}
+          </>
+        }
+        actions={
+          <>
+            <div className="flex flex-wrap gap-2">
+              {draft && can("quote.update") ? (
+                <Button
+                  variant="outline"
+                  nativeButton={false}
+                  render={<Link href={`/${slug}/quotes/${quote.id}/edit`} />}
+                >
+                  Edit
+                </Button>
+              ) : null}
+              {draft && can("quote.send") ? (
+                <Button
+                  onClick={() => setConfirm("send")}
+                  disabled={action.isPending}
+                >
+                  Mark as sent
+                </Button>
+              ) : null}
+              {!draft && can("quote.send") ? (
+                <Button variant="outline" onClick={() => setEmailing(true)}>
+                  Email
+                </Button>
+              ) : null}
+              {quote.status === "sent" && can("quote.update") ? (
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={() => run("decline")}
+                    disabled={action.isPending}
+                  >
+                    Declined
+                  </Button>
+                  <Button
+                    onClick={() => run("accept")}
+                    disabled={action.isPending}
+                  >
+                    Accepted
+                  </Button>
+                </>
+              ) : null}
+              {quote.status === "accepted" &&
+              !quote.invoiceId &&
+              can("invoice.create") ? (
+                <Button
+                  disabled={convert.isPending}
                   onClick={() =>
-                    startProject.mutate(undefined, {
-                      onSuccess: (p) => {
-                        toast.success("Project started from quote")
-                        router.push(`/${slug}/projects/${p.id}`)
+                    convert.mutate(undefined, {
+                      onSuccess: (inv) => {
+                        toast.success("Draft invoice created from quote")
+                        router.push(`/${slug}/invoices/${inv.id}`)
                       },
                       onError: (e) => toast.error(errorMessage(e)),
                     })
                   }
                 >
-                  Start project
-                </DropdownMenuItem>
+                  Create invoice
+                </Button>
               ) : null}
-              {!draft && can("contract.create") ? (
-                <DropdownMenuItem
-                  onClick={() =>
-                    router.push(`/${slug}/contracts/new?quoteId=${quote.id}`)
-                  }
-                >
-                  Create contract
-                </DropdownMenuItem>
-              ) : null}
-              <DropdownMenuItem
-                onClick={() =>
-                  openPdf(`/v1/quotes/${quote.id}/pdf`).catch((e) =>
-                    toast.error(errorMessage(e))
-                  )
-                }
-              >
-                Download PDF
-              </DropdownMenuItem>
-              {can("quote.create") ? (
-                <DropdownMenuItem onClick={() => run("duplicate")}>
-                  Duplicate
-                </DropdownMenuItem>
-              ) : null}
-              {draft && can("quote.delete") ? (
-                <DropdownMenuItem
-                  variant="destructive"
-                  onClick={() => setConfirm("delete")}
-                >
-                  Delete draft
-                </DropdownMenuItem>
-              ) : null}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={<Button variant="outline">More</Button>}
+                />
+                <DropdownMenuContent align="end">
+                  {quote.status === "accepted" && can("project.create") ? (
+                    <DropdownMenuItem
+                      onClick={() =>
+                        startProject.mutate(undefined, {
+                          onSuccess: (p) => {
+                            toast.success("Project started from quote")
+                            router.push(`/${slug}/projects/${p.id}`)
+                          },
+                          onError: (e) => toast.error(errorMessage(e)),
+                        })
+                      }
+                    >
+                      Start project
+                    </DropdownMenuItem>
+                  ) : null}
+                  {!draft && can("contract.create") ? (
+                    <DropdownMenuItem
+                      onClick={() =>
+                        router.push(
+                          `/${slug}/contracts/new?quoteId=${quote.id}`
+                        )
+                      }
+                    >
+                      Create contract
+                    </DropdownMenuItem>
+                  ) : null}
+                  <DropdownMenuItem
+                    onClick={() =>
+                      openPdf(`/v1/quotes/${quote.id}/pdf`).catch((e) =>
+                        toast.error(errorMessage(e))
+                      )
+                    }
+                  >
+                    Download PDF
+                  </DropdownMenuItem>
+                  {can("quote.create") ? (
+                    <DropdownMenuItem onClick={() => run("duplicate")}>
+                      Duplicate
+                    </DropdownMenuItem>
+                  ) : null}
+                  {draft && can("quote.delete") ? (
+                    <DropdownMenuItem
+                      variant="destructive"
+                      onClick={() => setConfirm("delete")}
+                    >
+                      Delete draft
+                    </DropdownMenuItem>
+                  ) : null}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </>
+        }
+      />
 
       <DocumentSheet
         issuer={quote.issuerSnapshot ?? toParty(profile.data)}
