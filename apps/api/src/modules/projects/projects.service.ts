@@ -194,6 +194,12 @@ export class ProjectsService {
 
   async remove(id: string): Promise<void> {
     await this.require(id)
+    if (await this.repo.hasTimeEntries(id)) {
+      throw new ConflictException({
+        message: "This project has tracked time. Archive it instead.",
+        code: "project_has_time",
+      })
+    }
     await this.repo.delete(id)
     await this.audit.record("project.deleted", {
       resourceType: "project",

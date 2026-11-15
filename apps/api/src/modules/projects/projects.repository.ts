@@ -1,6 +1,14 @@
 import { Injectable } from "@nestjs/common"
 import type { TaskStatus } from "@workspace/contracts"
-import { clients, member, projects, quotes, tasks, user } from "@workspace/db"
+import {
+  clients,
+  member,
+  projects,
+  quotes,
+  tasks,
+  timeEntries,
+  user,
+} from "@workspace/db"
 import {
   and,
   asc,
@@ -148,6 +156,20 @@ export class ProjectsRepository {
       .update(projects)
       .set(values)
       .where(and(this.scope(), eq(projects.id, id)))
+  }
+
+  async hasTimeEntries(id: string) {
+    const [row] = await this.db
+      .select({ id: timeEntries.id })
+      .from(timeEntries)
+      .where(
+        and(
+          eq(timeEntries.workspaceId, this.ctx.workspaceId),
+          eq(timeEntries.projectId, id)
+        )
+      )
+      .limit(1)
+    return Boolean(row)
   }
 
   async delete(id: string) {

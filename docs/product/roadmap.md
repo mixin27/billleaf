@@ -27,7 +27,7 @@ Phases are scope buckets, not dates. Each phase ends with a production deploy.
 ## Phase 2 — Connected work _(in progress)_
 
 - ✅ Projects & tasks (task board, assignees, start a project from an accepted quote).
-- Time tracking → billable time to invoice lines.
+- ✅ Time tracking (global timer, week timesheet, manual entries) → billable time to invoice lines.
 - Contracts (templates; e-sign later).
 - Recurring invoices.
 - **SaaS billing live** (MoR provider, entitlements enforced).

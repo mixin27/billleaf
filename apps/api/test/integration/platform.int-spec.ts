@@ -781,3 +781,191 @@ describe("projects & tasks", () => {
     )
   })
 })
+
+describe("time tracking", () => {
+  it("runs one timer per member, enforces own-vs-all permissions, invoices unbilled time once", async () => {
+    const owner = new Client(t)
+    await owner.signUp("Tracker")
+    const ws = await owner.createWorkspace("Timekeeping")
+    await owner.patch("/v1/workspace", {
+      timezone: "UTC",
+      defaultTaxRateBps: 0,
+    })
+    const client = (await owner.post("/v1/clients", { name: "Billable Co" }))
+      .body
+    const project = (
+      await owner.post("/v1/projects", {
+        name: "Retainer",
+        clientId: client.id,
+        hourlyRate: 10_000,
+      })
+    ).body
+    const other = (
+      await owner.post("/v1/projects", {
+        name: "Side",
+        clientId: client.id,
+        hourlyRate: 10_000,
+      })
+    ).body
+    const task = (
+      await owner.post(`/v1/projects/${project.id}/tasks`, { title: "Design" })
+    ).body
+
+    // Timer: starting a second one stops the first.
+    const first = await owner.post("/v1/time-entries/start", {
+      projectId: project.id,
+      taskId: task.id,
+    })
+    expect(first.status).toBe(201)
+    expect(first.body.isRunning).toBe(true)
+    const second = await owner.post("/v1/time-entries/start", {
+      projectId: other.id,
+    })
+    expect(second.body.projectName).toBe("Side")
+    expect((await owner.get("/v1/time-entries/running")).body.entry.id).toBe(
+      second.body.id
+    )
+    const stopped = await owner.post("/v1/time-entries/stop")
+    expect(stopped.body).toMatchObject({
+      isRunning: false,
+      durationSeconds: expect.any(Number),
+    })
+    expect((await owner.post("/v1/time-entries/stop")).body.code).toBe(
+      "no_timer"
+    )
+    expect(
+      (
+        await owner.post("/v1/time-entries/start", {
+          projectId: project.id,
+          taskId: other.id,
+        })
+      ).status
+    ).toBe(400) // task not in project
+
+    // Manual entries: 1.5 h on Design, 30 min general.
+    const today = new Date().toISOString().slice(0, 10)
+    const design = await owner.post("/v1/time-entries", {
+      projectId: project.id,
+      taskId: task.id,
+      entryDate: today,
+      durationMinutes: 90,
+    })
+    expect(design.body.durationSeconds).toBe(5_400)
+    await owner.post("/v1/time-entries", {
+      projectId: project.id,
+      startedAt: `${today}T08:00:00.000Z`,
+      endedAt: `${today}T08:30:00.000Z`,
+    })
+    expect(
+      (
+        await owner.post("/v1/time-entries", {
+          projectId: project.id,
+          startedAt: `${today}T09:00:00.000Z`,
+          endedAt: `${today}T08:00:00.000Z`,
+        })
+      ).status
+    ).toBe(422)
+
+    // A Member (time.track, no time.manage) sees and edits only their own time.
+    const member = new Client(t)
+    const { email } = await member.signUp("Contractor")
+    await t.db
+      .update(workspaceSubscriptions)
+      .set({ planKey: "team" })
+      .where(eq(workspaceSubscriptions.workspaceId, ws.id))
+    const role = (
+      await owner.post("/v1/roles", {
+        name: "Tracker only",
+        permissions: ["project.read", "time.track"],
+      })
+    ).body
+    const inv = (
+      await owner.post("/v1/invitations", { email, roleId: role.id })
+    ).body
+    await member.post("/api/auth/organization/accept-invitation", {
+      invitationId: inv.id,
+    })
+    member.workspaceId = ws.id
+    const mine = await member.post("/v1/time-entries", {
+      projectId: project.id,
+      entryDate: today,
+      durationMinutes: 60,
+    })
+    expect(mine.status).toBe(201)
+    const memberList = (
+      await member.get(`/v1/time-entries?from=${today}&to=${today}`)
+    ).body
+    expect(memberList.items.every((e: { isMine: boolean }) => e.isMine)).toBe(
+      true
+    )
+    expect(
+      (
+        await member.patch(`/v1/time-entries/${design.body.id}`, {
+          description: "hijack",
+        })
+      ).status
+    ).toBe(404)
+    const ownerList = (
+      await owner.get(
+        `/v1/time-entries?from=${today}&to=${today}&projectId=${project.id}`
+      )
+    ).body
+    expect(ownerList.items).toHaveLength(4) // first timer + 2 manual + the member's
+
+    // Summary + invoice from time: one line per task, priced at the hourly rate.
+    const summary = (await owner.get(`/v1/projects/${project.id}/time-summary`))
+      .body
+    // 1.5 h + 0.5 h + member's 1 h + the (seconds-long) first timer
+    expect(summary.unbilledSeconds).toBeGreaterThan(10_800)
+    expect(summary.unbilledAmount).toBe(
+      Math.round((Math.round(summary.unbilledSeconds / 36) / 100) * 10_000)
+    )
+    const invoice = await owner.post("/v1/invoices/from-time", {
+      projectId: project.id,
+    })
+    expect(invoice.status).toBe(201)
+    expect(invoice.body.status).toBe("draft")
+    const designLine = invoice.body.lines.find((l: { description: string }) =>
+      l.description.startsWith("Design")
+    )
+    expect(designLine).toMatchObject({ unitPrice: 10_000 })
+    expect(
+      (await owner.post("/v1/invoices/from-time", { projectId: project.id }))
+        .body.code
+    ).toBe("no_unbilled_time")
+
+    // Invoiced entries are locked; deleting the draft releases them; voiding releases too.
+    expect(
+      (
+        await owner.patch(`/v1/time-entries/${design.body.id}`, {
+          description: "x",
+        })
+      ).body.code
+    ).toBe("time_entry_invoiced")
+    await owner.del(`/v1/invoices/${invoice.body.id}`)
+    expect(
+      (await owner.get(`/v1/projects/${project.id}/time-summary`)).body
+        .unbilledSeconds
+    ).toBe(summary.unbilledSeconds)
+    const again = (
+      await owner.post("/v1/invoices/from-time", { projectId: project.id })
+    ).body
+    await owner.post(`/v1/invoices/${again.id}/issue`)
+    expect(
+      (await owner.get(`/v1/projects/${project.id}/time-summary`)).body
+        .unbilledSeconds
+    ).toBe(0)
+    await owner.post(`/v1/invoices/${again.id}/void`, {
+      reason: "Wrong rate used",
+    })
+    expect(
+      (await owner.get(`/v1/projects/${project.id}/time-summary`)).body
+        .unbilledSeconds
+    ).toBe(summary.unbilledSeconds)
+
+    // Projects with time can't be deleted.
+    expect((await owner.del(`/v1/projects/${project.id}`)).body.code).toBe(
+      "project_has_time"
+    )
+  })
+})

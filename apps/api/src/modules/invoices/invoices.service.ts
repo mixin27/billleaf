@@ -286,6 +286,7 @@ export class InvoicesService {
         voidedAt: new Date(),
         voidReason: reason,
       })
+      await this.repo.releaseTime(tx, id)
     })
     await this.audit.record("invoice.voided", {
       resourceType: "invoice",

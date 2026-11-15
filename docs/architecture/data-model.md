@@ -106,9 +106,17 @@ Recording a payment locks the invoice row (`SELECT … FOR UPDATE`), rejects ove
 
 Task moves send `afterTaskId` (null = top) and optionally a new `status`; the API places the task at the midpoint of its new neighbours and renumbers the column only when the gap gets too small. An accepted quote can start a fixed-price project budgeted at the quote total (one project per quote). Clients with projects can't be deleted.
 
+### Time tracking (`time.ts`) — Phase 2
+
+| Table          | Notes                                                                                                                                                                                                                    |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `time_entries` | `project_id` (restrict), `task_id` (set null), `member_id`, `description`, `entry_date` (workspace-local date), `started_at`, `ended_at` (null = running timer), `duration_seconds`, `billable`, `invoice_id` (set null) |
+
+Rules: one running timer per member (partial unique index `WHERE ended_at IS NULL`; starting a timer stops the current one). Own entries need `time.track`, others' need `time.manage`, reading others' needs `time.read`. **Invoice from time** turns billable, finished, uninvoiced entries into a draft invoice (one line per task, hours = seconds rounded to 0.01 h, at the project's hourly rate); entries are claimed atomically and locked. Deleting that draft (FK set null) or voiding the invoice releases them. Projects with time can't be deleted.
+
 ## Planned business tables (Phase 1+)
 
-`tax_rates`, `notifications`, then `time_entries`, `contracts`, `contract_templates`.
+`tax_rates`, `notifications`, then `contracts`, `contract_templates`.
 
 ```mermaid
 erDiagram
