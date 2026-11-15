@@ -40,9 +40,9 @@ export interface DocumentPdfData {
   logo?: Buffer | null
 }
 
-const INK = "#142B2B"
-const MUTED = "#5B6B6B"
-const RULE = "#DDE5E2"
+export const INK = "#142B2B"
+export const MUTED = "#5B6B6B"
+export const RULE = "#DDE5E2"
 
 // ── Fonts ────────────────────────────────────────────────────────────────
 // Noto Sans (Latin, Greek, Cyrillic, Vietnamese) + Thai + Myanmar, OFL-1.1.
@@ -98,15 +98,18 @@ export function scriptRuns(text: string): { script: Script; text: string }[] {
   return runs
 }
 
+export type WriteStyle = { bold?: boolean; size?: number; color?: string }
+
 /**
- * Render a quote/invoice/receipt as an A4 PDF with embedded Unicode fonts
- * (so Thai/Burmese/Vietnamese names render) and the workspace logo.
+ * A4 document with the Unicode fonts registered and a script-aware `write`
+ * (switches font per Latin/Thai/Myanmar run so mixed text renders).
  */
-export function renderDocumentPdf(d: DocumentPdfData): Promise<Buffer> {
+export function createPdf(title: string, opts: { bufferPages?: boolean } = {}) {
   const doc = new PDFDocument({
     size: "A4",
     margin: 50,
-    info: { Title: `${d.title} ${d.number ?? ""}`.trim() },
+    info: { Title: title },
+    bufferPages: opts.bufferPages ?? false,
   })
   for (const [name, data] of Object.entries(fonts()))
     doc.registerFont(name, data)
@@ -117,26 +120,29 @@ export function renderDocumentPdf(d: DocumentPdfData): Promise<Buffer> {
   )
 
   type TextOpts = PDFKit.Mixins.TextOptions
-  /** Write text, switching font per script run. */
+  /** Write text, switching font per script run. Omit x/y to continue the flow. */
   const write = (
     text: string,
-    x: number,
-    y: number,
+    x: number | undefined,
+    y: number | undefined,
     opts: TextOpts = {},
-    style: { bold?: boolean; size?: number; color?: string } = {}
+    style: WriteStyle = {}
   ) => {
     if (style.size) doc.fontSize(style.size)
     if (style.color) doc.fillColor(style.color)
     const runs = scriptRuns(text)
     const font = (s: Script) => (style.bold ? `${s}-bold` : s)
     if (runs.length <= 1) {
-      doc.font(font(runs[0]?.script ?? "base")).text(text, x, y, opts)
+      doc.font(font(runs[0]?.script ?? "base"))
+      if (x === undefined) doc.text(text, opts)
+      else doc.text(text, x, y, opts)
       return
     }
     runs.forEach((r, i) => {
       doc.font(font(r.script))
-      const continued = i < runs.length - 1
-      if (i === 0) doc.text(r.text, x, y, { ...opts, continued })
+      const continued = i < runs.length - 1 || Boolean(opts.continued)
+      if (i === 0 && x !== undefined)
+        doc.text(r.text, x, y, { ...opts, continued })
       else doc.text(r.text, { ...opts, continued })
     })
   }
@@ -146,6 +152,20 @@ export function renderDocumentPdf(d: DocumentPdfData): Promise<Buffer> {
     )
     return doc.heightOfString(text, { width: w })
   }
+  const left = doc.page.margins.left
+  const width = doc.page.width - left - doc.page.margins.right
+  return { doc, done, write, heightOf, left, width }
+}
+
+/**
+ * Render a quote/invoice/receipt as an A4 PDF with embedded Unicode fonts
+ * (so Thai/Burmese/Vietnamese names render) and the workspace logo.
+ */
+export function renderDocumentPdf(d: DocumentPdfData): Promise<Buffer> {
+  const { doc, done, write, heightOf, left, width } = createPdf(
+    `${d.title} ${d.number ?? ""}`.trim()
+  )
+  type TextOpts = PDFKit.Mixins.TextOptions
 
   const accent = d.brandColor ?? INK
   const money = (amount: number) => {
@@ -155,9 +175,6 @@ export function renderDocumentPdf(d: DocumentPdfData): Promise<Buffer> {
       return formatMoney({ amount, currency: d.currency })
     }
   }
-  const left = doc.page.margins.left
-  const width = doc.page.width - left - doc.page.margins.right
-
   // Header: title + number left, logo (or stamp) right.
   write(
     d.title.toUpperCase(),

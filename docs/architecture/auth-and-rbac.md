@@ -28,7 +28,7 @@ role_permissions   role_id, permission_key
 member_roles       workspace_id, member_id, role_id   (member = Better Auth organization member)
 ```
 
-- **Vocabulary in code, assignments in data.** `PERMISSION_CATALOG` in `packages/contracts/src/iam/permissions.ts` defines every key as `<resource>.<action>`. It is synced to `permissions` on boot/deploy.
+- **Vocabulary in code, assignments in data.** `PERMISSION_CATALOG` in `packages/contracts/src/iam/permissions.ts` defines every key as `<resource>.<action>`. It is synced to `permissions` on boot/deploy, and the sync grants every key to locked (Owner) roles, so owners of existing workspaces get new keys automatically. Other existing roles only get a new key through a data migration.
 - **System role templates** live in code (`SYSTEM_ROLES` in `@workspace/contracts`), not in the DB. On workspace creation (`WorkspaceBootstrapService`, from Better Auth's `afterCreateOrganization` hook) they are **cloned** into workspace-scoped roles. **Owner is immutable** and a workspace must always keep at least one Owner.
 - Workspaces can create custom roles and change role ↔ permission mappings at runtime (Team plan entitlement).
 - A member may hold several roles; effective permissions = union.

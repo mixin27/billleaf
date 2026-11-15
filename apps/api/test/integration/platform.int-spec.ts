@@ -1,7 +1,12 @@
 import zlib from "node:zlib"
 
-import { workspaceSubscriptions } from "@workspace/db"
-import { eq } from "drizzle-orm"
+import {
+  rolePermissions,
+  roles,
+  syncPermissions,
+  workspaceSubscriptions,
+} from "@workspace/db"
+import { and, eq } from "drizzle-orm"
 import { ClsService } from "nestjs-cls"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
@@ -1178,5 +1183,232 @@ describe("recurring invoices", () => {
         })
       ).status
     ).toBe(403)
+  })
+})
+
+describe("contracts", () => {
+  it("drafts from a quote + template, blocks unresolved fields, sends, signs, voids, and renders a PDF", async () => {
+    const owner = new Client(t)
+    await owner.signUp("Counsel")
+    const ws = await owner.createWorkspace("Agreements")
+    await owner.patch("/v1/workspace", { legalName: "Agreements LLC" })
+    const client = (
+      await owner.post("/v1/clients", {
+        name: "Signer Co",
+        email: "legal@signer.test",
+      })
+    ).body
+    const quote = (
+      await owner.post("/v1/quotes", {
+        clientId: client.id,
+        title: "Brand refresh",
+        lines: [{ description: "Design", quantity: 1, unitPrice: 250_000 }],
+      })
+    ).body
+    await owner.post(`/v1/quotes/${quote.id}/send`)
+
+    const template = (
+      await owner.post("/v1/contract-templates", {
+        name: "Standard",
+        body: "Between {{business.legal_name}} and {{client.legal_name}}.\n\n## Fees\n- {{quote.total}} per {{quote.number}}\n- Starts {{contract.effective_date}}",
+      })
+    ).body
+    expect(template.id).toBeTruthy()
+
+    const draft = (
+      await owner.post("/v1/contracts", {
+        quoteId: quote.id,
+        templateId: template.id,
+      })
+    ).body
+    expect(draft).toMatchObject({
+      status: "draft",
+      number: null,
+      clientId: client.id,
+      title: "Brand refresh",
+      quoteId: quote.id,
+      unresolvedFields: ["contract.effective_date"],
+    })
+    expect(draft.renderedBody).toContain(
+      "Between Agreements LLC and Signer Co."
+    )
+    expect(draft.renderedBody).toContain("$2,500.00 per QUO-0001")
+
+    const blocked = await owner.post(`/v1/contracts/${draft.id}/send`)
+    expect(blocked.status).toBe(400)
+    expect(blocked.body.code).toBe("unresolved_fields")
+
+    // Editing the template later never changes existing contracts.
+    await owner.patch(`/v1/contract-templates/${template.id}`, {
+      body: "Changed",
+    })
+    await owner.patch(`/v1/contracts/${draft.id}`, {
+      effectiveDate: "2026-12-01",
+    })
+    const sent = (await owner.post(`/v1/contracts/${draft.id}/send`)).body
+    expect(sent).toMatchObject({
+      status: "sent",
+      number: "CON-0001", // the blocked attempt did not burn a number
+      unresolvedFields: [],
+    })
+    expect(sent.renderedBody).toContain("- Starts Dec 1, 2026")
+    expect(sent.clientSnapshot.name).toBe("Signer Co")
+
+    // Frozen: edits are rejected, and later client changes don't leak in.
+    expect(
+      (await owner.patch(`/v1/contracts/${draft.id}`, { title: "x" })).status
+    ).toBe(409)
+    await owner.patch(`/v1/clients/${client.id}`, { name: "Renamed Co" })
+    expect(
+      (await owner.get(`/v1/contracts/${draft.id}`)).body.renderedBody
+    ).toContain("and Signer Co.")
+
+    const future = await owner.post(`/v1/contracts/${draft.id}/sign`, {
+      signedByName: "Sam Signer",
+      signedAt: "2999-01-01",
+    })
+    expect(future.status).toBe(400)
+    const signed = (
+      await owner.post(`/v1/contracts/${draft.id}/sign`, {
+        signedByName: "Sam Signer",
+        signedAt: "2026-11-02",
+      })
+    ).body
+    expect(signed).toMatchObject({
+      status: "signed",
+      signedAt: "2026-11-02",
+      signedByName: "Sam Signer",
+    })
+    expect((await owner.post(`/v1/contracts/${draft.id}/decline`)).status).toBe(
+      409
+    )
+    expect((await owner.del(`/v1/contracts/${draft.id}`)).status).toBe(409)
+
+    const pdf = await t.app.inject({
+      method: "GET",
+      url: `/v1/contracts/${draft.id}/pdf`,
+      headers: owner.headers(),
+    })
+    expect(pdf.statusCode).toBe(200)
+    expect(pdf.rawPayload.subarray(0, 4).toString()).toBe("%PDF")
+    expect(
+      (await owner.post(`/v1/contracts/${draft.id}/email`, {})).status
+    ).toBe(200)
+
+    const voided = (
+      await owner.post(`/v1/contracts/${draft.id}/void`, {
+        reason: "Superseded",
+      })
+    ).body
+    expect(voided).toMatchObject({ status: "void", voidReason: "Superseded" })
+    expect(
+      (await owner.post(`/v1/contracts/${draft.id}/email`, {})).status
+    ).toBe(409)
+
+    // Drafts without a template need a body; drafts can be deleted.
+    expect(
+      (await owner.post("/v1/contracts", { clientId: client.id })).status
+    ).toBe(400)
+    const scratch = (
+      await owner.post("/v1/contracts", {
+        clientId: client.id,
+        title: "NDA",
+        body: "Keep it secret.",
+      })
+    ).body
+    expect((await owner.del(`/v1/contracts/${scratch.id}`)).status).toBe(204)
+
+    const list = (await owner.get("/v1/contracts?status=void")).body
+    expect(list.items.map((c: { id: string }) => c.id)).toEqual([draft.id])
+
+    // Another workspace can't link this workspace's quote.
+    const other = new Client(t)
+    await other.signUp("Outsider")
+    await other.createWorkspace("Elsewhere")
+    const theirs = (await other.post("/v1/clients", { name: "Theirs" })).body
+    expect(
+      (
+        await other.post("/v1/contracts", {
+          clientId: theirs.id,
+          quoteId: quote.id,
+          body: "x",
+        })
+      ).status
+    ).toBe(400)
+    expect((await other.get(`/v1/contracts/${draft.id}`)).status).toBe(404)
+    void ws
+  })
+
+  it("lets members draft contracts but not send them", async () => {
+    const owner = new Client(t)
+    await owner.signUp("Principal")
+    const ws = await owner.createWorkspace("Studio Two")
+    await t.db
+      .update(workspaceSubscriptions)
+      .set({ planKey: "team" })
+      .where(eq(workspaceSubscriptions.workspaceId, ws.id))
+    const roles = (await owner.get("/v1/roles")).body
+    const memberRole = roles.find((r: { slug: string }) => r.slug === "member")
+    expect(memberRole.permissions).toContain("contract.create")
+    expect(memberRole.permissions).not.toContain("contract.send")
+    expect(
+      roles.find((r: { slug: string }) => r.slug === "owner").permissions
+    ).toContain("contract.send")
+
+    const member = new Client(t)
+    const { email } = await member.signUp("Junior")
+    const inv = (
+      await owner.post("/v1/invitations", { email, roleId: memberRole.id })
+    ).body
+    await member.post("/api/auth/organization/accept-invitation", {
+      invitationId: inv.id,
+    })
+    member.workspaceId = ws.id
+
+    const client = (await owner.post("/v1/clients", { name: "Client" })).body
+    const draft = await member.post("/v1/contracts", {
+      clientId: client.id,
+      title: "Retainer",
+      body: "Work for {{client.name}}.",
+    })
+    expect(draft.status).toBe(201)
+    expect(draft.body.renderedBody).toBe("Work for Client.")
+    expect(
+      (await member.post(`/v1/contracts/${draft.body.id}/send`)).status
+    ).toBe(403)
+    expect(
+      (await owner.post(`/v1/contracts/${draft.body.id}/send`)).status
+    ).toBe(200)
+  })
+})
+
+describe("permission catalog sync", () => {
+  it("grants keys added later to existing Owner roles, and only to them", async () => {
+    const owner = new Client(t)
+    await owner.signUp("Founder")
+    const ws = await owner.createWorkspace("Older")
+    const wsRoles = await t.db
+      .select()
+      .from(roles)
+      .where(eq(roles.workspaceId, ws.id))
+    const ownerRole = wsRoles.find((r) => r.slug === "owner")!
+    const memberRole = wsRoles.find((r) => r.slug === "member")!
+    // Simulate a workspace created before `contract.send` existed.
+    await t.db
+      .delete(rolePermissions)
+      .where(
+        and(
+          eq(rolePermissions.roleId, ownerRole.id),
+          eq(rolePermissions.permissionKey, "contract.send")
+        )
+      )
+    await syncPermissions(t.db)
+    const granted = await t.db
+      .select({ roleId: rolePermissions.roleId })
+      .from(rolePermissions)
+      .where(eq(rolePermissions.permissionKey, "contract.send"))
+    const ids = granted.map((g) => g.roleId)
+    expect(ids).toContain(ownerRole.id)
+    expect(ids).not.toContain(memberRole.id)
   })
 })

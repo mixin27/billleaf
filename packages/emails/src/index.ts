@@ -104,12 +104,13 @@ export function invitationEmail(p: {
   }
 }
 
-/** A quote or invoice sent to a client, with the PDF attached. */
+/** A quote, invoice, receipt or contract sent to a client, with the PDF attached. */
 export function documentEmail(p: {
   to: string
-  kind: "Invoice" | "Quote" | "Receipt"
+  kind: "Invoice" | "Quote" | "Receipt" | "Contract"
   number: string
   workspaceName: string
+  /** Formatted amount; for contracts, the contract title. */
   amount: string
   dueOrValid?: string
   message?: string | null
@@ -119,9 +120,11 @@ export function documentEmail(p: {
   const intro =
     p.kind === "Invoice"
       ? `Please find invoice ${p.number} for ${p.amount}${p.dueOrValid ? `, due ${p.dueOrValid}` : ""}.`
-      : p.kind === "Receipt"
-        ? `Thank you for your payment of ${p.amount}${p.dueOrValid ? ` received on ${p.dueOrValid}` : ""}. Receipt ${p.number} is attached.`
-        : `Please find quote ${p.number} for ${p.amount}${p.dueOrValid ? `, valid until ${p.dueOrValid}` : ""}.`
+      : p.kind === "Contract"
+        ? `Please find contract ${p.number}, "${p.amount}", for your review and signature.`
+        : p.kind === "Receipt"
+          ? `Thank you for your payment of ${p.amount}${p.dueOrValid ? ` received on ${p.dueOrValid}` : ""}. Receipt ${p.number} is attached.`
+          : `Please find quote ${p.number} for ${p.amount}${p.dueOrValid ? `, valid until ${p.dueOrValid}` : ""}.`
   const message = p.message
     ? `<p style="white-space:pre-line">${esc(p.message)}</p>`
     : ""

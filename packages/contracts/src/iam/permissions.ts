@@ -51,8 +51,9 @@ export const PERMISSION_CATALOG = {
   contract: {
     read: "View contracts",
     create: "Create contracts",
-    update: "Edit contracts",
-    delete: "Delete contracts",
+    update: "Edit draft contracts and templates",
+    send: "Send contracts and record signatures",
+    delete: "Delete draft contracts",
   },
   project: {
     read: "View projects",
@@ -140,6 +141,8 @@ export const SYSTEM_ROLES = {
       ...readAll.filter((k) => !["billing.read", "audit.read"].includes(k)),
       "client.create",
       "client.update",
+      "contract.create",
+      "contract.update",
       "project.create",
       "project.update",
       "quote.create",
