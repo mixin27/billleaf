@@ -19,6 +19,7 @@ import { PaymentsModule } from "./modules/payments/payments.module.js"
 import { ProjectsModule } from "./modules/projects/projects.module.js"
 import { TimeModule } from "./modules/time/time.module.js"
 import { QuotesModule } from "./modules/quotes/quotes.module.js"
+import { RecurringModule } from "./modules/recurring/recurring.module.js"
 import { WorkspaceProfileModule } from "./modules/workspace/workspace-profile.module.js"
 
 @Module({
@@ -35,6 +36,7 @@ import { WorkspaceProfileModule } from "./modules/workspace/workspace-profile.mo
     ClientsModule,
     QuotesModule,
     InvoicesModule,
+    RecurringModule,
     PaymentsModule,
     ProjectsModule,
     TimeModule,

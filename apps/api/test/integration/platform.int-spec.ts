@@ -2,8 +2,10 @@ import zlib from "node:zlib"
 
 import { workspaceSubscriptions } from "@workspace/db"
 import { eq } from "drizzle-orm"
+import { ClsService } from "nestjs-cls"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
+import { RecurringService } from "../../src/modules/recurring/recurring.service.js"
 import { Client, startApp, type TestApp } from "./harness.js"
 
 let t: TestApp
@@ -1048,5 +1050,133 @@ describe("time after a member leaves", () => {
         })
       ).status
     ).toBe(200)
+  })
+})
+
+describe("recurring invoices", () => {
+  it("is plan-gated, generates one invoice per period (month-end safe), catches up, sends, and ends", async () => {
+    const owner = new Client(t)
+    await owner.signUp("Retainer")
+    const ws = await owner.createWorkspace("Retainers")
+    const client = (
+      await owner.post("/v1/clients", {
+        name: "Monthly Co",
+        email: "ap@monthly.test",
+      })
+    ).body
+    const body = {
+      clientId: client.id,
+      title: "Retainer",
+      startDate: "2026-01-31",
+      dueDays: 10,
+      maxOccurrences: 4,
+      lines: [{ description: "Retainer", quantity: 1, unitPrice: 100_000 }],
+    }
+    const gated = await owner.post("/v1/recurring-invoices", body)
+    expect(gated.status).toBe(403)
+    expect(gated.body.code).toBe("feature_not_in_plan")
+
+    await t.db
+      .update(workspaceSubscriptions)
+      .set({ planKey: "pro" })
+      .where(eq(workspaceSubscriptions.workspaceId, ws.id))
+    const schedule = (await owner.post("/v1/recurring-invoices", body)).body
+    expect(schedule).toMatchObject({
+      nextRunDate: "2026-01-31",
+      total: 100_000,
+    })
+
+    const first = await owner.post(`/v1/recurring-invoices/${schedule.id}/run`)
+    expect(first.status).toBe(200)
+    expect(first.body.schedule.nextRunDate).toBe("2026-02-28")
+    const inv = (await owner.get(`/v1/invoices/${first.body.invoiceId}`)).body
+    expect(inv).toMatchObject({
+      status: "draft",
+      issueDate: "2026-01-31",
+      dueDate: "2026-02-10",
+      recurringId: schedule.id,
+    })
+
+    // Worker path: catches up the missed periods; re-running is a no-op.
+    const cls = t.app.get(ClsService)
+    const svc = t.app.get(RecurringService)
+    const sweep = () =>
+      cls.run(async () => {
+        cls.set("workspaceId", ws.id)
+        return svc.generateDue(schedule.id)
+      })
+    // Switch to send mode before the catch-up so the last period is emailed.
+    await owner.patch(`/v1/recurring-invoices/${schedule.id}`, { mode: "send" })
+    expect(await sweep()).toBe(3)
+    expect(await sweep()).toBe(0)
+
+    const history = (
+      await owner.get(`/v1/recurring-invoices/${schedule.id}/invoices`)
+    ).body
+    expect(history.map((h: { period: string }) => h.period)).toEqual([
+      "2026-04-30",
+      "2026-03-31",
+      "2026-02-28",
+      "2026-01-31",
+    ])
+    expect(history[0].status).toBe("issued")
+    expect(history[0].number).toMatch(/^INV-/)
+    const ended = (await owner.get(`/v1/recurring-invoices/${schedule.id}`))
+      .body
+    expect(ended).toMatchObject({
+      status: "ended",
+      nextRunDate: null,
+      generatedCount: 4,
+    })
+    expect(
+      (await owner.post(`/v1/recurring-invoices/${schedule.id}/run`)).status
+    ).toBe(409)
+
+    // Deleting a schedule keeps its invoices.
+    expect(
+      (await owner.del(`/v1/recurring-invoices/${schedule.id}`)).status
+    ).toBe(204)
+    expect((await owner.get(`/v1/invoices/${inv.id}`)).body.recurringId).toBe(
+      null
+    )
+  })
+
+  it("pauses schedules whose workspace lost the feature", async () => {
+    const owner = new Client(t)
+    await owner.signUp("Downgrade")
+    const ws = await owner.createWorkspace("Downgraded")
+    const setPlan = (planKey: string) =>
+      t.db
+        .update(workspaceSubscriptions)
+        .set({ planKey })
+        .where(eq(workspaceSubscriptions.workspaceId, ws.id))
+    await setPlan("pro")
+    const client = (await owner.post("/v1/clients", { name: "Weekly Co" })).body
+    const schedule = (
+      await owner.post("/v1/recurring-invoices", {
+        clientId: client.id,
+        unit: "week",
+        startDate: "2026-11-01",
+        lines: [{ description: "Support", quantity: 1, unitPrice: 5_000 }],
+      })
+    ).body
+    await setPlan("free")
+    const cls = t.app.get(ClsService)
+    const generated = await cls.run(async () => {
+      cls.set("workspaceId", ws.id)
+      return t.app.get(RecurringService).generateDue(schedule.id)
+    })
+    expect(generated).toBe(0)
+    const paused = (await owner.get(`/v1/recurring-invoices/${schedule.id}`))
+      .body
+    expect(paused.status).toBe("paused")
+    expect(paused.lastError).toMatch(/plan/)
+    expect(
+      (
+        await owner.patch(`/v1/recurring-invoices/${schedule.id}`, {
+          status: "active",
+        })
+      ).status
+    ).toBe(403)
   })
 })

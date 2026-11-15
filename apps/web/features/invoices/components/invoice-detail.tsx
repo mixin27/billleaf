@@ -125,6 +125,17 @@ function InvoiceDetailView({ invoice }: { invoice: Invoice }) {
             <p className="text-sm text-muted-foreground">{invoice.title}</p>
           ) : null}
           <p className="mt-1 text-xs text-muted-foreground">
+            {invoice.recurringId ? (
+              <>
+                <Link
+                  className="underline"
+                  href={`/${slug}/invoices/recurring/${invoice.recurringId}`}
+                >
+                  Recurring schedule
+                </Link>
+                {" · "}
+              </>
+            ) : null}
             {invoice.quoteId ? (
               <>
                 From quote{" "}

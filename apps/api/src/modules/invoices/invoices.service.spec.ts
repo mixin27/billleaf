@@ -15,6 +15,8 @@ const invoice = (over: Partial<InvoiceWithRefs> = {}): InvoiceWithRefs => ({
   clientName: "Acme",
   quoteId: null,
   quoteNumber: null,
+  recurringId: null,
+  recurringPeriod: null,
   number: null,
   status: "draft",
   title: null,

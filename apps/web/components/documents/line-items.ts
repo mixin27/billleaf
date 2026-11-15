@@ -20,7 +20,10 @@ export const emptyLine = (taxBps = 0): LineFormValues => ({
 })
 
 export function toLineFormValues(
-  lines: LineItem[],
+  lines: Pick<
+    LineItem,
+    "description" | "quantity" | "unitPrice" | "taxRateBps"
+  >[],
   currency: string
 ): LineFormValues[] {
   return lines.map((l) => ({

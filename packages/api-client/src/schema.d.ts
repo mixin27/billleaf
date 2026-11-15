@@ -580,6 +580,70 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  "/v1/recurring-invoices": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["RecurringController_list_v1"]
+    put?: never
+    post: operations["RecurringController_create_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/recurring-invoices/{id}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["RecurringController_get_v1"]
+    put?: never
+    post?: never
+    delete: operations["RecurringController_remove_v1"]
+    options?: never
+    head?: never
+    patch: operations["RecurringController_update_v1"]
+    trace?: never
+  }
+  "/v1/recurring-invoices/{id}/invoices": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["RecurringController_history_v1"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/recurring-invoices/{id}/run": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["RecurringController_run_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   "/v1/payments": {
     parameters: {
       query?: never
@@ -1590,6 +1654,8 @@ export interface components {
       /** Format: date-time */
       updatedAt: string
       quoteNumber: string | null
+      recurringId: string | null
+      recurringPeriod: string | null
       notes: string | null
       terms: string | null
       lines: {
@@ -1668,6 +1734,152 @@ export interface components {
     }
     VoidInvoiceDto: {
       reason: string
+    }
+    RecurringDto_Output: {
+      id: string
+      clientId: string
+      clientName: string
+      title: string | null
+      currency: string
+      lines: {
+        description: string
+        quantity: number
+        unitPrice: number
+        taxRateBps: number
+      }[]
+      total: number
+      every: number
+      /** @enum {string} */
+      unit: "week" | "month" | "year"
+      /** Format: date */
+      startDate: string
+      /** Format: date */
+      endDate: string | null
+      maxOccurrences: number | null
+      /** Format: date */
+      nextRunDate: string | null
+      dueDays: number | null
+      /** @enum {string} */
+      mode: "draft" | "send"
+      /** @enum {string} */
+      status: "active" | "paused" | "ended"
+      notes: string | null
+      terms: string | null
+      generatedCount: number
+      /** Format: date-time */
+      lastRunAt: string | null
+      lastError: string | null
+      /** Format: date-time */
+      createdAt: string
+    }
+    HistoryDto_Output: {
+      id: string
+      number: string | null
+      status: string
+      period: string | null
+      total: number
+      amountPaid: number
+      currency: string
+      dueDate: string | null
+    }[]
+    CreateRecurringDto: {
+      /** Format: uuid */
+      clientId: string
+      title?: string | null
+      currency?: string
+      lines: {
+        description: string
+        quantity: number
+        unitPrice: number
+        /** @default 0 */
+        taxRateBps: number
+      }[]
+      /** @default 1 */
+      every: number
+      /**
+       * @default month
+       * @enum {string}
+       */
+      unit: "week" | "month" | "year"
+      /** Format: date */
+      startDate: string
+      /** Format: date */
+      endDate?: string | null
+      maxOccurrences?: number | null
+      dueDays?: number | null
+      /**
+       * @default draft
+       * @enum {string}
+       */
+      mode: "draft" | "send"
+      notes?: string | null
+      terms?: string | null
+    }
+    UpdateRecurringDto: {
+      title?: string | null
+      currency?: string
+      lines?: {
+        description: string
+        quantity: number
+        unitPrice: number
+        /** @default 0 */
+        taxRateBps: number
+      }[]
+      every?: number
+      /** @enum {string} */
+      unit?: "week" | "month" | "year"
+      /** Format: date */
+      endDate?: string | null
+      maxOccurrences?: number | null
+      dueDays?: number | null
+      /** @enum {string} */
+      mode?: "draft" | "send"
+      notes?: string | null
+      terms?: string | null
+      /** @enum {string} */
+      status?: "active" | "paused"
+    }
+    RunResultDto_Output: {
+      schedule: {
+        id: string
+        clientId: string
+        clientName: string
+        title: string | null
+        currency: string
+        lines: {
+          description: string
+          quantity: number
+          unitPrice: number
+          taxRateBps: number
+        }[]
+        total: number
+        every: number
+        /** @enum {string} */
+        unit: "week" | "month" | "year"
+        /** Format: date */
+        startDate: string
+        /** Format: date */
+        endDate: string | null
+        maxOccurrences: number | null
+        /** Format: date */
+        nextRunDate: string | null
+        dueDays: number | null
+        /** @enum {string} */
+        mode: "draft" | "send"
+        /** @enum {string} */
+        status: "active" | "paused" | "ended"
+        notes: string | null
+        terms: string | null
+        generatedCount: number
+        /** Format: date-time */
+        lastRunAt: string | null
+        lastError: string | null
+        /** Format: date-time */
+        createdAt: string
+      }
+      invoiceId: string | null
+      invoiceNumber: string | null
+      sent: boolean
     }
     PaymentListDto_Output: {
       items: {
@@ -3343,6 +3555,155 @@ export interface operations {
         }
         content: {
           "application/json": components["schemas"]["InvoiceDto_Output"]
+        }
+      }
+    }
+  }
+  RecurringController_list_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["RecurringDto_Output"][]
+        }
+      }
+    }
+  }
+  RecurringController_create_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateRecurringDto"]
+      }
+    }
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["RecurringDto_Output"]
+        }
+      }
+    }
+  }
+  RecurringController_get_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["RecurringDto_Output"]
+        }
+      }
+    }
+  }
+  RecurringController_remove_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  RecurringController_update_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateRecurringDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["RecurringDto_Output"]
+        }
+      }
+    }
+  }
+  RecurringController_history_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["HistoryDto_Output"]
+        }
+      }
+    }
+  }
+  RecurringController_run_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["RunResultDto_Output"]
         }
       }
     }

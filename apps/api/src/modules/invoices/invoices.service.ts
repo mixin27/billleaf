@@ -75,6 +75,8 @@ function toInvoice(
   return {
     ...toInvoiceSummary(inv, today),
     quoteNumber: inv.quoteNumber ?? null,
+    recurringId: inv.recurringId,
+    recurringPeriod: inv.recurringPeriod,
     notes: inv.notes,
     terms: inv.terms,
     lines: lines.map(toLineItem),
@@ -132,8 +134,13 @@ export class InvoicesService {
 
   async create(
     input: CreateInvoiceInput,
-    quoteId: string | null = null
+    origin: {
+      quoteId?: string | null
+      recurringId?: string
+      recurringPeriod?: string
+    } = {}
   ): Promise<Invoice> {
+    const quoteId = origin.quoteId ?? null
     const client = await this.activeClient(input.clientId)
     const profile = await this.profile.get()
     const issueDate = input.issueDate ?? todayIn(profile.timezone)
@@ -143,6 +150,8 @@ export class InvoicesService {
       {
         clientId: client.id,
         quoteId,
+        recurringId: origin.recurringId ?? null,
+        recurringPeriod: origin.recurringPeriod ?? null,
         title: input.title ?? null,
         currency: input.currency ?? client.currency ?? profile.defaultCurrency,
         issueDate,
@@ -159,7 +168,11 @@ export class InvoicesService {
     await this.audit.record("invoice.created", {
       resourceType: "invoice",
       resourceId: id,
-      metadata: quoteId ? { quoteId } : undefined,
+      metadata: quoteId
+        ? { quoteId }
+        : origin.recurringId
+          ? { recurringId: origin.recurringId, period: origin.recurringPeriod }
+          : undefined,
     })
     return this.get(id)
   }
@@ -196,7 +209,7 @@ export class InvoicesService {
             })
           ),
         },
-        quoteId
+        { quoteId }
       )
     } catch (e) {
       // Unique (quote_id) lost a race with a concurrent conversion.

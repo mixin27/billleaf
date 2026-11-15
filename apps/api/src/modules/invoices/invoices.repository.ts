@@ -154,6 +154,24 @@ export class InvoicesRepository {
       : null
   }
 
+  async findByRecurringPeriod(
+    recurringId: string,
+    period: string
+  ): Promise<InvoiceRow | null> {
+    const [row] = await this.db
+      .select()
+      .from(invoices)
+      .where(
+        and(
+          this.scope(),
+          eq(invoices.recurringId, recurringId),
+          eq(invoices.recurringPeriod, period)
+        )
+      )
+      .limit(1)
+    return row ?? null
+  }
+
   async findByQuote(quoteId: string): Promise<InvoiceRow | null> {
     const [row] = await this.db
       .select()
