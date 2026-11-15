@@ -1,6 +1,9 @@
 import { Module } from "@nestjs/common"
 
+import { MailModule } from "../mail/mail.module.js"
 import { AuditService } from "./audit/audit.service.js"
+import { InvitationsController } from "./invitations/invitations.controller.js"
+import { InvitationsService } from "./invitations/invitations.service.js"
 import { MeController } from "./me/me.controller.js"
 import { MembersController } from "./members/members.controller.js"
 import { MembersService } from "./members/members.service.js"
@@ -13,7 +16,13 @@ import { WorkspaceGuard } from "./workspace.guard.js"
 import { WorkspaceBootstrapService } from "./workspaces/workspace-bootstrap.service.js"
 
 @Module({
-  controllers: [MeController, RolesController, MembersController],
+  imports: [MailModule],
+  controllers: [
+    MeController,
+    RolesController,
+    MembersController,
+    InvitationsController,
+  ],
   providers: [
     AuditService,
     PermissionResolver,
@@ -21,6 +30,7 @@ import { WorkspaceBootstrapService } from "./workspaces/workspace-bootstrap.serv
     RolesRepository,
     RolesService,
     MembersService,
+    InvitationsService,
     WorkspaceBootstrapService,
     WorkspaceGuard,
   ],

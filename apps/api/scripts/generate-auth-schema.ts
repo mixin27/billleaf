@@ -30,6 +30,7 @@ const tables = getSchema({
     sendEmail: noop,
     onWorkspaceCreated: noop,
     onMemberAdded: noop,
+    onInvitationAccepted: noop,
   }),
   advanced: { database: AUTH_ADVANCED_DATABASE },
 } as never) as Record<string, { fields: Record<string, Field>; order?: number }>

@@ -20,7 +20,18 @@ Start lean: Sentry + Uptime Kuma + Dokploy logs on day one; add the Grafana stac
 ## Tracing
 
 - `requestId` propagated web → api via `x-request-id`; jobs carry the originating `requestId`.
-- Sentry releases tagged with the image sha; source maps uploaded in CI.
+- Sentry releases tagged with the image sha (`SENTRY_RELEASE`); source-map upload in CI is a follow-up (needs a Sentry auth token).
+
+## Sentry setup (implemented)
+
+| Where         | File                                                                                                                    | Enabled by                               |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| API + worker  | `apps/api/src/instrument.ts` (loaded with `node --import ./dist/instrument.js`, also imported first by the entrypoints) | `SENTRY_DSN`                             |
+| API errors    | `ProblemDetailsFilter` (`@SentryExceptionCaptured`): unexpected errors only, never 4xx                                  | —                                        |
+| Web (browser) | `apps/web/instrumentation-client.ts`                                                                                    | `NEXT_PUBLIC_SENTRY_DSN`                 |
+| Web (server)  | `apps/web/instrumentation.ts` (`onRequestError`) and `app/global-error.tsx`                                             | `SENTRY_DSN` or `NEXT_PUBLIC_SENTRY_DSN` |
+
+Tracing comes from Sentry's OpenTelemetry-based instrumentation (`SENTRY_TRACES_SAMPLE_RATE`, default 0.1). **Data policy:** `SENTRY_DATA_COLLECTION` in `@workspace/env` turns off request bodies, cookies, headers, query strings and automatic user info everywhere. Session Replay is deliberately not enabled.
 
 ## Alerts (minimum)
 

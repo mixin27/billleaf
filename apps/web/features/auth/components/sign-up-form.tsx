@@ -5,7 +5,7 @@ import { Button } from "@workspace/ui/components/button"
 import { Input } from "@workspace/ui/components/input"
 import { Label } from "@workspace/ui/components/label"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { toast } from "sonner"
 import { z } from "zod"
@@ -24,13 +24,17 @@ type Values = z.infer<typeof schema>
 
 export function SignUpForm() {
   const router = useRouter()
+  const rawNext = useSearchParams().get("next")
+  // Only same-origin relative paths, never protocol-relative URLs.
+  const next =
+    rawNext?.startsWith("/") && !rawNext.startsWith("//") ? rawNext : null
   const form = useForm<Values>({ resolver: zodResolver(schema) })
   const { errors } = form.formState
 
   const onSubmit = form.handleSubmit(async (values) => {
     const { error } = await signUp.email({
       ...values,
-      callbackURL: `${env.NEXT_PUBLIC_APP_URL}/onboarding`,
+      callbackURL: `${env.NEXT_PUBLIC_APP_URL}${next ?? "/onboarding"}`,
     })
     if (error) {
       toast.error(error.message ?? "Sign up failed")
@@ -46,7 +50,12 @@ export function SignUpForm() {
       footer={
         <>
           Already have an account?{" "}
-          <Link href="/sign-in" className="underline">
+          <Link
+            href={
+              next ? `/sign-in?next=${encodeURIComponent(next)}` : "/sign-in"
+            }
+            className="underline"
+          >
             Sign in
           </Link>
         </>

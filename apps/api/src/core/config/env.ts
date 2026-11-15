@@ -38,6 +38,14 @@ export const envSchema = z.object({
     .optional()
     .transform((v) => v || undefined),
 
+  // Optional observability (read directly by src/instrument.ts; listed for docs/validation)
+  SENTRY_DSN: z
+    .string()
+    .optional()
+    .transform((v) => v || undefined),
+  SENTRY_ENVIRONMENT: z.string().optional(),
+  SENTRY_TRACES_SAMPLE_RATE: z.coerce.number().min(0).max(1).optional(),
+
   SMTP_URL: z.string().default("smtp://localhost:1025"),
   EMAIL_FROM: z.string().default("Billleaf <no-reply@billleaf.local>"),
 })

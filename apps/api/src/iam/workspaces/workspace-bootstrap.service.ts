@@ -2,6 +2,7 @@ import { Injectable, Logger } from "@nestjs/common"
 import { SYSTEM_ROLES, type SystemRoleSlug } from "@workspace/contracts"
 import {
   documentSequences,
+  invitationRoles,
   memberRoles,
   rolePermissions,
   roles,
@@ -83,6 +84,35 @@ export class WorkspaceBootstrapService {
       .insert(memberRoles)
       .values({ workspaceId, memberId, roleId })
       .onConflictDoNothing()
+    await this.resolver.invalidateWorkspace(workspaceId)
+  }
+
+  /**
+   * An invitation was accepted: give the new member exactly the workspace role
+   * chosen when inviting (replacing any default assigned by onMemberAdded).
+   */
+  async onInvitationAccepted(
+    workspaceId: string,
+    memberId: string,
+    invitationId: string
+  ) {
+    const [mapping] = await this.db
+      .select({ roleId: invitationRoles.roleId })
+      .from(invitationRoles)
+      .where(
+        and(
+          eq(invitationRoles.invitationId, invitationId),
+          eq(invitationRoles.workspaceId, workspaceId)
+        )
+      )
+      .limit(1)
+    if (!mapping) return this.onMemberAdded(workspaceId, memberId, "member")
+    await this.db.transaction(async (tx) => {
+      await tx.delete(memberRoles).where(eq(memberRoles.memberId, memberId))
+      await tx
+        .insert(memberRoles)
+        .values({ workspaceId, memberId, roleId: mapping.roleId })
+    })
     await this.resolver.invalidateWorkspace(workspaceId)
   }
 

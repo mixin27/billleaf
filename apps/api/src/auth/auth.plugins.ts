@@ -23,6 +23,11 @@ export interface AuthPluginDeps {
     memberId: string,
     role: string
   ) => Promise<void>
+  onInvitationAccepted: (
+    workspaceId: string,
+    memberId: string,
+    invitationId: string
+  ) => Promise<void>
 }
 
 /**
@@ -53,8 +58,12 @@ export function buildAuthPlugins(deps: AuthPluginDeps) {
             await deps.onMemberAdded(org.id, member.id, member.role)
           }
         },
-        afterAcceptInvitation: async ({ member, organization: org }) => {
-          await deps.onMemberAdded(org.id, member.id, member.role)
+        afterAcceptInvitation: async ({
+          member,
+          organization: org,
+          invitation,
+        }) => {
+          await deps.onInvitationAccepted(org.id, member.id, invitation.id)
         },
       },
     }),

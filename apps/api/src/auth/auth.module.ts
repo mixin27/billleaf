@@ -34,6 +34,8 @@ import { createAuth } from "./auth.js"
             bootstrap.onWorkspaceCreated(ws, member),
           onMemberAdded: (ws, member, role) =>
             bootstrap.onMemberAdded(ws, member, role),
+          onInvitationAccepted: (ws, member, invitationId) =>
+            bootstrap.onInvitationAccepted(ws, member, invitationId),
         }),
       }),
     }),

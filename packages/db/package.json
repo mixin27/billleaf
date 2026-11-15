@@ -12,6 +12,10 @@
     "./schema": {
       "types": "./dist/schema/index.d.ts",
       "default": "./dist/schema/index.js"
+    },
+    "./testing": {
+      "types": "./dist/testing.d.ts",
+      "default": "./dist/testing.js"
     }
   },
   "files": [
@@ -29,6 +33,7 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
+    "@opentelemetry/api": "^1.10.0",
     "@workspace/contracts": "workspace:*",
     "drizzle-orm": "^0.45.4",
     "pg": "^8.23.1",

@@ -6,6 +6,7 @@ import {
   HttpStatus,
   Logger,
 } from "@nestjs/common"
+import { SentryExceptionCaptured } from "@sentry/nestjs"
 import type { Problem } from "@workspace/contracts"
 import type { FastifyReply, FastifyRequest } from "fastify"
 import { ZodValidationException } from "nestjs-zod"
@@ -16,6 +17,8 @@ import type { ZodError } from "zod"
 export class ProblemDetailsFilter implements ExceptionFilter {
   private readonly logger = new Logger(ProblemDetailsFilter.name)
 
+  /** Reports unexpected (non-HTTP) errors to Sentry; 4xx are not reported. */
+  @SentryExceptionCaptured()
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp()
     const reply = ctx.getResponse<FastifyReply>()

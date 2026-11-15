@@ -46,7 +46,7 @@ services:
 
   worker:
     image: ghcr.io/${GHCR_OWNER}/billleaf-api:${IMAGE_TAG:-latest}
-    command: ["node", "dist/worker.js"]
+    command: ["node", "--import", "./dist/instrument.js", "dist/worker.js"]
     environment: *api-env
     depends_on:
       migrate: { condition: service_completed_successfully }
