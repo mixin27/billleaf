@@ -244,6 +244,102 @@ export interface paths {
     patch: operations["ClientsController_updateContact_v1"]
     trace?: never
   }
+  "/v1/quotes": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["QuotesController_list_v1"]
+    put?: never
+    post: operations["QuotesController_create_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/quotes/{id}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["QuotesController_get_v1"]
+    put?: never
+    post?: never
+    delete: operations["QuotesController_remove_v1"]
+    options?: never
+    head?: never
+    patch: operations["QuotesController_update_v1"]
+    trace?: never
+  }
+  "/v1/quotes/{id}/send": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["QuotesController_send_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/quotes/{id}/accept": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["QuotesController_accept_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/quotes/{id}/decline": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["QuotesController_decline_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/quotes/{id}/duplicate": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["QuotesController_duplicate_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
 }
 export type webhooks = Record<string, never>
 export interface components {
@@ -720,6 +816,126 @@ export interface components {
       phone?: string | null
       title?: string | null
       isPrimary?: boolean
+    }
+    QuoteListDto_Output: {
+      items: {
+        id: string
+        number: string | null
+        /** @enum {string} */
+        status: "draft" | "sent" | "accepted" | "declined"
+        isExpired: boolean
+        title: string | null
+        clientId: string
+        clientName: string
+        currency: string
+        /** Format: date */
+        issueDate: string
+        /** Format: date */
+        validUntil: string | null
+        subtotal: number
+        taxTotal: number
+        total: number
+        /** Format: date-time */
+        createdAt: string
+        /** Format: date-time */
+        updatedAt: string
+      }[]
+      nextCursor: string | null
+    }
+    QuoteDto_Output: {
+      id: string
+      number: string | null
+      /** @enum {string} */
+      status: "draft" | "sent" | "accepted" | "declined"
+      isExpired: boolean
+      title: string | null
+      clientId: string
+      clientName: string
+      currency: string
+      /** Format: date */
+      issueDate: string
+      /** Format: date */
+      validUntil: string | null
+      subtotal: number
+      taxTotal: number
+      total: number
+      /** Format: date-time */
+      createdAt: string
+      /** Format: date-time */
+      updatedAt: string
+      notes: string | null
+      terms: string | null
+      lines: {
+        id: string
+        position: number
+        description: string
+        quantity: number
+        unitPrice: number
+        taxRateBps: number
+        amount: number
+        taxAmount: number
+      }[]
+      /** Format: date-time */
+      sentAt: string | null
+      /** Format: date-time */
+      acceptedAt: string | null
+      /** Format: date-time */
+      declinedAt: string | null
+      clientSnapshot: {
+        name: string
+        legalName?: string | null
+        email?: string | null
+        phone?: string | null
+        taxId?: string | null
+        addressLines: string[]
+      } | null
+      issuerSnapshot: {
+        name: string
+        legalName?: string | null
+        email?: string | null
+        phone?: string | null
+        taxId?: string | null
+        addressLines: string[]
+      } | null
+    }
+    CreateQuoteDto: {
+      /** Format: uuid */
+      clientId: string
+      title?: string | null
+      currency?: string
+      /** Format: date */
+      issueDate?: string
+      /** Format: date */
+      validUntil?: string | null
+      notes?: string | null
+      terms?: string | null
+      /** @default [] */
+      lines: {
+        description: string
+        quantity: number
+        unitPrice: number
+        /** @default 0 */
+        taxRateBps: number
+      }[]
+    }
+    UpdateQuoteDto: {
+      /** Format: uuid */
+      clientId?: string
+      title?: string | null
+      currency?: string
+      /** Format: date */
+      issueDate?: string
+      /** Format: date */
+      validUntil?: string | null
+      notes?: string | null
+      terms?: string | null
+      lines?: {
+        description: string
+        quantity: number
+        unitPrice: number
+        /** @default 0 */
+        taxRateBps: number
+      }[]
     }
   }
   responses: never
@@ -1343,6 +1559,203 @@ export interface operations {
         }
         content: {
           "application/json": components["schemas"]["ClientContactDto_Output"]
+        }
+      }
+    }
+  }
+  QuotesController_list_v1: {
+    parameters: {
+      query?: {
+        cursor?: string
+        limit?: number
+        status?: "draft" | "sent" | "accepted" | "declined"
+        clientId?: string
+        q?: string
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["QuoteListDto_Output"]
+        }
+      }
+    }
+  }
+  QuotesController_create_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateQuoteDto"]
+      }
+    }
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["QuoteDto_Output"]
+        }
+      }
+    }
+  }
+  QuotesController_get_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["QuoteDto_Output"]
+        }
+      }
+    }
+  }
+  QuotesController_remove_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  QuotesController_update_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateQuoteDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["QuoteDto_Output"]
+        }
+      }
+    }
+  }
+  QuotesController_send_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["QuoteDto_Output"]
+        }
+      }
+    }
+  }
+  QuotesController_accept_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["QuoteDto_Output"]
+        }
+      }
+    }
+  }
+  QuotesController_decline_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["QuoteDto_Output"]
+        }
+      }
+    }
+  }
+  QuotesController_duplicate_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["QuoteDto_Output"]
         }
       }
     }

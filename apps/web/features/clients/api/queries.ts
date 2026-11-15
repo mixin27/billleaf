@@ -10,10 +10,10 @@ import { clientKeys, type ClientFilters } from "./keys"
 const PAGE_SIZE = 25
 
 /** Paginated client list (keyset cursor from the API). */
-export function useClients(filters: ClientFilters) {
+export function useClients(filters: ClientFilters, pageSize = PAGE_SIZE) {
   const workspaceId = useWorkspaceStore((s) => s.workspace?.id)
   return useInfiniteQuery({
-    queryKey: clientKeys.list(workspaceId, filters),
+    queryKey: [...clientKeys.list(workspaceId, filters), pageSize],
     queryFn: ({ pageParam }) =>
       unwrap(
         api.GET("/v1/clients", {
@@ -21,7 +21,7 @@ export function useClients(filters: ClientFilters) {
             query: {
               q: filters.q || undefined,
               status: filters.status,
-              limit: PAGE_SIZE,
+              limit: pageSize,
               cursor: pageParam ?? undefined,
             },
           },

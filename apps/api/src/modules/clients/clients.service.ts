@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from "@nestjs/common"
@@ -133,12 +134,15 @@ export class ClientsService {
     return toClientDto(row!)
   }
 
-  /**
-   * Soft delete. Once quotes/invoices exist, clients referenced by issued
-   * documents must be archived instead of deleted (enforce here).
-   */
+  /** Soft delete. Clients with quotes/invoices must be archived instead. */
   async remove(id: string): Promise<void> {
     await this.require(id)
+    if (await this.repo.hasDocuments(id)) {
+      throw new ConflictException({
+        message: "This client has quotes or invoices. Archive it instead.",
+        code: "client_has_documents",
+      })
+    }
     await this.repo.update(id, { deletedAt: new Date() })
     await this.audit.record("client.deleted", {
       resourceType: "client",

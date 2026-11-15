@@ -9,6 +9,6 @@ import { ClientsService } from "./clients.service.js"
   imports: [IamModule],
   controllers: [ClientsController],
   providers: [ClientsRepository, ClientsService],
-  exports: [ClientsService],
+  exports: [ClientsService, ClientsRepository],
 })
 export class ClientsModule {}

@@ -1,5 +1,10 @@
 import { Injectable } from "@nestjs/common"
-import { clientContacts, clients, type Transaction } from "@workspace/db"
+import {
+  clientContacts,
+  clients,
+  quotes,
+  type Transaction,
+} from "@workspace/db"
 import {
   and,
   asc,
@@ -84,6 +89,21 @@ export class ClientsRepository {
       .from(clients)
       .where(and(this.scope(), isNull(clients.archivedAt)))
     return row?.n ?? 0
+  }
+
+  /** True when quotes (and later invoices) reference this client. */
+  async hasDocuments(id: string): Promise<boolean> {
+    const [row] = await this.db
+      .select({ id: quotes.id })
+      .from(quotes)
+      .where(
+        and(
+          eq(quotes.workspaceId, this.ctx.workspaceId),
+          eq(quotes.clientId, id)
+        )
+      )
+      .limit(1)
+    return Boolean(row)
   }
 
   async findById(id: string): Promise<ClientRow | null> {

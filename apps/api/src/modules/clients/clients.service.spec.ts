@@ -40,6 +40,7 @@ function setup(
   opts: {
     existing?: ClientRow | null
     active?: number
+    hasDocuments?: boolean
     limitHit?: boolean
   } = {}
 ) {
@@ -53,6 +54,7 @@ function setup(
     listContacts: vi.fn().mockResolvedValue([]),
     createContact: vi.fn(),
     deleteContact: vi.fn().mockResolvedValue(false),
+    hasDocuments: vi.fn().mockResolvedValue(opts.hasDocuments ?? false),
   } as unknown as ClientsRepository
   const entitlements = {
     assertWithinLimit: vi.fn().mockImplementation(async () => {
@@ -114,6 +116,12 @@ describe("ClientsService", () => {
     expect(repo.update).toHaveBeenCalledWith("c1", {
       deletedAt: expect.any(Date),
     })
+  })
+
+  it("refuses to delete clients that have documents", async () => {
+    const { service, repo } = setup({ hasDocuments: true })
+    await expect(service.remove("c1")).rejects.toThrow("Archive it instead")
+    expect(repo.update).not.toHaveBeenCalled()
   })
 
   it("blocks contact edits on archived clients", async () => {
