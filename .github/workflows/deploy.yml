@@ -1,0 +1,118 @@
+name: Deploy
+
+# main   -> build & push images to GHCR -> Dokploy staging webhook
+# tag v* -> build & push images to GHCR -> Dokploy production webhook
+#
+# Setup (GitHub repo settings):
+#   - Environments: create `staging` and `production`.
+#     Add "Required reviewers" to `production` so tag deploys wait for manual approval.
+#   - Secrets: DOKPLOY_STAGING_WEBHOOK (staging env or repo), DOKPLOY_PRODUCTION_WEBHOOK (production env).
+#   - The api image also runs the BullMQ worker (different command in Dokploy).
+#   - DB migrations run as a one-off `migrate` job in Dokploy before the api rolls.
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  build:
+    name: Build & push ${{ matrix.app }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: true
+      matrix:
+        app: [web, api]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Lowercase image name
+        id: image
+        run: echo "name=${REGISTRY}/${GITHUB_REPOSITORY,,}-${{ matrix.app }}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.image.outputs.name }}
+          tags: |
+            type=sha,format=long
+            type=sha
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+
+      - name: Build & push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/${{ matrix.app }}/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # Web inlines NEXT_PUBLIC_* at build time (repo/environment variables).
+          # NOTE: one image serves both envs, so staging and production share these
+          # values unless you split the build per environment.
+          build-args: |
+            NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}
+            NEXT_PUBLIC_APP_URL=${{ vars.NEXT_PUBLIC_APP_URL }}
+          cache-from: type=gha,scope=${{ matrix.app }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.app }}
+
+  deploy-staging:
+    name: Deploy to staging
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+    steps:
+      - name: Trigger Dokploy staging deploy
+        env:
+          WEBHOOK: ${{ secrets.DOKPLOY_STAGING_WEBHOOK }}
+        run: |
+          if [ -z "$WEBHOOK" ]; then echo "::error::DOKPLOY_STAGING_WEBHOOK is not set"; exit 1; fi
+          curl -fsS -X POST "$WEBHOOK"
+
+  deploy-production:
+    name: Deploy to production
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    # Configure "Required reviewers" on this environment for manual approval.
+    environment:
+      name: production
+    steps:
+      - name: Trigger Dokploy production deploy
+        env:
+          WEBHOOK: ${{ secrets.DOKPLOY_PRODUCTION_WEBHOOK }}
+        run: |
+          if [ -z "$WEBHOOK" ]; then echo "::error::DOKPLOY_PRODUCTION_WEBHOOK is not set"; exit 1; fi
+          curl -fsS -X POST "$WEBHOOK"

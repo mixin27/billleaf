@@ -1,0 +1,27 @@
+# CODEOWNERS — https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+#
+# PLACEHOLDER: no owners are assigned yet. Replace the commented lines below with
+# real GitHub users or teams (e.g. an org team handle) and uncomment them.
+# Later rules take precedence over earlier ones.
+
+# Default owner for everything
+# *                         <owner>
+
+# Apps
+# /apps/web/                <web-owner>
+# /apps/api/                <api-owner>
+
+# Database schema & migrations — review carefully
+# /packages/db/             <db-owner>
+
+# Shared contracts (permission catalog, schemas) and generated client
+# /packages/contracts/      <api-owner>
+# /packages/api-client/     <api-owner>
+
+# CI/CD, infra, deployment
+# /.github/                 <platform-owner>
+# /infra/                   <platform-owner>
+# **/Dockerfile             <platform-owner>
+
+# Docs & ADRs
+# /docs/                    <owner>

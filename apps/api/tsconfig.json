@@ -1,0 +1,9 @@
+{
+  "extends": "@workspace/typescript-config/nestjs.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": ".",
+    "types": ["node", "vitest/globals"]
+  },
+  "include": ["src", "test", "vitest.config.ts"]
+}

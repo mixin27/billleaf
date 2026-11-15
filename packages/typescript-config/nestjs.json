@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "display": "NestJS (ESM)",
+  "extends": "./base.json",
+  "compilerOptions": {
+    "lib": ["es2023"],
+    "target": "ES2023",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": true,
+    "incremental": true,
+    "noUncheckedIndexedAccess": true,
+    "types": ["node"]
+  }
+}

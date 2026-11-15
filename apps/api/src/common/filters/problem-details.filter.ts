@@ -1,0 +1,66 @@
+import {
+  type ArgumentsHost,
+  Catch,
+  type ExceptionFilter,
+  HttpException,
+  HttpStatus,
+  Logger,
+} from "@nestjs/common"
+import type { Problem } from "@workspace/contracts"
+import type { FastifyReply, FastifyRequest } from "fastify"
+import { ZodValidationException } from "nestjs-zod"
+import type { ZodError } from "zod"
+
+/** Renders every error as RFC 9457 `application/problem+json`. */
+@Catch()
+export class ProblemDetailsFilter implements ExceptionFilter {
+  private readonly logger = new Logger(ProblemDetailsFilter.name)
+
+  catch(exception: unknown, host: ArgumentsHost) {
+    const ctx = host.switchToHttp()
+    const reply = ctx.getResponse<FastifyReply>()
+    const req = ctx.getRequest<FastifyRequest>()
+
+    let problem: Problem
+    if (exception instanceof ZodValidationException) {
+      const zodError = exception.getZodError() as ZodError
+      problem = {
+        type: "about:blank",
+        title: "Validation failed",
+        status: HttpStatus.UNPROCESSABLE_ENTITY,
+        code: "validation_failed",
+        errors: zodError.issues.map((i) => ({
+          path: i.path.join("."),
+          message: i.message,
+        })),
+      }
+    } else if (exception instanceof HttpException) {
+      const status = exception.getStatus()
+      const res = exception.getResponse()
+      const detail =
+        typeof res === "string"
+          ? res
+          : ((res as { message?: string | string[] }).message ?? undefined)
+      problem = {
+        type: "about:blank",
+        title:
+          HttpStatus[status]?.replaceAll("_", " ").toLowerCase() ?? "error",
+        status,
+        detail: Array.isArray(detail) ? detail.join("; ") : detail,
+      }
+    } else {
+      this.logger.error(exception)
+      problem = {
+        type: "about:blank",
+        title: "internal server error",
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      }
+    }
+
+    problem.instance = req.url
+    void reply
+      .status(problem.status)
+      .header("content-type", "application/problem+json")
+      .send(problem)
+  }
+}

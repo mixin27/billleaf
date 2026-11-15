@@ -43,3 +43,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# allow example env files
+!.env.example
+
+# generated (regenerate with pnpm gen:api-client)
+apps/api/openapi.json
+internal/

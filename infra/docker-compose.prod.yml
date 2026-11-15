@@ -1,0 +1,109 @@
+# Reference production stack for a single VPS. In practice this is deployed as
+# a Dokploy "Compose" app (Traefik + TLS are provided by Dokploy). Images are
+# built by .github/workflows/deploy.yml and pushed to GHCR.
+#
+# Required env (set in Dokploy): see apps/api/.env.example and apps/web/.env.example
+name: billleaf
+
+x-api-env: &api-env
+  NODE_ENV: production
+  DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+  REDIS_URL: redis://valkey:6379
+  BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+  API_URL: ${API_URL}
+  WEB_URL: ${WEB_URL}
+  TRUSTED_ORIGINS: ${TRUSTED_ORIGINS:-}
+  COOKIE_DOMAIN: ${COOKIE_DOMAIN}
+  SMTP_URL: ${SMTP_URL}
+  EMAIL_FROM: ${EMAIL_FROM}
+  LOG_LEVEL: info
+
+services:
+  # One-off: applies Drizzle migrations before api/worker start.
+  migrate:
+    image: ghcr.io/${GHCR_OWNER}/billleaf-api:${IMAGE_TAG:-latest}
+    command: ["node", "dist/migrate.js"]
+    environment: *api-env
+    depends_on:
+      postgres: { condition: service_healthy }
+    restart: "no"
+
+  api:
+    image: ghcr.io/${GHCR_OWNER}/billleaf-api:${IMAGE_TAG:-latest}
+    environment: *api-env
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      valkey: { condition: service_healthy }
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:4000/health/live"]
+      interval: 15s
+      retries: 5
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.api.rule=Host(`api.${DOMAIN}`)
+      - traefik.http.services.api.loadbalancer.server.port=4000
+
+  worker:
+    image: ghcr.io/${GHCR_OWNER}/billleaf-api:${IMAGE_TAG:-latest}
+    command: ["node", "dist/worker.js"]
+    environment: *api-env
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    restart: unless-stopped
+
+  web:
+    image: ghcr.io/${GHCR_OWNER}/billleaf-web:${IMAGE_TAG:-latest}
+    environment:
+      NODE_ENV: production
+      API_INTERNAL_URL: http://api:4000
+    restart: unless-stopped
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.web.rule=Host(`app.${DOMAIN}`)
+      - traefik.http.services.web.loadbalancer.server.port=3000
+
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes: [pgdata:/var/lib/postgresql/data]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
+      interval: 10s
+      retries: 10
+
+  valkey:
+    image: valkey/valkey:8-alpine
+    command: ["valkey-server", "--appendonly", "yes"]
+    volumes: [valkeydata:/data]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 10s
+      retries: 10
+
+  backup:
+    image: postgres:17-alpine
+    entrypoint: ["/bin/sh", "/backup/backup.sh"]
+    environment:
+      PGHOST: postgres
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB}
+      BACKUP_BUCKET: ${BACKUP_BUCKET}
+      AWS_ACCESS_KEY_ID: ${BACKUP_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${BACKUP_SECRET_ACCESS_KEY}
+      S3_ENDPOINT: ${BACKUP_S3_ENDPOINT}
+      RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
+    volumes: [./backup:/backup:ro]
+    depends_on:
+      postgres: { condition: service_healthy }
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  valkeydata:

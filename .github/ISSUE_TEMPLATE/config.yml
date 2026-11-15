@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://github.com/OWNER/billleaf/tree/main/docs
+    about: Architecture, infrastructure and engineering docs. Replace OWNER with the GitHub org/user.
+  - name: Security vulnerability
+    url: https://github.com/OWNER/billleaf/security/advisories/new
+    about: Please report security issues privately, not as public issues.

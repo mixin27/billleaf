@@ -1,0 +1,47 @@
+{
+  "name": "@workspace/db",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Drizzle schema, migrations, seed and client factory for PostgreSQL.",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./schema": {
+      "types": "./dist/schema/index.d.ts",
+      "default": "./dist/schema/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "migrations"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch --preserveWatchOutput",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx --env-file-if-exists=.env scripts/migrate.ts",
+    "db:seed": "tsx --env-file-if-exists=.env scripts/seed.ts",
+    "db:studio": "drizzle-kit studio"
+  },
+  "dependencies": {
+    "@workspace/contracts": "workspace:*",
+    "drizzle-orm": "^0.45.4",
+    "pg": "^8.23.1",
+    "uuidv7": "^1.2.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "@types/pg": "^8.23.1",
+    "@workspace/eslint-config": "workspace:*",
+    "@workspace/typescript-config": "workspace:*",
+    "drizzle-kit": "^0.31.11",
+    "eslint": "^10",
+    "tsx": "^4.23.15",
+    "typescript": "^5"
+  }
+}

@@ -1,19 +1,37 @@
-import { Button } from "@workspace/ui/components/button"
+"use client"
 
-export default function Page() {
+import { Skeleton } from "@workspace/ui/components/skeleton"
+import { useRouter } from "next/navigation"
+import * as React from "react"
+
+import { useWorkspaces } from "@/features/workspace"
+import { useSession } from "@/lib/auth-client"
+
+/** Entry: send the user to their active (or first) workspace, or onboarding. */
+export default function HomePage() {
+  const router = useRouter()
+  const session = useSession()
+  const workspaces = useWorkspaces()
+
+  React.useEffect(() => {
+    if (session.isPending || workspaces.isPending) return
+    if (!session.data) return router.replace("/sign-in")
+    const list = workspaces.data ?? []
+    const active =
+      list.find((w) => w.id === session.data?.session.activeOrganizationId) ??
+      list[0]
+    router.replace(active ? `/${active.slug}` : "/onboarding")
+  }, [
+    session.isPending,
+    session.data,
+    workspaces.isPending,
+    workspaces.data,
+    router,
+  ])
+
   return (
-    <div className="flex min-h-svh p-6">
-      <div className="flex max-w-md min-w-0 flex-col gap-4 text-sm leading-loose">
-        <div>
-          <h1 className="font-medium">Project ready!</h1>
-          <p>You may now add components and start building.</p>
-          <p>We&apos;ve already added the button component for you.</p>
-          <Button className="mt-2">Button</Button>
-        </div>
-        <div className="text-muted-foreground font-mono text-xs">
-          (Press <kbd>d</kbd> to toggle dark mode)
-        </div>
-      </div>
+    <div className="p-10">
+      <Skeleton className="h-8 w-40" />
     </div>
   )
 }
