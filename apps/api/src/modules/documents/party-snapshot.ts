@@ -52,3 +52,21 @@ export function addDays(isoDate: string, days: number): string {
   d.setUTCDate(d.getUTCDate() + days)
   return d.toISOString().slice(0, 10)
 }
+
+/** "2026-11-15" → "Nov 15, 2026" in the workspace locale (date-only, no tz shift). */
+export function formatDocDate(
+  isoDate: string | null | undefined,
+  locale = "en-US",
+  fallback = "—"
+): string {
+  if (!isoDate) return fallback
+  const [y, m, d] = isoDate.slice(0, 10).split("-").map(Number)
+  try {
+    return new Intl.DateTimeFormat(locale, {
+      dateStyle: "medium",
+      timeZone: "UTC",
+    }).format(new Date(Date.UTC(y!, m! - 1, d!)))
+  } catch {
+    return isoDate
+  }
+}

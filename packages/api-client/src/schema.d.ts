@@ -404,6 +404,166 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  "/v1/quotes/{id}/pdf": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["QuotesController_pdf_v1"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/quotes/{id}/email": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["QuotesController_email_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/invoices": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["InvoicesController_list_v1"]
+    put?: never
+    post: operations["InvoicesController_create_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/invoices/{id}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["InvoicesController_get_v1"]
+    put?: never
+    post?: never
+    delete: operations["InvoicesController_remove_v1"]
+    options?: never
+    head?: never
+    patch: operations["InvoicesController_update_v1"]
+    trace?: never
+  }
+  "/v1/invoices/{id}/pdf": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["InvoicesController_pdf_v1"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/invoices/from-quote/{quoteId}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["InvoicesController_fromQuote_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/invoices/{id}/issue": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["InvoicesController_issue_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/invoices/{id}/send": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["InvoicesController_send_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/invoices/{id}/void": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["InvoicesController_void_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/invoices/{id}/duplicate": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["InvoicesController_duplicate_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
 }
 export type webhooks = Record<string, never>
 export interface components {
@@ -999,6 +1159,8 @@ export interface components {
         taxId?: string | null
         addressLines: string[]
       } | null
+      invoiceId: string | null
+      invoiceNumber: string | null
     }
     CreateQuoteDto: {
       /** Format: uuid */
@@ -1038,6 +1200,153 @@ export interface components {
         /** @default 0 */
         taxRateBps: number
       }[]
+    }
+    SendDocumentDto: {
+      /** Format: email */
+      to?: string
+      message?: string | null
+    }
+    InvoiceListDto_Output: {
+      items: {
+        id: string
+        number: string | null
+        /** @enum {string} */
+        status: "draft" | "issued" | "void"
+        /** @enum {string} */
+        paymentStatus: "unpaid" | "partially_paid" | "paid"
+        /** @enum {string} */
+        displayStatus:
+          "draft" | "open" | "overdue" | "partially_paid" | "paid" | "void"
+        isOverdue: boolean
+        title: string | null
+        clientId: string
+        clientName: string
+        quoteId: string | null
+        currency: string
+        /** Format: date */
+        issueDate: string
+        /** Format: date */
+        dueDate: string | null
+        subtotal: number
+        taxTotal: number
+        total: number
+        amountPaid: number
+        amountDue: number
+        /** Format: date-time */
+        createdAt: string
+        /** Format: date-time */
+        updatedAt: string
+      }[]
+      nextCursor: string | null
+    }
+    InvoiceDto_Output: {
+      id: string
+      number: string | null
+      /** @enum {string} */
+      status: "draft" | "issued" | "void"
+      /** @enum {string} */
+      paymentStatus: "unpaid" | "partially_paid" | "paid"
+      /** @enum {string} */
+      displayStatus:
+        "draft" | "open" | "overdue" | "partially_paid" | "paid" | "void"
+      isOverdue: boolean
+      title: string | null
+      clientId: string
+      clientName: string
+      quoteId: string | null
+      currency: string
+      /** Format: date */
+      issueDate: string
+      /** Format: date */
+      dueDate: string | null
+      subtotal: number
+      taxTotal: number
+      total: number
+      amountPaid: number
+      amountDue: number
+      /** Format: date-time */
+      createdAt: string
+      /** Format: date-time */
+      updatedAt: string
+      quoteNumber: string | null
+      notes: string | null
+      terms: string | null
+      lines: {
+        id: string
+        position: number
+        description: string
+        quantity: number
+        unitPrice: number
+        taxRateBps: number
+        amount: number
+        taxAmount: number
+      }[]
+      /** Format: date-time */
+      issuedAt: string | null
+      /** Format: date-time */
+      voidedAt: string | null
+      voidReason: string | null
+      /** Format: date-time */
+      lastSentAt: string | null
+      lastSentTo: string | null
+      clientSnapshot: {
+        name: string
+        legalName?: string | null
+        email?: string | null
+        phone?: string | null
+        taxId?: string | null
+        addressLines: string[]
+      } | null
+      issuerSnapshot: {
+        name: string
+        legalName?: string | null
+        email?: string | null
+        phone?: string | null
+        taxId?: string | null
+        addressLines: string[]
+      } | null
+    }
+    CreateInvoiceDto: {
+      /** Format: uuid */
+      clientId: string
+      title?: string | null
+      currency?: string
+      /** Format: date */
+      issueDate?: string
+      /** Format: date */
+      dueDate?: string | null
+      notes?: string | null
+      terms?: string | null
+      /** @default [] */
+      lines: {
+        description: string
+        quantity: number
+        unitPrice: number
+        /** @default 0 */
+        taxRateBps: number
+      }[]
+    }
+    UpdateInvoiceDto: {
+      /** Format: uuid */
+      clientId?: string
+      title?: string | null
+      currency?: string
+      /** Format: date */
+      issueDate?: string
+      /** Format: date */
+      dueDate?: string | null
+      notes?: string | null
+      terms?: string | null
+      lines?: {
+        description: string
+        quantity: number
+        unitPrice: number
+        /** @default 0 */
+        taxRateBps: number
+      }[]
+    }
+    VoidInvoiceDto: {
+      reason: string
     }
   }
   responses: never
@@ -1961,6 +2270,296 @@ export interface operations {
         }
         content: {
           "application/json": components["schemas"]["QuoteDto_Output"]
+        }
+      }
+    }
+  }
+  QuotesController_pdf_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  QuotesController_email_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SendDocumentDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["QuoteDto_Output"]
+        }
+      }
+    }
+  }
+  InvoicesController_list_v1: {
+    parameters: {
+      query?: {
+        cursor?: string
+        limit?: number
+        status?:
+          "draft" | "open" | "overdue" | "partially_paid" | "paid" | "void"
+        clientId?: string
+        q?: string
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["InvoiceListDto_Output"]
+        }
+      }
+    }
+  }
+  InvoicesController_create_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateInvoiceDto"]
+      }
+    }
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["InvoiceDto_Output"]
+        }
+      }
+    }
+  }
+  InvoicesController_get_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["InvoiceDto_Output"]
+        }
+      }
+    }
+  }
+  InvoicesController_remove_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  InvoicesController_update_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateInvoiceDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["InvoiceDto_Output"]
+        }
+      }
+    }
+  }
+  InvoicesController_pdf_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  InvoicesController_fromQuote_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        quoteId: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["InvoiceDto_Output"]
+        }
+      }
+    }
+  }
+  InvoicesController_issue_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["InvoiceDto_Output"]
+        }
+      }
+    }
+  }
+  InvoicesController_send_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SendDocumentDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["InvoiceDto_Output"]
+        }
+      }
+    }
+  }
+  InvoicesController_void_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["VoidInvoiceDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["InvoiceDto_Output"]
+        }
+      }
+    }
+  }
+  InvoicesController_duplicate_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["InvoiceDto_Output"]
         }
       }
     }

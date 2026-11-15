@@ -1,0 +1,175 @@
+import { z } from "zod"
+
+import { optionalText } from "../common/locale.js"
+import { currencyCodeSchema } from "../common/money.js"
+import { cursorPaginationQuerySchema, paginated } from "../common/pagination.js"
+import {
+  lineItemInputSchema,
+  lineItemSchema,
+  MAX_LINES,
+  partySnapshotSchema,
+} from "../documents/line-items.js"
+
+/**
+ * Stored lifecycle: draft → issued → void.
+ * Payment state is derived from `amountPaid` (Payments module):
+ *   unpaid → partially_paid → paid. "Overdue" = issued, not fully paid,
+ *   dueDate before today (workspace timezone).
+ * Issuing assigns the number (INV-0001, gap-free per workspace) and freezes
+ * client/issuer snapshots; issued invoices are never edited, only voided.
+ */
+export const invoiceStatusSchema = z.enum(["draft", "issued", "void"])
+export type InvoiceStatus = z.infer<typeof invoiceStatusSchema>
+
+export const invoicePaymentStatusSchema = z.enum([
+  "unpaid",
+  "partially_paid",
+  "paid",
+])
+export type InvoicePaymentStatus = z.infer<typeof invoicePaymentStatusSchema>
+
+/** Single display state used by lists, badges and filters. */
+export const invoiceDisplayStatusSchema = z.enum([
+  "draft",
+  "open",
+  "overdue",
+  "partially_paid",
+  "paid",
+  "void",
+])
+export type InvoiceDisplayStatus = z.infer<typeof invoiceDisplayStatusSchema>
+
+const isoDate = z.iso.date()
+
+export const invoiceSummarySchema = z.object({
+  id: z.string(),
+  number: z.string().nullable(),
+  status: invoiceStatusSchema,
+  paymentStatus: invoicePaymentStatusSchema,
+  displayStatus: invoiceDisplayStatusSchema,
+  isOverdue: z.boolean(),
+  title: z.string().nullable(),
+  clientId: z.string(),
+  clientName: z.string(),
+  quoteId: z.string().nullable(),
+  currency: z.string(),
+  issueDate: isoDate,
+  dueDate: isoDate.nullable(),
+  subtotal: z.number().int(),
+  taxTotal: z.number().int(),
+  total: z.number().int(),
+  amountPaid: z.number().int(),
+  amountDue: z.number().int(),
+  createdAt: z.iso.datetime(),
+  updatedAt: z.iso.datetime(),
+})
+export type InvoiceSummary = z.infer<typeof invoiceSummarySchema>
+
+export const invoiceSchema = invoiceSummarySchema.extend({
+  quoteNumber: z.string().nullable(),
+  notes: z.string().nullable(),
+  terms: z.string().nullable(),
+  lines: z.array(lineItemSchema),
+  issuedAt: z.iso.datetime().nullable(),
+  voidedAt: z.iso.datetime().nullable(),
+  voidReason: z.string().nullable(),
+  lastSentAt: z.iso.datetime().nullable(),
+  lastSentTo: z.string().nullable(),
+  clientSnapshot: partySnapshotSchema.nullable(),
+  issuerSnapshot: partySnapshotSchema.nullable(),
+})
+export type Invoice = z.infer<typeof invoiceSchema>
+
+const lines = z.array(lineItemInputSchema).max(MAX_LINES)
+
+export const createInvoiceSchema = z.object({
+  clientId: z.uuid(),
+  title: optionalText(200),
+  /** Defaults to the client's currency, else the workspace default. */
+  currency: currencyCodeSchema.optional(),
+  issueDate: isoDate.optional(),
+  /** Defaults to issueDate + client/workspace payment terms. */
+  dueDate: isoDate.nullish(),
+  notes: optionalText(5000),
+  terms: optionalText(5000),
+  lines: lines.default([]),
+})
+export type CreateInvoiceInput = z.input<typeof createInvoiceSchema>
+
+export const updateInvoiceSchema = z
+  .object({
+    clientId: z.uuid(),
+    title: optionalText(200),
+    currency: currencyCodeSchema,
+    issueDate: isoDate,
+    dueDate: isoDate.nullable(),
+    notes: optionalText(5000),
+    terms: optionalText(5000),
+    /** When present, replaces all lines. */
+    lines,
+  })
+  .partial()
+export type UpdateInvoiceInput = z.input<typeof updateInvoiceSchema>
+
+export const voidInvoiceSchema = z.object({
+  reason: z.string().trim().min(3, "Give a short reason").max(500),
+})
+export type VoidInvoiceInput = z.input<typeof voidInvoiceSchema>
+
+export const sendDocumentSchema = z.object({
+  /** Defaults to the client's primary contact, else the client email. */
+  to: z.email().optional(),
+  message: optionalText(2000),
+})
+export type SendDocumentInput = z.input<typeof sendDocumentSchema>
+
+export const listInvoicesQuerySchema = cursorPaginationQuerySchema.extend({
+  status: invoiceDisplayStatusSchema.optional(),
+  clientId: z.uuid().optional(),
+  q: z.string().trim().max(100).optional(),
+})
+export type ListInvoicesQuery = z.input<typeof listInvoicesQuerySchema>
+
+export const invoiceListSchema = paginated(invoiceSummarySchema)
+export type InvoiceList = z.infer<typeof invoiceListSchema>
+
+/** Derive payment/display state (shared by API and tests). */
+export function invoiceState(
+  inv: {
+    status: InvoiceStatus
+    total: number
+    amountPaid: number
+    dueDate: string | null
+  },
+  today: string
+) {
+  const paymentStatus: InvoicePaymentStatus =
+    inv.amountPaid <= 0
+      ? "unpaid"
+      : inv.amountPaid >= inv.total
+        ? "paid"
+        : "partially_paid"
+  const isOverdue =
+    inv.status === "issued" &&
+    paymentStatus !== "paid" &&
+    inv.dueDate !== null &&
+    inv.dueDate < today
+  const displayStatus: InvoiceDisplayStatus =
+    inv.status === "draft"
+      ? "draft"
+      : inv.status === "void"
+        ? "void"
+        : paymentStatus === "paid"
+          ? "paid"
+          : isOverdue
+            ? "overdue"
+            : paymentStatus === "partially_paid"
+              ? "partially_paid"
+              : "open"
+  return {
+    paymentStatus,
+    isOverdue,
+    displayStatus,
+    amountDue: Math.max(0, inv.total - inv.amountPaid),
+  }
+}

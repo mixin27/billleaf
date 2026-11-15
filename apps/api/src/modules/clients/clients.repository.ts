@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common"
 import {
   clientContacts,
   clients,
+  invoices,
   quotes,
   type Transaction,
 } from "@workspace/db"
@@ -93,17 +94,20 @@ export class ClientsRepository {
 
   /** True when quotes (and later invoices) reference this client. */
   async hasDocuments(id: string): Promise<boolean> {
-    const [row] = await this.db
-      .select({ id: quotes.id })
-      .from(quotes)
-      .where(
-        and(
-          eq(quotes.workspaceId, this.ctx.workspaceId),
-          eq(quotes.clientId, id)
-        )
-      )
-      .limit(1)
-    return Boolean(row)
+    const ws = this.ctx.workspaceId
+    const [[quote], [invoice]] = await Promise.all([
+      this.db
+        .select({ id: quotes.id })
+        .from(quotes)
+        .where(and(eq(quotes.workspaceId, ws), eq(quotes.clientId, id)))
+        .limit(1),
+      this.db
+        .select({ id: invoices.id })
+        .from(invoices)
+        .where(and(eq(invoices.workspaceId, ws), eq(invoices.clientId, id)))
+        .limit(1),
+    ])
+    return Boolean(quote ?? invoice)
   }
 
   async findById(id: string): Promise<ClientRow | null> {

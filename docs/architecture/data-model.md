@@ -69,9 +69,20 @@ Plan limit: active (non-archived) clients count against `PLANS[plan].limits.clie
 
 Rules: only drafts are editable/deletable; sending assigns the next `QUO-` number via `DocumentNumberingService` **inside the same transaction** (row lock on `document_sequences`) and freezes the snapshots. Line math (`lineAmounts`, `documentTotals` in `@workspace/contracts`) rounds half away from zero per line and is shared by the API and the web preview. "Expired" is derived (sent and `valid_until` before today in the workspace timezone). Clients referenced by quotes can be archived but not deleted.
 
+### Invoices (`invoices.ts`) — Phase 1
+
+| Table           | Notes                                                                                                                                                                                                                                                                                                                                                                               |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `invoices`      | `workspace_id`, `client_id` (restrict), `quote_id` (unique — one invoice per quote), `number` (null while draft; unique per workspace), `status` (draft → issued → void), dates (`issue_date`, `due_date`), totals in minor units, **`amount_paid`** (maintained by Payments), snapshots frozen on issue, `issued_at`, `voided_at` + `void_reason`, `last_sent_at` / `last_sent_to` |
+| `invoice_lines` | Same shape as `quote_lines`                                                                                                                                                                                                                                                                                                                                                         |
+
+Payment/display state is **derived**, never stored: `invoiceState()` in `@workspace/contracts` gives `unpaid | partially_paid | paid` and `draft | open | overdue | partially_paid | paid | void` (overdue = issued, not fully paid, due before today in the workspace timezone); the list filter uses the equivalent SQL. Issuing assigns the next `INV-` number in the issuing transaction (voided numbers are never reused) and fills `due_date` from client → workspace payment terms. Invoices with payments must be refunded before voiding. Issued invoices are never edited.
+
+PDFs (quotes and invoices) are rendered on demand by `renderDocumentPdf` (pdfkit, `GET /v1/{quotes|invoices}/:id/pdf`) and emailed as attachments through the BullMQ email queue.
+
 ## Planned business tables (Phase 1+)
 
-`invoices`, `invoice_lines`, `tax_rates`, `payments`, `receipts`, `files`, `notifications`, then `projects`, `tasks`, `time_entries`, `contracts`, `contract_templates`.
+`tax_rates`, `payments`, `receipts`, `files`, `notifications`, then `projects`, `tasks`, `time_entries`, `contracts`, `contract_templates`.
 
 ```mermaid
 erDiagram
@@ -88,6 +99,7 @@ erDiagram
   clients ||--o{ quotes : receives
   quotes ||--o{ quote_lines : contains
   clients ||--o{ invoices : billed
+  quotes |o--o| invoices : converts_to
   invoices ||--o{ invoice_lines : contains
   invoices ||--o{ payments : settled_by
   payments ||--|| receipts : produces

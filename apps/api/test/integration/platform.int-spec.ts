@@ -212,3 +212,101 @@ describe("invitations", () => {
     expect((await invitee.get("/v1/me")).status).toBe(403)
   })
 })
+
+describe("invoices", () => {
+  it("converts an accepted quote once, issues with a gap-free number, renders a PDF, voids", async () => {
+    const owner = new Client(t)
+    await owner.signUp("Biller")
+    await owner.createWorkspace("Billing")
+    const client = (
+      await owner.post("/v1/clients", {
+        name: "Payer",
+        email: "ap@payer.test",
+        paymentTermsDays: 30,
+      })
+    ).body
+
+    const quote = (
+      await owner.post("/v1/quotes", {
+        clientId: client.id,
+        lines: [
+          {
+            description: "Build",
+            quantity: 2,
+            unitPrice: 50_000,
+            taxRateBps: 700,
+          },
+        ],
+      })
+    ).body
+    expect(
+      (await owner.post(`/v1/invoices/from-quote/${quote.id}`)).status
+    ).toBe(409) // not accepted yet
+    await owner.post(`/v1/quotes/${quote.id}/send`)
+    await owner.post(`/v1/quotes/${quote.id}/accept`)
+
+    // Two concurrent conversions: exactly one invoice.
+    const conversions = await Promise.all(
+      [1, 2].map(() => owner.post(`/v1/invoices/from-quote/${quote.id}`))
+    )
+    expect(conversions.map((r) => r.status).sort()).toEqual([201, 409])
+    const draft = conversions.find((r) => r.status === 201)!.body
+    expect(draft).toMatchObject({
+      status: "draft",
+      quoteId: quote.id,
+      total: 107_000,
+      displayStatus: "draft",
+    })
+    expect((await owner.get(`/v1/quotes/${quote.id}`)).body.invoiceId).toBe(
+      draft.id
+    )
+
+    const issued = await owner.post(`/v1/invoices/${draft.id}/issue`)
+    expect(issued.status).toBe(200)
+    expect(issued.body).toMatchObject({
+      number: "INV-0001",
+      displayStatus: "open",
+      amountDue: 107_000,
+    })
+    expect(issued.body.clientSnapshot.email).toBe("ap@payer.test")
+    expect(issued.body.dueDate > issued.body.issueDate).toBe(true)
+
+    const pdf = await t.app.inject({
+      method: "GET",
+      url: `/v1/invoices/${draft.id}/pdf`,
+      headers: owner.headers(),
+    })
+    expect(pdf.statusCode).toBe(200)
+    expect(pdf.headers["content-type"]).toBe("application/pdf")
+    expect(pdf.rawPayload.subarray(0, 4).toString()).toBe("%PDF")
+
+    expect(
+      (await owner.patch(`/v1/invoices/${draft.id}`, { title: "x" })).status
+    ).toBe(409)
+    expect((await owner.post(`/v1/invoices/${draft.id}/send`, {})).status).toBe(
+      200
+    )
+
+    const voided = await owner.post(`/v1/invoices/${draft.id}/void`, {
+      reason: "Issued to wrong entity",
+    })
+    expect(voided.body).toMatchObject({ status: "void", displayStatus: "void" })
+    expect(
+      (await owner.get("/v1/invoices?status=void")).body.items
+    ).toHaveLength(1)
+    expect(
+      (await owner.get("/v1/invoices?status=open")).body.items
+    ).toHaveLength(0)
+
+    // A second invoice continues the sequence (void numbers are not reused).
+    const second = (
+      await owner.post("/v1/invoices", {
+        clientId: client.id,
+        lines: [{ description: "Support", quantity: 1, unitPrice: 1000 }],
+      })
+    ).body
+    expect(
+      (await owner.post(`/v1/invoices/${second.id}/issue`)).body.number
+    ).toBe("INV-0002")
+  })
+})

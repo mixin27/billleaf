@@ -55,6 +55,9 @@ export const quoteSchema = quoteSummarySchema.extend({
   /** Frozen at send time; null while draft (use live client/workspace data). */
   clientSnapshot: partySnapshotSchema.nullable(),
   issuerSnapshot: partySnapshotSchema.nullable(),
+  /** Set once an accepted quote has been converted to an invoice. */
+  invoiceId: z.string().nullable(),
+  invoiceNumber: z.string().nullable(),
 })
 export type Quote = z.infer<typeof quoteSchema>
 

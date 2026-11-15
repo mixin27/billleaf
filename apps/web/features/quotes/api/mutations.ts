@@ -1,7 +1,11 @@
 "use client"
 
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import type { CreateQuoteInput, UpdateQuoteInput } from "@workspace/contracts"
+import type {
+  CreateQuoteInput,
+  SendDocumentInput,
+  UpdateQuoteInput,
+} from "@workspace/contracts"
 
 import { clientKeys } from "@/features/clients"
 import { useWorkspaceStore } from "@/features/workspace"
@@ -67,5 +71,36 @@ export function useDeleteQuote(id: string) {
   return useMutation({
     mutationFn: () => unwrap(api.DELETE("/v1/quotes/{id}", path(id))),
     onSuccess: invalidate,
+  })
+}
+
+export function useEmailQuote(id: string) {
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: (body: SendDocumentInput) =>
+      unwrap(
+        api.POST("/v1/quotes/{id}/email", { ...path(id), body: body as never })
+      ),
+    onSuccess: invalidate,
+  })
+}
+
+/** Accepted quote → draft invoice. */
+export function useConvertQuote(id: string) {
+  const qc = useQueryClient()
+  const invalidate = useInvalidate()
+  const workspaceId = useWorkspaceStore((s) => s.workspace?.id)
+  return useMutation({
+    mutationFn: () =>
+      unwrap(
+        api.POST("/v1/invoices/from-quote/{quoteId}", {
+          params: { path: { quoteId: id } },
+        })
+      ),
+    onSuccess: () =>
+      Promise.all([
+        invalidate(),
+        qc.invalidateQueries({ queryKey: ["invoices", workspaceId] }),
+      ]),
   })
 }
