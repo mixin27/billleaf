@@ -2,7 +2,7 @@
 
 Work we've agreed to do later, with enough detail to pick up without re-research. The [roadmap](roadmap.md) lists phases; this page holds the next concrete items and their order.
 
-**In progress now:** design system and app shell → data tables with server-side pagination → Clockify-style time tracking.
+**In progress now:** Clockify-style time tracking. The tracker (timer bar, tags, entries without a project, continue/duplicate, bulk edit) is done; the weekly timesheet grid, reports with CSV export and Clockify CSV import are next.
 
 **Suggested order afterwards:** Client portal → Production deploy readiness → Online invoice payments → small follow-ups as capacity allows. The billing provider adapter goes in whenever the company's jurisdiction is settled.
 

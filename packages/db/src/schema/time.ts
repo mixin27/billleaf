@@ -4,6 +4,7 @@ import {
   date,
   index,
   integer,
+  primaryKey,
   pgTable,
   text,
   timestamp,
@@ -23,9 +24,8 @@ export const timeEntries = pgTable(
     workspaceId: uuid()
       .notNull()
       .references(() => organization.id, { onDelete: "cascade" }),
-    projectId: uuid()
-      .notNull()
-      .references(() => projects.id, { onDelete: "restrict" }),
+    /** Null = "no project" (allowed, like Clockify); invoicing needs one. */
+    projectId: uuid().references(() => projects.id, { onDelete: "restrict" }),
     taskId: uuid().references(() => tasks.id, { onDelete: "set null" }),
     /** Null once the member leaves the workspace; their time is kept. */
     memberId: uuid().references(() => member.id, { onDelete: "set null" }),
@@ -53,4 +53,38 @@ export const timeEntries = pgTable(
       .on(t.memberId)
       .where(sql`${t.endedAt} is null`),
   ]
+)
+
+/** Workspace-wide labels for time entries (Clockify-style tags). */
+export const tags = pgTable(
+  "tags",
+  {
+    id: id(),
+    workspaceId: uuid()
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    name: text().notNull(),
+    /** One of the UI's tag colour names (e.g. "green"); null = neutral. */
+    color: text(),
+    ...timestamps,
+  },
+  (t) => [
+    uniqueIndex("tags_workspace_name_unique").on(
+      t.workspaceId,
+      sql`lower(${t.name})`
+    ),
+  ]
+)
+
+export const timeEntryTags = pgTable(
+  "time_entry_tags",
+  {
+    entryId: uuid()
+      .notNull()
+      .references(() => timeEntries.id, { onDelete: "cascade" }),
+    tagId: uuid()
+      .notNull()
+      .references(() => tags.id, { onDelete: "cascade" }),
+  },
+  (t) => [primaryKey({ columns: [t.entryId, t.tagId] }), index().on(t.tagId)]
 )

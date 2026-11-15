@@ -1683,3 +1683,205 @@ describe("list pagination and sorting", () => {
     ).toEqual(["alpha Co", "Bravo Co"])
   })
 })
+
+describe("Clockify-style tracker", () => {
+  it("tracks without a project, tags entries, edits the running timer, continues, duplicates and bulk-edits", async () => {
+    const owner = new Client(t)
+    await owner.signUp("Tagger")
+    const ws = await owner.createWorkspace("Tag Studio")
+    await t.db
+      .update(workspaceSubscriptions)
+      .set({ planKey: "team" })
+      .where(eq(workspaceSubscriptions.workspaceId, ws.id))
+    await owner.patch("/v1/workspace", { timezone: "UTC" })
+    const client = (await owner.post("/v1/clients", { name: "Tag Co" })).body
+    const project = (
+      await owner.post("/v1/projects", {
+        name: "Website",
+        clientId: client.id,
+        hourlyRate: 8_000,
+      })
+    ).body
+
+    // Tags: unique per workspace (case-insensitive).
+    const deep = await owner.post("/v1/tags", {
+      name: "Deep work",
+      color: "green",
+    })
+    expect(deep.status).toBe(201)
+    expect(
+      (await owner.post("/v1/tags", { name: "deep WORK" })).body.code
+    ).toBe("tag_exists")
+    const call = (await owner.post("/v1/tags", { name: "Call" })).body
+    expect(
+      (await owner.get("/v1/tags")).body.items.map((x: any) => x.name)
+    ).toEqual(["Call", "Deep work"])
+
+    // A timer with no project, with tags; a task without a project is rejected.
+    const started = await owner.post("/v1/time-entries/start", {
+      description: "Inbox zero",
+      tagIds: [call.id],
+    })
+    expect(started.status).toBe(201)
+    expect(started.body).toMatchObject({
+      projectId: null,
+      projectName: null,
+      billable: true,
+      tags: [{ name: "Call" }],
+    })
+    const task = (
+      await owner.post(`/v1/projects/${project.id}/tasks`, { title: "Build" })
+    ).body
+    expect(
+      (await owner.patch("/v1/time-entries/running", { taskId: task.id }))
+        .status
+    ).toBe(400)
+    expect(
+      (await owner.post("/v1/time-entries/start", { tagIds: [ws.id] })).status
+    ).toBe(400) // unknown tag
+
+    // Edit the running timer: project, tags, billable, an earlier start.
+    const tenMinAgo = new Date(Date.now() - 10 * 60_000).toISOString()
+    const edited = await owner.patch("/v1/time-entries/running", {
+      projectId: project.id,
+      taskId: task.id,
+      tagIds: [deep.body.id, call.id],
+      billable: false,
+      startedAt: tenMinAgo,
+    })
+    expect(edited.status).toBe(200)
+    expect(edited.body).toMatchObject({
+      projectName: "Website",
+      taskTitle: "Build",
+      billable: false,
+      isRunning: true,
+    })
+    expect(edited.body.tags.map((x: any) => x.name)).toEqual([
+      "Call",
+      "Deep work",
+    ])
+    expect(
+      (
+        await owner.patch("/v1/time-entries/running", {
+          startedAt: new Date(Date.now() + 60_000).toISOString(),
+        })
+      ).status
+    ).toBe(400)
+    const stopped = (await owner.post("/v1/time-entries/stop")).body
+    expect(stopped.durationSeconds).toBeGreaterThanOrEqual(600)
+
+    // Continue starts a new timer with the same fields; duplicate copies.
+    const cont = await owner.post(`/v1/time-entries/${stopped.id}/continue`)
+    expect(cont.status).toBe(201)
+    expect(cont.body).toMatchObject({
+      isRunning: true,
+      description: "Inbox zero",
+      projectId: project.id,
+      taskId: task.id,
+      billable: false,
+    })
+    expect(cont.body.tags).toHaveLength(2)
+    expect(
+      (await owner.post(`/v1/time-entries/${cont.body.id}/duplicate`)).status
+    ).toBe(400) // still running
+    await owner.post("/v1/time-entries/stop")
+    const dup = await owner.post(`/v1/time-entries/${stopped.id}/duplicate`)
+    expect(dup.body).toMatchObject({
+      startedAt: stopped.startedAt,
+      durationSeconds: stopped.durationSeconds,
+      isRunning: false,
+    })
+    expect(dup.body.id).not.toBe(stopped.id)
+
+    // Suggestions: one per description + project + task, filterable.
+    const sugg = (await owner.get("/v1/time-entries/suggestions?q=inbox")).body
+      .items
+    expect(sugg).toHaveLength(1)
+    expect(sugg[0]).toMatchObject({
+      description: "Inbox zero",
+      projectName: "Website",
+      taskTitle: "Build",
+    })
+    expect(
+      (await owner.get("/v1/time-entries/suggestions?q=nothing-like-this")).body
+        .items
+    ).toEqual([])
+
+    // Bulk: invoiced entries are skipped.
+    const today = new Date().toISOString().slice(0, 10)
+    const billable = (
+      await owner.post("/v1/time-entries", {
+        projectId: project.id,
+        entryDate: today,
+        durationMinutes: 60,
+      })
+    ).body
+    const invoice = await owner.post("/v1/invoices/from-time", {
+      projectId: project.id,
+      entryIds: [billable.id],
+    })
+    expect(invoice.status).toBe(201)
+    const ids = [stopped.id, cont.body.id, dup.body.id, billable.id]
+    const bulk = await owner.patch("/v1/time-entries/bulk", {
+      ids,
+      billable: true,
+      tagIds: [deep.body.id],
+      tagMode: "replace",
+    })
+    expect(bulk.body).toEqual({ updated: 3, skipped: 1 })
+    const list = (
+      await owner.get(
+        `/v1/time-entries?from=${today}&to=${today}&tagId=${deep.body.id}`
+      )
+    ).body.items
+    expect(list).toHaveLength(3)
+    expect(list.every((e: any) => e.billable && e.tags.length === 1)).toBe(true)
+    expect(
+      (
+        await owner.patch("/v1/time-entries/bulk", {
+          ids,
+          projectId: null,
+        })
+      ).body
+    ).toEqual({ updated: 3, skipped: 1 })
+    expect(
+      (await owner.post("/v1/time-entries/bulk-delete", { ids })).body
+    ).toEqual({ updated: 3, skipped: 1 })
+
+    // A member can create tags but not rename or delete them.
+    const member = new Client(t)
+    const { email } = await member.signUp("Mo Member")
+    const role = (
+      await owner.post("/v1/roles", {
+        name: "Tracker",
+        permissions: ["project.read", "time.track"],
+      })
+    ).body
+    const inv = (
+      await owner.post("/v1/invitations", { email, roleId: role.id })
+    ).body
+    await member.post("/api/auth/organization/accept-invitation", {
+      invitationId: inv.id,
+    })
+    member.workspaceId = ws.id
+    expect((await member.post("/v1/tags", { name: "Admin" })).status).toBe(201)
+    expect(
+      (await member.patch(`/v1/tags/${call.id}`, { name: "Calls" })).status
+    ).toBe(403)
+    // …and can't bulk-edit someone else's time (skipped, not changed).
+    expect(
+      (
+        await member.patch("/v1/time-entries/bulk", {
+          ids: [billable.id],
+          billable: false,
+        })
+      ).body
+    ).toEqual({ updated: 0, skipped: 1 })
+
+    // Deleting a tag removes it from entries.
+    expect((await owner.del(`/v1/tags/${call.id}`)).status).toBe(204)
+    expect(
+      (await owner.get("/v1/tags")).body.items.map((x: any) => x.name)
+    ).toEqual(["Admin", "Deep work"])
+  })
+})

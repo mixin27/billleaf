@@ -13,6 +13,39 @@ export const timeKeys = {
     ["time", ws, "list", q] as const,
   summary: (ws: string | undefined, projectId: string) =>
     ["time", ws, "summary", projectId] as const,
+  suggestions: (ws: string | undefined, q: string) =>
+    ["time", ws, "suggestions", q] as const,
+  tags: (ws: string | undefined) => ["time", ws, "tags"] as const,
+}
+
+/** Workspace tags, alphabetical. */
+export function useTags(enabled = true) {
+  const ws = useWorkspaceStore((s) => s.workspace?.id)
+  return useQuery({
+    queryKey: timeKeys.tags(ws),
+    queryFn: async () => (await unwrap(api.GET("/v1/tags"))).items,
+    enabled: Boolean(ws) && enabled,
+    staleTime: 60_000,
+  })
+}
+
+/** Recent description + project combos for the timer bar's autocomplete. */
+export function useTimeSuggestions(q: string, enabled = true) {
+  const ws = useWorkspaceStore((s) => s.workspace?.id)
+  return useQuery({
+    queryKey: timeKeys.suggestions(ws, q),
+    queryFn: async () =>
+      (
+        await unwrap(
+          api.GET("/v1/time-entries/suggestions", {
+            params: { query: q ? { q } : {} },
+          })
+        )
+      ).items,
+    enabled: Boolean(ws) && enabled,
+    placeholderData: (prev) => prev,
+    staleTime: 30_000,
+  })
 }
 
 export function useRunningTimer(enabled = true) {

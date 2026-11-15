@@ -12,14 +12,24 @@ import {
 } from "@nestjs/common"
 import { ApiTags } from "@nestjs/swagger"
 import {
+  bulkDeleteTimeEntriesSchema,
+  bulkResultSchema,
+  bulkUpdateTimeEntriesSchema,
+  createTagSchema,
   createTimeEntrySchema,
   invoiceFromTimeSchema,
   invoiceSchema,
   listTimeEntriesQuerySchema,
   projectTimeSummarySchema,
   startTimerSchema,
+  tagListSchema,
+  tagSchema,
   timeEntryListSchema,
   timeEntrySchema,
+  timeSuggestionListSchema,
+  timeSuggestionsQuerySchema,
+  updateRunningSchema,
+  updateTagSchema,
   updateTimeEntrySchema,
 } from "@workspace/contracts"
 import { createZodDto, ZodResponse } from "nestjs-zod"
@@ -40,6 +50,16 @@ class UpdateDto extends createZodDto(updateTimeEntrySchema) {}
 class SummaryDto extends createZodDto(projectTimeSummarySchema) {}
 class InvoiceFromTimeDto extends createZodDto(invoiceFromTimeSchema) {}
 class InvoiceDto extends createZodDto(invoiceSchema) {}
+class UpdateRunningDto extends createZodDto(updateRunningSchema) {}
+class BulkUpdateDto extends createZodDto(bulkUpdateTimeEntriesSchema) {}
+class BulkDeleteDto extends createZodDto(bulkDeleteTimeEntriesSchema) {}
+class BulkResultDto extends createZodDto(bulkResultSchema) {}
+class SuggestionsQueryDto extends createZodDto(timeSuggestionsQuerySchema) {}
+class SuggestionListDto extends createZodDto(timeSuggestionListSchema) {}
+class TagDto extends createZodDto(tagSchema) {}
+class TagListDto extends createZodDto(tagListSchema) {}
+class CreateTagDto extends createZodDto(createTagSchema) {}
+class UpdateTagDto extends createZodDto(updateTagSchema) {}
 
 const uuid = new ParseUUIDPipe()
 
@@ -68,6 +88,43 @@ export class TimeController {
     return this.time.start(body as never)
   }
 
+  @Patch("time-entries/running")
+  @ZodResponse({ status: 200, type: TimeEntryDto })
+  updateRunning(@Body() body: UpdateRunningDto) {
+    return this.time.updateRunning(body as never)
+  }
+
+  @Get("time-entries/suggestions")
+  @ZodResponse({ status: 200, type: SuggestionListDto })
+  async suggestions(@Query() q: SuggestionsQueryDto) {
+    return { items: await this.time.suggestions(q.q) }
+  }
+
+  @Patch("time-entries/bulk")
+  @ZodResponse({ status: 200, type: BulkResultDto })
+  bulkUpdate(@Body() body: BulkUpdateDto) {
+    return this.time.bulkUpdate(body as never)
+  }
+
+  @Post("time-entries/bulk-delete")
+  @HttpCode(200)
+  @ZodResponse({ status: 200, type: BulkResultDto })
+  bulkDelete(@Body() body: BulkDeleteDto) {
+    return this.time.bulkDelete(body.ids)
+  }
+
+  @Post("time-entries/:id/continue")
+  @ZodResponse({ status: 201, type: TimeEntryDto })
+  continue(@Param("id", uuid) id: string) {
+    return this.time.continue(id)
+  }
+
+  @Post("time-entries/:id/duplicate")
+  @ZodResponse({ status: 201, type: TimeEntryDto })
+  duplicate(@Param("id", uuid) id: string) {
+    return this.time.duplicate(id)
+  }
+
   @Post("time-entries/stop")
   @HttpCode(200)
   @ZodResponse({ status: 200, type: TimeEntryDto })
@@ -91,6 +148,30 @@ export class TimeController {
   @HttpCode(204)
   remove(@Param("id", uuid) id: string) {
     return this.time.remove(id)
+  }
+
+  @Get("tags")
+  @ZodResponse({ status: 200, type: TagListDto })
+  async tags() {
+    return { items: await this.time.listTags() }
+  }
+
+  @Post("tags")
+  @ZodResponse({ status: 201, type: TagDto })
+  createTag(@Body() body: CreateTagDto) {
+    return this.time.createTag(body as never)
+  }
+
+  @Patch("tags/:id")
+  @ZodResponse({ status: 200, type: TagDto })
+  updateTag(@Param("id", uuid) id: string, @Body() body: UpdateTagDto) {
+    return this.time.updateTag(id, body as never)
+  }
+
+  @Delete("tags/:id")
+  @HttpCode(204)
+  deleteTag(@Param("id", uuid) id: string) {
+    return this.time.deleteTag(id)
   }
 
   @Get("projects/:id/time-summary")

@@ -2,8 +2,12 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import type {
+  BulkUpdateTimeEntriesInput,
+  CreateTagInput,
   CreateTimeEntryInput,
   StartTimerInput,
+  UpdateRunningInput,
+  UpdateTagInput,
   UpdateTimeEntryInput,
 } from "@workspace/contracts"
 
@@ -73,6 +77,89 @@ export function useInvoiceFromTime() {
   return useMutation({
     mutationFn: (projectId: string) =>
       unwrap(api.POST("/v1/invoices/from-time", { body: { projectId } })),
+    onSuccess: invalidate,
+  })
+}
+
+export function useUpdateRunning() {
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: (body: UpdateRunningInput) =>
+      unwrap(api.PATCH("/v1/time-entries/running", { body: body as never })),
+    onSuccess: invalidate,
+  })
+}
+
+export function useContinueEntry() {
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: (id: string) =>
+      unwrap(
+        api.POST("/v1/time-entries/{id}/continue", { params: { path: { id } } })
+      ),
+    onSuccess: invalidate,
+  })
+}
+
+export function useDuplicateEntry() {
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: (id: string) =>
+      unwrap(
+        api.POST("/v1/time-entries/{id}/duplicate", {
+          params: { path: { id } },
+        })
+      ),
+    onSuccess: invalidate,
+  })
+}
+
+export function useBulkUpdateEntries() {
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: (body: BulkUpdateTimeEntriesInput) =>
+      unwrap(api.PATCH("/v1/time-entries/bulk", { body: body as never })),
+    onSuccess: invalidate,
+  })
+}
+
+export function useBulkDeleteEntries() {
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: (ids: string[]) =>
+      unwrap(api.POST("/v1/time-entries/bulk-delete", { body: { ids } })),
+    onSuccess: invalidate,
+  })
+}
+
+export function useCreateTag() {
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: (body: CreateTagInput) =>
+      unwrap(api.POST("/v1/tags", { body: body as never })),
+    onSuccess: invalidate,
+  })
+}
+
+export function useUpdateTag() {
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: ({ id, ...body }: UpdateTagInput & { id: string }) =>
+      unwrap(
+        api.PATCH("/v1/tags/{id}", {
+          params: { path: { id } },
+          body: body as never,
+        })
+      ),
+    onSuccess: invalidate,
+  })
+}
+
+export function useDeleteTag() {
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: (id: string) =>
+      unwrap(api.DELETE("/v1/tags/{id}", { params: { path: { id } } })),
     onSuccess: invalidate,
   })
 }
