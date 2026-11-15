@@ -73,6 +73,17 @@ export class Client {
     return { status: res.statusCode, body: json }
   }
 
+  /** Headers this client would send (for raw `inject` calls). */
+  headers(): Record<string, string> {
+    return {
+      origin: "http://localhost:3000",
+      ...(this.cookies.size
+        ? { cookie: [...this.cookies].map(([k, v]) => `${k}=${v}`).join("; ") }
+        : {}),
+      ...(this.workspaceId ? { "x-workspace-id": this.workspaceId } : {}),
+    }
+  }
+
   get = (url: string) => this.request("GET", url)
   post = (url: string, body: Json = {}) => this.request("POST", url, body)
   patch = (url: string, body: Json) => this.request("PATCH", url, body)

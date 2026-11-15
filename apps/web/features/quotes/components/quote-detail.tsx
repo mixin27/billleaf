@@ -1,6 +1,6 @@
 "use client"
 
-import type { PartySnapshot, Quote } from "@workspace/contracts"
+import type { Quote } from "@workspace/contracts"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -12,7 +12,6 @@ import {
   AlertDialogTitle,
 } from "@workspace/ui/components/alert-dialog"
 import { Button } from "@workspace/ui/components/button"
-import { Card, CardContent } from "@workspace/ui/components/card"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,28 +19,25 @@ import {
   DropdownMenuTrigger,
 } from "@workspace/ui/components/dropdown-menu"
 import { Skeleton } from "@workspace/ui/components/skeleton"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@workspace/ui/components/table"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import * as React from "react"
 import { toast } from "sonner"
 
+import { DocumentSheet, toParty } from "@/components/documents/document-sheet"
+import { SendDialog } from "@/components/documents/send-dialog"
 import { usePermissions } from "@/components/permissions/can"
 import { useClient } from "@/features/clients"
 import { useWorkspaceProfile, useWorkspaceStore } from "@/features/workspace"
 import { errorMessage } from "@/lib/api"
-import { formatDate, money } from "@/lib/format"
+import { openPdf } from "@/lib/download"
+import { formatDate } from "@/lib/format"
 
 import {
   type QuoteAction,
+  useConvertQuote,
   useDeleteQuote,
+  useEmailQuote,
   useQuoteAction,
 } from "../api/mutations"
 import { useQuote } from "../api/queries"
@@ -79,9 +75,16 @@ function QuoteDetailView({ quote }: { quote: Quote }) {
   const { can } = usePermissions()
   const action = useQuoteAction(quote.id)
   const remove = useDeleteQuote(quote.id)
+  const email = useEmailQuote(quote.id)
+  const convert = useConvertQuote(quote.id)
   const [confirm, setConfirm] = React.useState<"send" | "delete" | null>(null)
+  const [emailing, setEmailing] = React.useState(false)
   const locale = profile.data?.locale
   const draft = quote.status === "draft"
+  const primaryEmail =
+    client.data?.contacts.find((c) => c.isPrimary && c.email)?.email ??
+    client.data?.email ??
+    null
 
   const run = (a: QuoteAction) =>
     action.mutate(a, {
@@ -92,31 +95,6 @@ function QuoteDetailView({ quote }: { quote: Quote }) {
       },
       onError: (e) => toast.error(errorMessage(e)),
     })
-
-  // Drafts show live data; issued quotes show the frozen snapshots.
-  const issuer: PartySnapshot | null =
-    quote.issuerSnapshot ??
-    (profile.data
-      ? {
-          name: profile.data.name,
-          legalName: profile.data.legalName,
-          email: profile.data.email,
-          phone: profile.data.phone,
-          taxId: profile.data.taxId,
-          addressLines: addressLines(profile.data),
-        }
-      : null)
-  const recipient: PartySnapshot | null =
-    quote.clientSnapshot ??
-    (client.data
-      ? {
-          name: client.data.name,
-          email: client.data.email,
-          phone: client.data.phone,
-          taxId: client.data.taxId,
-          addressLines: addressLines(client.data),
-        }
-      : null)
 
   return (
     <div className="flex flex-col gap-6">
@@ -134,6 +112,17 @@ function QuoteDetailView({ quote }: { quote: Quote }) {
           </h1>
           {quote.title ? (
             <p className="text-sm text-muted-foreground">{quote.title}</p>
+          ) : null}
+          {quote.invoiceId ? (
+            <p className="mt-1 text-sm">
+              Invoiced as{" "}
+              <Link
+                className="underline"
+                href={`/${slug}/invoices/${quote.invoiceId}`}
+              >
+                {quote.invoiceNumber ?? "draft invoice"}
+              </Link>
+            </p>
           ) : null}
         </div>
         <div className="flex flex-wrap gap-2">
@@ -154,6 +143,11 @@ function QuoteDetailView({ quote }: { quote: Quote }) {
               Mark as sent
             </Button>
           ) : null}
+          {!draft && can("quote.send") ? (
+            <Button variant="outline" onClick={() => setEmailing(true)}>
+              Email
+            </Button>
+          ) : null}
           {quote.status === "sent" && can("quote.update") ? (
             <>
               <Button
@@ -168,122 +162,92 @@ function QuoteDetailView({ quote }: { quote: Quote }) {
               </Button>
             </>
           ) : null}
-          {can("quote.create") || (draft && can("quote.delete")) ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={<Button variant="outline">More</Button>}
-              />
-              <DropdownMenuContent align="end">
-                {can("quote.create") ? (
-                  <DropdownMenuItem onClick={() => run("duplicate")}>
-                    Duplicate
-                  </DropdownMenuItem>
-                ) : null}
-                {draft && can("quote.delete") ? (
-                  <DropdownMenuItem
-                    variant="destructive"
-                    onClick={() => setConfirm("delete")}
-                  >
-                    Delete draft
-                  </DropdownMenuItem>
-                ) : null}
-              </DropdownMenuContent>
-            </DropdownMenu>
+          {quote.status === "accepted" &&
+          !quote.invoiceId &&
+          can("invoice.create") ? (
+            <Button
+              disabled={convert.isPending}
+              onClick={() =>
+                convert.mutate(undefined, {
+                  onSuccess: (inv) => {
+                    toast.success("Draft invoice created from quote")
+                    router.push(`/${slug}/invoices/${inv.id}`)
+                  },
+                  onError: (e) => toast.error(errorMessage(e)),
+                })
+              }
+            >
+              Create invoice
+            </Button>
           ) : null}
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={<Button variant="outline">More</Button>}
+            />
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onClick={() =>
+                  openPdf(`/v1/quotes/${quote.id}/pdf`).catch((e) =>
+                    toast.error(errorMessage(e))
+                  )
+                }
+              >
+                Download PDF
+              </DropdownMenuItem>
+              {can("quote.create") ? (
+                <DropdownMenuItem onClick={() => run("duplicate")}>
+                  Duplicate
+                </DropdownMenuItem>
+              ) : null}
+              {draft && can("quote.delete") ? (
+                <DropdownMenuItem
+                  variant="destructive"
+                  onClick={() => setConfirm("delete")}
+                >
+                  Delete draft
+                </DropdownMenuItem>
+              ) : null}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
-      <Card>
-        <CardContent className="flex flex-col gap-8 p-6 sm:p-10">
-          <div className="grid gap-6 sm:grid-cols-2">
-            <Party label="From" party={issuer} />
-            <Party label="For" party={recipient} />
-          </div>
-          <dl className="grid grid-cols-2 gap-4 text-sm sm:grid-cols-4">
-            <Meta label="Quote" value={quote.number ?? "Draft"} />
-            <Meta label="Issued" value={formatDate(quote.issueDate, locale)} />
-            <Meta
-              label="Valid until"
-              value={formatDate(quote.validUntil, locale)}
-            />
-            <Meta label="Currency" value={quote.currency} />
-          </dl>
+      <DocumentSheet
+        issuer={quote.issuerSnapshot ?? toParty(profile.data)}
+        recipient={quote.clientSnapshot ?? toParty(client.data)}
+        meta={[
+          { label: "Quote", value: quote.number ?? "Draft" },
+          { label: "Issued", value: formatDate(quote.issueDate, locale) },
+          { label: "Valid until", value: formatDate(quote.validUntil, locale) },
+          { label: "Currency", value: quote.currency },
+        ]}
+        lines={quote.lines}
+        currency={quote.currency}
+        locale={locale}
+        subtotal={quote.subtotal}
+        taxTotal={quote.taxTotal}
+        total={quote.total}
+        notes={quote.notes}
+        terms={quote.terms}
+        footer={profile.data?.documentFooter}
+      />
 
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Description</TableHead>
-                <TableHead className="text-right">Qty</TableHead>
-                <TableHead className="text-right">Unit price</TableHead>
-                <TableHead className="hidden text-right sm:table-cell">
-                  Tax
-                </TableHead>
-                <TableHead className="text-right">Amount</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {quote.lines.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-muted-foreground">
-                    No line items yet.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                quote.lines.map((l) => (
-                  <TableRow key={l.id}>
-                    <TableCell className="whitespace-pre-line">
-                      {l.description}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {l.quantity}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {money(l.unitPrice, quote.currency, locale)}
-                    </TableCell>
-                    <TableCell className="hidden text-right tabular-nums sm:table-cell">
-                      {l.taxRateBps ? `${l.taxRateBps / 100}%` : "—"}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {money(l.amount, quote.currency, locale)}
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-
-          <dl className="ml-auto grid w-full max-w-xs grid-cols-2 gap-1 text-sm">
-            <dt className="text-muted-foreground">Subtotal</dt>
-            <dd className="text-right tabular-nums">
-              {money(quote.subtotal, quote.currency, locale)}
-            </dd>
-            <dt className="text-muted-foreground">Tax</dt>
-            <dd className="text-right tabular-nums">
-              {money(quote.taxTotal, quote.currency, locale)}
-            </dd>
-            <dt className="font-medium">Total</dt>
-            <dd className="text-right font-medium tabular-nums">
-              {money(quote.total, quote.currency, locale)}
-            </dd>
-          </dl>
-
-          {quote.notes || quote.terms ? (
-            <div className="grid gap-6 text-sm sm:grid-cols-2">
-              {quote.notes ? (
-                <TextBlock label="Notes" text={quote.notes} />
-              ) : null}
-              {quote.terms ? (
-                <TextBlock label="Terms" text={quote.terms} />
-              ) : null}
-            </div>
-          ) : null}
-          {profile.data?.documentFooter ? (
-            <p className="border-t pt-4 text-xs whitespace-pre-line text-muted-foreground">
-              {profile.data.documentFooter}
-            </p>
-          ) : null}
-        </CardContent>
-      </Card>
+      <SendDialog
+        open={emailing}
+        onOpenChange={setEmailing}
+        title={`Email ${quote.number ?? "quote"}`}
+        defaultTo={primaryEmail}
+        pending={email.isPending}
+        onSend={(input) =>
+          email.mutate(input, {
+            onSuccess: () => {
+              toast.success("Quote emailed")
+              setEmailing(false)
+            },
+            onError: (e) => toast.error(errorMessage(e)),
+          })
+        }
+      />
 
       <AlertDialog
         open={confirm !== null}
@@ -298,7 +262,7 @@ function QuoteDetailView({ quote }: { quote: Quote }) {
             </AlertDialogTitle>
             <AlertDialogDescription>
               {confirm === "send"
-                ? "It gets the next quote number and becomes read-only. Client and business details are frozen as they are now. To change it later, duplicate it."
+                ? "It gets the next quote number and becomes read-only. Client and business details are frozen as they are now. You can then email the PDF."
                 : "This draft will be permanently removed."}
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -324,69 +288,6 @@ function QuoteDetailView({ quote }: { quote: Quote }) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
-  )
-}
-
-function addressLines(a: {
-  addressLine1: string | null
-  addressLine2: string | null
-  city: string | null
-  state: string | null
-  postalCode: string | null
-  country: string | null
-}) {
-  return [
-    a.addressLine1,
-    a.addressLine2,
-    [a.city, a.state, a.postalCode].filter(Boolean).join(" ") || null,
-    a.country,
-  ].filter((l): l is string => Boolean(l))
-}
-
-function Party({
-  label,
-  party,
-}: {
-  label: string
-  party: PartySnapshot | null
-}) {
-  return (
-    <div className="text-sm">
-      <p className="mb-1 text-xs text-muted-foreground uppercase">{label}</p>
-      {party ? (
-        <>
-          <p className="font-medium">{party.legalName || party.name}</p>
-          {party.addressLines.map((l) => (
-            <p key={l}>{l}</p>
-          ))}
-          {party.email ? <p>{party.email}</p> : null}
-          {party.phone ? <p>{party.phone}</p> : null}
-          {party.taxId ? (
-            <p className="text-muted-foreground">Tax ID {party.taxId}</p>
-          ) : null}
-        </>
-      ) : (
-        <Skeleton className="h-16 w-40" />
-      )}
-    </div>
-  )
-}
-
-function Meta({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <dt className="text-xs text-muted-foreground">{label}</dt>
-      <dd className="mt-0.5 font-medium">{value}</dd>
-    </div>
-  )
-}
-
-function TextBlock({ label, text }: { label: string; text: string }) {
-  return (
-    <div>
-      <p className="mb-1 text-xs text-muted-foreground uppercase">{label}</p>
-      <p className="whitespace-pre-line">{text}</p>
     </div>
   )
 }

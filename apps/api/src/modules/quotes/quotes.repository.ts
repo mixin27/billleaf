@@ -1,5 +1,11 @@
 import { Injectable } from "@nestjs/common"
-import { clients, quoteLines, quotes, type Transaction } from "@workspace/db"
+import {
+  clients,
+  invoices,
+  quoteLines,
+  quotes,
+  type Transaction,
+} from "@workspace/db"
 import { and, asc, count, desc, eq, ilike, lt, or, type SQL } from "drizzle-orm"
 
 import { RequestContext } from "../../common/context/request-context.js"
@@ -7,7 +13,12 @@ import { InjectDb, type Database } from "../../core/database/database.module.js"
 
 export type QuoteRow = typeof quotes.$inferSelect
 export type QuoteLineRow = typeof quoteLines.$inferSelect
-export type QuoteWithClient = QuoteRow & { clientName: string }
+export type QuoteWithClient = QuoteRow & {
+  clientName: string
+  /** Present on detail lookups once converted to an invoice. */
+  invoiceId?: string | null
+  invoiceNumber?: string | null
+}
 export type QuoteValues = Omit<
   typeof quotes.$inferInsert,
   "id" | "workspaceId" | "createdAt" | "updatedAt"
@@ -77,15 +88,28 @@ export class QuotesRepository {
     opts: { forUpdate?: boolean } = {}
   ): Promise<QuoteWithClient | null> {
     const q = tx
-      .select({ quote: quotes, clientName: clients.name })
+      .select({
+        quote: quotes,
+        clientName: clients.name,
+        invoiceId: invoices.id,
+        invoiceNumber: invoices.number,
+      })
       .from(quotes)
       .innerJoin(clients, eq(clients.id, quotes.clientId))
+      .leftJoin(invoices, eq(invoices.quoteId, quotes.id))
       .where(and(this.scope(), eq(quotes.id, id)))
       .limit(1)
     const [row] = opts.forUpdate
       ? await q.for("update", { of: quotes })
       : await q
-    return row ? { ...row.quote, clientName: row.clientName } : null
+    return row
+      ? {
+          ...row.quote,
+          clientName: row.clientName,
+          invoiceId: row.invoiceId,
+          invoiceNumber: row.invoiceNumber,
+        }
+      : null
   }
 
   async lines(

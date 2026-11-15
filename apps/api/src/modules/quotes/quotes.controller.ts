@@ -3,13 +3,18 @@ import {
   Controller,
   Delete,
   Get,
+  Header,
   HttpCode,
   Param,
   ParseUUIDPipe,
   Patch,
   Post,
   Query,
+  Res,
 } from "@nestjs/common"
+import { sendDocumentSchema } from "@workspace/contracts"
+import type { FastifyReply } from "fastify"
+import { createZodDto } from "nestjs-zod"
 import { ApiTags } from "@nestjs/swagger"
 import { ZodResponse } from "nestjs-zod"
 
@@ -22,6 +27,8 @@ import {
   UpdateQuoteDto,
 } from "./quotes.dto.js"
 import { QuotesService } from "./quotes.service.js"
+
+class SendDocumentDto extends createZodDto(sendDocumentSchema) {}
 
 const uuid = new ParseUUIDPipe()
 
@@ -94,5 +101,24 @@ export class QuotesController {
   @RequirePermission("quote.delete")
   remove(@Param("id", uuid) id: string) {
     return this.quotes.remove(id)
+  }
+
+  @Get(":id/pdf")
+  @RequirePermission("quote.read")
+  @Header("cache-control", "private, no-store")
+  async pdf(@Param("id", uuid) id: string, @Res() reply: FastifyReply) {
+    const { filename, content } = await this.quotes.pdf(id)
+    void reply
+      .header("content-type", "application/pdf")
+      .header("content-disposition", `inline; filename="${filename}"`)
+      .send(content)
+  }
+
+  @Post(":id/email")
+  @HttpCode(200)
+  @RequirePermission("quote.send")
+  @ZodResponse({ status: 200, type: QuoteDto })
+  email(@Param("id", uuid) id: string, @Body() body: SendDocumentDto) {
+    return this.quotes.email(id, body as never)
   }
 }

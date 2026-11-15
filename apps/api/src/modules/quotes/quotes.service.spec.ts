@@ -105,7 +105,15 @@ function setup(
     next: vi.fn().mockResolvedValue("QUO-0001"),
   } as unknown as DocumentNumberingService
   const audit = { record: vi.fn() } as unknown as AuditService
-  const service = new QuotesService(repo, clients, profile, numbering, audit)
+  const mail = { send: vi.fn() } as never
+  const service = new QuotesService(
+    repo,
+    clients,
+    profile,
+    numbering,
+    audit,
+    mail
+  )
   return { service, repo, numbering, tx }
 }
 

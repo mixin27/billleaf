@@ -36,6 +36,7 @@ import * as React from "react"
 import { toast } from "sonner"
 
 import { Can, usePermissions } from "@/components/permissions/can"
+import { ClientInvoices } from "@/features/invoices"
 import { ClientQuotes } from "@/features/quotes"
 import { useWorkspaceProfile, useWorkspaceStore } from "@/features/workspace"
 import { errorMessage } from "@/lib/api"
@@ -184,7 +185,10 @@ function ClientDetailView({ client }: { client: ClientDetailData }) {
         />
       </div>
 
-      <ClientQuotes clientId={client.id} canCreate={!archived} />
+      <div className="grid gap-6 lg:grid-cols-2">
+        <ClientInvoices clientId={client.id} canCreate={!archived} />
+        <ClientQuotes clientId={client.id} canCreate={!archived} />
+      </div>
 
       <ClientFormDialog
         open={editing}

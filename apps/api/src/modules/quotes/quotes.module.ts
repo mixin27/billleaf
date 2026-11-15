@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common"
 
 import { IamModule } from "../../iam/iam.module.js"
+import { MailModule } from "../../mail/mail.module.js"
 import { ClientsModule } from "../clients/clients.module.js"
 import { DocumentsModule } from "../documents/documents.module.js"
 import { WorkspaceProfileModule } from "../workspace/workspace-profile.module.js"
@@ -9,7 +10,13 @@ import { QuotesRepository } from "./quotes.repository.js"
 import { QuotesService } from "./quotes.service.js"
 
 @Module({
-  imports: [IamModule, ClientsModule, DocumentsModule, WorkspaceProfileModule],
+  imports: [
+    IamModule,
+    MailModule,
+    ClientsModule,
+    DocumentsModule,
+    WorkspaceProfileModule,
+  ],
   controllers: [QuotesController],
   providers: [QuotesRepository, QuotesService],
   exports: [QuotesService],

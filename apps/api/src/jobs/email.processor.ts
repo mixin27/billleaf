@@ -18,13 +18,19 @@ export class EmailProcessor extends WorkerHost {
   }
 
   async process(job: Job<EmailMessage>) {
-    const { to, subject, html, text } = job.data
+    const { to, subject, html, text, replyTo, attachments } = job.data
     await this.transport.sendMail({
       from: this.env.EMAIL_FROM,
       to,
       subject,
       html,
       text,
+      replyTo,
+      attachments: attachments?.map((a) => ({
+        filename: a.filename,
+        content: Buffer.from(a.contentBase64, "base64"),
+        contentType: a.contentType,
+      })),
     })
     this.logger.log(`Sent "${subject}" to ${to}`)
   }

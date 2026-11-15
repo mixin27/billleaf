@@ -7,43 +7,39 @@ import {
 import {
   type CreateQuoteInput,
   documentTotals,
-  type LineItemInput,
-  lineAmounts,
   type Quote,
   type QuoteList,
   type QuoteStatus,
   type QuoteSummary,
   type UpdateQuoteInput,
 } from "@workspace/contracts"
+import { formatMoney, type PartySnapshot } from "@workspace/contracts"
+import { documentEmail } from "@workspace/emails"
 
 import { AuditService } from "../../iam/audit/audit.service.js"
+import { MailService } from "../../mail/mail.service.js"
 import { ClientsRepository } from "../clients/clients.repository.js"
 import { DocumentNumberingService } from "../documents/document-numbering.service.js"
-import { addDays, partySnapshot, todayIn } from "../documents/party-snapshot.js"
+import { renderDocumentPdf } from "../documents/document-pdf.js"
+import {
+  type ParsedLine,
+  toLineItem,
+  toLineValues,
+} from "../documents/line-values.js"
+import {
+  addDays,
+  formatDocDate,
+  partySnapshot,
+  todayIn,
+} from "../documents/party-snapshot.js"
 import { WorkspaceProfileService } from "../workspace/workspace-profile.service.js"
 import {
-  type LineValues,
   type QuoteLineRow,
   QuotesRepository,
   type QuoteWithClient,
 } from "./quotes.repository.js"
 
 const DEFAULT_VALIDITY_DAYS = 30
-
-type ParsedLine = Required<LineItemInput>
-
-function toLineValues(
-  lines: ParsedLine[]
-): (LineValues & { taxRateBps: number })[] {
-  return lines.map((l, i) => ({
-    position: i,
-    description: l.description,
-    quantity: l.quantity,
-    unitPrice: l.unitPrice,
-    taxRateBps: l.taxRateBps,
-    ...lineAmounts(l),
-  }))
-}
 
 export function toQuoteSummary(
   q: QuoteWithClient,
@@ -78,21 +74,14 @@ function toQuote(
     ...toQuoteSummary(q, today),
     notes: q.notes,
     terms: q.terms,
-    lines: lines.map((l) => ({
-      id: l.id,
-      position: l.position,
-      description: l.description,
-      quantity: Number(l.quantity),
-      unitPrice: l.unitPrice,
-      taxRateBps: l.taxRateBps,
-      amount: l.amount,
-      taxAmount: l.taxAmount,
-    })),
+    lines: lines.map(toLineItem),
     sentAt: q.sentAt?.toISOString() ?? null,
     acceptedAt: q.acceptedAt?.toISOString() ?? null,
     declinedAt: q.declinedAt?.toISOString() ?? null,
     clientSnapshot: q.clientSnapshot ?? null,
     issuerSnapshot: q.issuerSnapshot ?? null,
+    invoiceId: q.invoiceId ?? null,
+    invoiceNumber: q.invoiceNumber ?? null,
   }
 }
 
@@ -108,7 +97,8 @@ export class QuotesService {
     private readonly clients: ClientsRepository,
     private readonly profile: WorkspaceProfileService,
     private readonly numbering: DocumentNumberingService,
-    private readonly audit: AuditService
+    private readonly audit: AuditService,
+    private readonly mail: MailService
   ) {}
 
   private async today() {
@@ -289,6 +279,109 @@ export class QuotesService {
       resourceType: "quote",
       resourceId: id,
     })
+  }
+
+  async pdf(id: string): Promise<{ filename: string; content: Buffer }> {
+    const quote = await this.get(id)
+    const profile = await this.profile.get()
+    const client = quote.clientSnapshot
+      ? null
+      : await this.clients.findById(quote.clientId)
+    const issuer: PartySnapshot = quote.issuerSnapshot ?? partySnapshot(profile)
+    const recipient: PartySnapshot =
+      quote.clientSnapshot ??
+      (client
+        ? partySnapshot(client)
+        : { name: quote.clientName, addressLines: [] })
+    const content = await renderDocumentPdf({
+      title: "Quote",
+      number: quote.number,
+      stamp:
+        quote.status === "draft"
+          ? "DRAFT"
+          : quote.status === "declined"
+            ? "DECLINED"
+            : null,
+      meta: [
+        { label: "Quote", value: quote.number ?? "Draft" },
+        {
+          label: "Issued",
+          value: formatDocDate(quote.issueDate, profile.locale),
+        },
+        {
+          label: "Valid until",
+          value: formatDocDate(quote.validUntil, profile.locale),
+        },
+      ],
+      issuer,
+      recipient,
+      currency: quote.currency,
+      locale: profile.locale,
+      lines: quote.lines,
+      subtotal: quote.subtotal,
+      taxTotal: quote.taxTotal,
+      total: quote.total,
+      notes: quote.notes,
+      terms: quote.terms,
+      footer: profile.documentFooter,
+      brandColor: profile.brandColor,
+    })
+    return { filename: `${quote.number ?? "quote-draft"}.pdf`, content }
+  }
+
+  /** Email the PDF of a sent quote (primary contact → client email, or `to`). */
+  async email(
+    id: string,
+    opts: { to?: string; message?: string | null }
+  ): Promise<Quote> {
+    const quote = await this.get(id)
+    if (quote.status === "draft")
+      throw new ConflictException("Mark the quote as sent before emailing it")
+    let to = opts.to
+    if (!to) {
+      const [client, contacts] = await Promise.all([
+        this.clients.findById(quote.clientId),
+        this.clients.listContacts(quote.clientId),
+      ])
+      to =
+        contacts.find((c) => c.isPrimary && c.email)?.email ??
+        client?.email ??
+        contacts.find((c) => c.email)?.email ??
+        undefined
+    }
+    if (!to) {
+      throw new BadRequestException({
+        message:
+          "This client has no email address. Add one or enter a recipient.",
+        code: "no_recipient",
+      })
+    }
+    const profile = await this.profile.get()
+    const { filename, content } = await this.pdf(id)
+    await this.mail.send(
+      documentEmail({
+        to,
+        kind: "Quote",
+        number: quote.number!,
+        workspaceName: profile.name,
+        amount: formatMoney(
+          { amount: quote.total, currency: quote.currency },
+          profile.locale
+        ),
+        dueOrValid: quote.validUntil
+          ? formatDocDate(quote.validUntil, profile.locale)
+          : undefined,
+        message: opts.message,
+        replyTo: profile.email,
+        pdf: { filename, contentBase64: content.toString("base64") },
+      })
+    )
+    await this.audit.record("quote.emailed", {
+      resourceType: "quote",
+      resourceId: id,
+      metadata: { to },
+    })
+    return quote
   }
 
   private async require(id: string) {

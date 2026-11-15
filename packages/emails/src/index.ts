@@ -5,11 +5,20 @@
  * TODO(phase-1): replace string templates with react-email components once
  * brand typography/colors are final.
  */
+export interface EmailAttachment {
+  filename: string
+  /** Base64 so the message stays JSON-serialisable in the job queue. */
+  contentBase64: string
+  contentType: string
+}
+
 export interface EmailMessage {
   to: string
   subject: string
   html: string
   text: string
+  replyTo?: string
+  attachments?: EmailAttachment[]
 }
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`)
@@ -92,5 +101,37 @@ export function invitationEmail(p: {
       { label: "Accept invitation", url: p.url }
     ),
     text: `${p.inviterName} invited you to ${p.workspaceName}: ${p.url}`,
+  }
+}
+
+/** A quote or invoice sent to a client, with the PDF attached. */
+export function documentEmail(p: {
+  to: string
+  kind: "Invoice" | "Quote"
+  number: string
+  workspaceName: string
+  amount: string
+  dueOrValid?: string
+  message?: string | null
+  replyTo?: string | null
+  pdf: { filename: string; contentBase64: string }
+}): EmailMessage {
+  const intro =
+    p.kind === "Invoice"
+      ? `Please find invoice ${p.number} for ${p.amount}${p.dueOrValid ? `, due ${p.dueOrValid}` : ""}.`
+      : `Please find quote ${p.number} for ${p.amount}${p.dueOrValid ? `, valid until ${p.dueOrValid}` : ""}.`
+  const message = p.message
+    ? `<p style="white-space:pre-line">${esc(p.message)}</p>`
+    : ""
+  return {
+    to: p.to,
+    subject: `${p.kind} ${p.number} from ${p.workspaceName}`,
+    html: layout(
+      `${p.kind} ${p.number}`,
+      `${message}<p>${esc(intro)}</p><p>The PDF is attached.</p>`
+    ),
+    text: `${p.message ? `${p.message}\n\n` : ""}${intro}\nThe PDF is attached.`,
+    replyTo: p.replyTo ?? undefined,
+    attachments: [{ ...p.pdf, contentType: "application/pdf" }],
   }
 }
