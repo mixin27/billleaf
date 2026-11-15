@@ -1,6 +1,6 @@
 # Deployment
 
-Decision: [ADR-0007 Self-hosted VPS + Dokploy](../adr/0007-self-hosted-vps-dokploy.md). Topology: [Architecture overview](../architecture/overview.md).
+Decision: [ADR-0007 Self-hosted VPS + Dokploy](../adr/0007-self-hosted-vps-dokploy.md). Topology: [Architecture overview](../architecture/overview.md). How Dokploy works, costs, sizing and migrating from a manual VPS: [Hosting playbook](hosting-playbook.md).
 
 ## Hosting
 

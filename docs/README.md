@@ -30,13 +30,14 @@ Billleaf is an all-in-one business workspace for freelancers — **Client → Qu
 
 ## Infrastructure
 
-| Doc                                                        | What                                           |
-| ---------------------------------------------------------- | ---------------------------------------------- |
-| [Environments](infrastructure/environments.md)             | local / staging / production, config & secrets |
-| [Deployment](infrastructure/deployment.md)                 | VPS + Dokploy + Vercel, GHCR, migrate job      |
-| [Observability](infrastructure/observability.md)           | Sentry, logs, traces, alerts                   |
-| [Backup & restore](infrastructure/backup-restore.md)       | Runbook and restore drill                      |
-| [Security checklist](infrastructure/security-checklist.md) | Pre-launch and quarterly review                |
+| Doc                                                        | What                                                                              |
+| ---------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| [Environments](infrastructure/environments.md)             | local / staging / production, config & secrets                                    |
+| [Deployment](infrastructure/deployment.md)                 | VPS + Dokploy + Vercel, GHCR, migrate job                                         |
+| [Hosting playbook](infrastructure/hosting-playbook.md)     | How Dokploy works, costs, sizing, DO/Hetzner, migration (reusable for other SaaS) |
+| [Observability](infrastructure/observability.md)           | Sentry, logs, traces, alerts                                                      |
+| [Backup & restore](infrastructure/backup-restore.md)       | Runbook and restore drill                                                         |
+| [Security checklist](infrastructure/security-checklist.md) | Pre-launch and quarterly review                                                   |
 
 ## Engineering
 
