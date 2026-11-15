@@ -36,6 +36,8 @@ export const workspaceProfileSchema = z.object({
   defaultTaxRateBps: z.number().int(),
   documentFooter: z.string().nullable(),
   brandColor: z.string().nullable(),
+  /** Short-lived presigned URL; null when no logo is set. */
+  logoUrl: z.string().nullable(),
   updatedAt: z.iso.datetime(),
 })
 export type WorkspaceProfile = z.infer<typeof workspaceProfileSchema>

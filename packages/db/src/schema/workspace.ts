@@ -6,6 +6,7 @@ import { integer, pgTable, text, uuid } from "drizzle-orm/pg-core"
 
 import { timestamps } from "./_shared.js"
 import { organization } from "./auth.js"
+import { files } from "./files.js"
 
 export const workspaceProfiles = pgTable("workspace_profiles", {
   workspaceId: uuid()
@@ -30,5 +31,7 @@ export const workspaceProfiles = pgTable("workspace_profiles", {
   defaultTaxRateBps: integer().notNull().default(0),
   documentFooter: text(),
   brandColor: text(),
+  /** PNG/JPEG shown in the app and on documents. */
+  logoFileId: uuid().references(() => files.id, { onDelete: "set null" }),
   ...timestamps,
 })

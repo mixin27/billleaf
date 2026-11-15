@@ -233,6 +233,7 @@ export class PaymentsService {
           : payment.notes,
       footer: profile.documentFooter,
       brandColor: profile.brandColor,
+      logo: await this.profile.logoImage(),
     })
     return { filename: `${receipt.number}.pdf`, content }
   }

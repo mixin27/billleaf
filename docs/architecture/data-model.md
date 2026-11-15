@@ -89,9 +89,17 @@ PDFs (quotes and invoices) are rendered on demand by `renderDocumentPdf` (pdfkit
 
 Recording a payment locks the invoice row (`SELECT … FOR UPDATE`), rejects overpayment (`overpayment`) and payments on non-issued or fully paid invoices, inserts the payment, increments `invoices.amount_paid` and issues the receipt — all in one transaction. A refund (recording that money was returned; Billleaf moves no money) marks the payment refunded, decrements `amount_paid` and voids the receipt. Invoices with `amount_paid > 0` cannot be voided.
 
+### Files (`files.ts`)
+
+| Table   | Notes                                                                                                                                                                                                                                                                                                              |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `files` | `workspace_id`, `key` (`<workspaceId>/<purpose>/<uuid>.<ext>`, unique), `purpose` (logo, attachment), `filename`, `content_type`, `size`, `created_by`. Bytes live in S3-compatible storage (SeaweedFS locally, Cloudflare R2 in production); the bucket is private and browsers get 15-minute presigned GET URLs. |
+
+`workspace_profiles.logo_file_id` → `files.id` (set null). Logo uploads are PNG/JPEG ≤ 1 MB, validated by **magic bytes** (the client's content-type is ignored). Replacing or removing a logo deletes the old object.
+
 ## Planned business tables (Phase 1+)
 
-`tax_rates`, `files`, `notifications`, then `projects`, `tasks`, `time_entries`, `contracts`, `contract_templates`.
+`tax_rates`, `notifications`, then `projects`, `tasks`, `time_entries`, `contracts`, `contract_templates`.
 
 ```mermaid
 erDiagram

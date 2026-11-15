@@ -16,6 +16,7 @@ import { ApiError, errorMessage } from "@/lib/api"
 
 import { useUpdateWorkspaceProfile } from "../api/mutations"
 import { useWorkspaceProfile } from "../api/queries"
+import { LogoUploader } from "./logo-uploader"
 
 /** Form values are all strings; converted to the API shape on submit. */
 type Values = {
@@ -126,6 +127,7 @@ export function WorkspaceProfileForm() {
           title="Business"
           description="Shown as the sender on quotes, invoices and receipts."
         >
+          <LogoUploader profile={profile.data} disabled={readOnly} />
           <Field
             label="Workspace name"
             htmlFor="name"

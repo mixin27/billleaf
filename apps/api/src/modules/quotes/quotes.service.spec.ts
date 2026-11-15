@@ -85,6 +85,7 @@ function setup(
     }),
   } as unknown as ClientsRepository
   const profile = {
+    logoImage: vi.fn().mockResolvedValue(null),
     get: vi.fn().mockResolvedValue({
       name: "Studio",
       legalName: "Studio LLC",

@@ -230,6 +230,7 @@ function QuoteDetailView({ quote }: { quote: Quote }) {
         notes={quote.notes}
         terms={quote.terms}
         footer={profile.data?.documentFooter}
+        logoUrl={profile.data?.logoUrl}
       />
 
       <SendDialog

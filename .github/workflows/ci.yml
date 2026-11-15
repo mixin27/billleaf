@@ -89,6 +89,14 @@ jobs:
       - name: Lint, typecheck, test, build
         run: pnpm turbo lint typecheck test build --cache-dir=.turbo/cache
 
-      # Real Postgres + Valkey (job services above). Recreates billleaf_test each run.
+      # S3-compatible storage for file/logo tests. Job `services` can't pass a
+      # container command, so SeaweedFS is started here instead.
+      - name: Start SeaweedFS (S3)
+        run: |
+          docker run -d --name s3 -p 8333:8333 chrislusf/seaweedfs:latest server -dir=/data -s3 -s3.port=8333
+          for i in $(seq 1 30); do curl -s -o /dev/null http://localhost:8333/ && exit 0; sleep 2; done
+          echo "SeaweedFS did not start"; docker logs s3; exit 1
+
+      # Real Postgres + Valkey (job services above) + SeaweedFS. Recreates billleaf_test each run.
       - name: Integration tests
         run: pnpm turbo test:integration --cache-dir=.turbo/cache

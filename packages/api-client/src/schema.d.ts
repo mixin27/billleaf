@@ -212,6 +212,22 @@ export interface paths {
     patch: operations["WorkspaceProfileController_update_v1"]
     trace?: never
   }
+  "/v1/workspace/logo": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put: operations["WorkspaceProfileController_uploadLogo_v1"]
+    post?: never
+    delete: operations["WorkspaceProfileController_removeLogo_v1"]
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   "/v1/clients": {
     parameters: {
       query?: never
@@ -1004,6 +1020,7 @@ export interface components {
       defaultTaxRateBps: number
       documentFooter: string | null
       brandColor: string | null
+      logoUrl: string | null
       /** Format: date-time */
       updatedAt: string
     }
@@ -2111,6 +2128,44 @@ export interface operations {
         "application/json": components["schemas"]["UpdateWorkspaceProfileDto"]
       }
     }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["WorkspaceProfileDto_Output"]
+        }
+      }
+    }
+  }
+  WorkspaceProfileController_uploadLogo_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["WorkspaceProfileDto_Output"]
+        }
+      }
+    }
+  }
+  WorkspaceProfileController_removeLogo_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
     responses: {
       200: {
         headers: {

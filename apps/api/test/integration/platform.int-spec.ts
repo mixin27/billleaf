@@ -1,3 +1,5 @@
+import zlib from "node:zlib"
+
 import { workspaceSubscriptions } from "@workspace/db"
 import { eq } from "drizzle-orm"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
@@ -564,5 +566,101 @@ describe("dashboard", () => {
     expect(vd.quotes.open).toEqual([
       { currency: "USD", amount: 7_500, count: 1 },
     ])
+  })
+})
+
+describe("workspace logo", () => {
+  /** A valid 4x4 RGBA PNG built with zlib (a hand-typed one is easy to get wrong). */
+  const png = (() => {
+    const chunk = (type: string, data: Buffer) => {
+      const td = Buffer.concat([Buffer.from(type), data])
+      const len = Buffer.alloc(4)
+      len.writeUInt32BE(data.length)
+      const crc = Buffer.alloc(4)
+      crc.writeUInt32BE(zlib.crc32(td) >>> 0)
+      return Buffer.concat([len, td, crc])
+    }
+    const ihdr = Buffer.alloc(13)
+    ihdr.writeUInt32BE(4, 0)
+    ihdr.writeUInt32BE(4, 4)
+    ihdr.set([8, 6, 0, 0, 0], 8)
+    const rows = Buffer.concat(
+      Array.from({ length: 4 }, () => Buffer.from([0, ...Array(16).fill(0x80)]))
+    )
+    return Buffer.concat([
+      Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+      chunk("IHDR", ihdr),
+      chunk("IDAT", zlib.deflateSync(rows)),
+      chunk("IEND", Buffer.alloc(0)),
+    ])
+  })()
+  const multipart = (filename: string, body: Buffer, contentType: string) => {
+    const boundary = "----billleaf-test"
+    const payload = Buffer.concat([
+      Buffer.from(
+        `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="${filename}"\r\nContent-Type: ${contentType}\r\n\r\n`
+      ),
+      body,
+      Buffer.from(`\r\n--${boundary}--\r\n`),
+    ])
+    return { payload, contentType: `multipart/form-data; boundary=${boundary}` }
+  }
+
+  it("uploads to object storage, serves a presigned URL, embeds it in PDFs, and validates type", async () => {
+    const owner = new Client(t)
+    await owner.signUp("Brand")
+    await owner.createWorkspace("Branding")
+    const upload = async (filename: string, body: Buffer, type: string) => {
+      const m = multipart(filename, body, type)
+      const res = await t.app.inject({
+        method: "PUT",
+        url: "/v1/workspace/logo",
+        headers: { ...owner.headers(), "content-type": m.contentType },
+        payload: m.payload,
+      })
+      return { status: res.statusCode, body: JSON.parse(res.body) }
+    }
+
+    // Content-type is ignored: a "PNG" that isn't one is rejected by magic bytes.
+    const fake = await upload(
+      "evil.png",
+      Buffer.from("<svg onload=alert(1)>"),
+      "image/png"
+    )
+    expect(fake.status).toBe(400)
+    expect(fake.body.code).toBe("unsupported_file_type")
+
+    const ok = await upload("logo.png", png, "image/png")
+    expect(ok.status).toBe(200)
+    expect(ok.body.logoUrl).toMatch(
+      /^http.*billleaf-test.*\.png.*X-Amz-Signature=/
+    )
+    const fetched = await fetch(ok.body.logoUrl)
+    expect(fetched.status).toBe(200)
+    expect(Buffer.from(await fetched.arrayBuffer()).equals(png)).toBe(true)
+
+    const client = (await owner.post("/v1/clients", { name: "ရွှေ ကုမ္ပဏီ" })).body
+    const inv = (
+      await owner.post("/v1/invoices", {
+        clientId: client.id,
+        lines: [{ description: "ออกแบบ", quantity: 1, unitPrice: 100 }],
+      })
+    ).body
+    const pdf = await t.app.inject({
+      method: "GET",
+      url: `/v1/invoices/${inv.id}/pdf`,
+      headers: owner.headers(),
+    })
+    const text = pdf.rawPayload.toString("latin1")
+    expect(text).toContain("/Subtype /Image")
+    expect(text).toContain("NotoSansMyanmar")
+
+    const removed = await t.app.inject({
+      method: "DELETE",
+      url: "/v1/workspace/logo",
+      headers: owner.headers(),
+    })
+    expect(JSON.parse(removed.body).logoUrl).toBeNull()
+    expect((await fetch(ok.body.logoUrl)).status).toBe(404)
   })
 })

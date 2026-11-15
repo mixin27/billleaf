@@ -46,6 +46,18 @@ export const envSchema = z.object({
   SENTRY_ENVIRONMENT: z.string().optional(),
   SENTRY_TRACES_SAMPLE_RATE: z.coerce.number().min(0).max(1).optional(),
 
+  // S3-compatible object storage (SeaweedFS locally, Cloudflare R2 in prod)
+  S3_ENDPOINT: z.url().default("http://localhost:8333"),
+  S3_REGION: z.string().default("us-east-1"),
+  S3_BUCKET: z.string().default("billleaf-dev"),
+  S3_ACCESS_KEY_ID: z.string().default("dev"),
+  S3_SECRET_ACCESS_KEY: z.string().default("dev"),
+  /** Path-style URLs (required by SeaweedFS/MinIO; R2 works either way). */
+  S3_FORCE_PATH_STYLE: z
+    .enum(["true", "false"])
+    .default("true")
+    .transform((v) => v === "true"),
+
   SMTP_URL: z.string().default("smtp://localhost:1025"),
   EMAIL_FROM: z.string().default("Billleaf <no-reply@billleaf.local>"),
 })

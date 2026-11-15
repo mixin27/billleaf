@@ -1,4 +1,5 @@
 import helmet from "@fastify/helmet"
+import multipart from "@fastify/multipart"
 import { type INestApplication, VersioningType } from "@nestjs/common"
 import { NestFactory } from "@nestjs/core"
 import {
@@ -38,6 +39,10 @@ export async function createApp() {
     maxAge: 600,
   })
   await app.register(helmet, { contentSecurityPolicy: false })
+  // Uploads (e.g. workspace logo). Limits are enforced again per endpoint.
+  await app.register(multipart, {
+    limits: { fileSize: 2 * 1024 * 1024, files: 1, fields: 5 },
+  })
 
   return { app, env }
 }

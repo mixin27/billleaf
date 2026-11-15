@@ -380,6 +380,7 @@ export class InvoicesService {
       terms: invoice.terms,
       footer: profile.documentFooter,
       brandColor: profile.brandColor,
+      logo: await this.profile.logoImage(),
     })
     return { filename: `${invoice.number ?? "invoice-draft"}.pdf`, content }
   }

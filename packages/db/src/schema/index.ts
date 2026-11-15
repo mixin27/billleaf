@@ -1,6 +1,7 @@
 export * from "./auth.js"
 export * from "./iam.js"
 export * from "./billing.js"
+export * from "./files.js"
 export * from "./workspace.js"
 export * from "./clients.js"
 export * from "./quotes.js"
