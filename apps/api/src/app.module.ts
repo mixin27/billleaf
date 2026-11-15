@@ -11,6 +11,8 @@ import { CoreModule } from "./core/core.module.js"
 import { HealthModule } from "./health/health.module.js"
 import { IamModule } from "./iam/iam.module.js"
 import { WorkspaceGuard } from "./iam/workspace.guard.js"
+import { ClientsModule } from "./modules/clients/clients.module.js"
+import { WorkspaceProfileModule } from "./modules/workspace/workspace-profile.module.js"
 
 @Module({
   imports: [
@@ -20,7 +22,9 @@ import { WorkspaceGuard } from "./iam/workspace.guard.js"
     IamModule,
     BillingModule,
     HealthModule,
-    // Business modules (clients, quotes, invoices, …) are added here.
+    // Business modules
+    WorkspaceProfileModule,
+    ClientsModule,
   ],
   providers: [
     // Guard order matters: rate limit → session → workspace/RBAC.

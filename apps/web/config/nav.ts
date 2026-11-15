@@ -14,5 +14,5 @@ export const workspaceNav: NavItem[] = [
   { title: "Quotes", href: "/quotes", permission: "quote.read" },
   { title: "Projects", href: "/projects", permission: "project.read" },
   { title: "Invoices", href: "/invoices", permission: "invoice.read" },
-  { title: "Settings", href: "/settings/roles", permission: "role.read" },
+  { title: "Settings", href: "/settings", permission: "workspace.read" },
 ]

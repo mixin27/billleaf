@@ -8,7 +8,7 @@
 | Docs           | `localhost` (Fumadocs dev) | Vercel preview                                    | `docs.billleaf.com` (Vercel)  |
 | Postgres       | docker compose             | own container + own DB/credentials                | own container (later own VPS) |
 | Valkey         | docker compose             | own container                                     | own container                 |
-| Storage        | MinIO                      | R2 bucket `billleaf-staging`                      | R2 bucket `billleaf-prod`     |
+| Storage        | SeaweedFS (S3, :8333)      | R2 bucket `billleaf-staging`                      | R2 bucket `billleaf-prod`     |
 | Email          | Mailpit (`localhost:8025`) | Resend (restricted / test domain)                 | Resend                        |
 | Billing        | provider sandbox           | provider sandbox                                  | provider live                 |
 | Deploy trigger | —                          | push to `main`                                    | tag `v*` + manual approval    |
@@ -23,7 +23,7 @@ cp .env.example .env
 cp apps/api/.env.example apps/api/.env
 cp packages/db/.env.example packages/db/.env
 pnpm install
-pnpm infra:up          # postgres, valkey, minio, mailpit
+pnpm infra:up          # postgres, valkey, s3 (seaweedfs), mailpit
 pnpm db:migrate && pnpm db:seed
 pnpm dev               # web :3000, api :4000
 ```

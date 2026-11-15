@@ -47,6 +47,11 @@ export class ProblemDetailsFilter implements ExceptionFilter {
           HttpStatus[status]?.replaceAll("_", " ").toLowerCase() ?? "error",
         status,
         detail: Array.isArray(detail) ? detail.join("; ") : detail,
+        // Machine-readable code, e.g. throw new ForbiddenException({ message, code })
+        code:
+          typeof res === "object" && res && "code" in res
+            ? String((res as { code: unknown }).code)
+            : undefined,
       }
     } else {
       this.logger.error(exception)

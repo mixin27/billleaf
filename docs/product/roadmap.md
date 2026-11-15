@@ -9,7 +9,7 @@ Phases are scope buckets, not dates. Each phase ends with a production deploy.
 - Packages: `db`, `contracts`, `env`, `api-client`, `emails` (stub).
 - API skeleton: Better Auth (email/password, verification, Google, 2FA, organizations as workspaces), dynamic RBAC, `/health`, OpenAPI, BullMQ worker.
 - Web shell: auth pages, workspace switcher, settings → roles UI skeleton.
-- Local docker stack (Postgres, Valkey, MinIO, Mailpit), deployment docs.
+- Local docker stack (Postgres, Valkey, SeaweedFS S3, Mailpit), deployment docs.
 
 **Exit:** sign up → verify email → workspace with Owner → custom role → permission-guarded endpoint returns 403/200 correctly.
 

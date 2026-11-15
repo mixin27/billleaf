@@ -50,9 +50,19 @@ Exact columns follow the Better Auth schema for the enabled plugins; regenerate 
 | ------------------------- | --------------------------------------------------------------------------------------------------------------- |
 | `workspace_subscriptions` | `workspace_id` (PK), `plan_key`, `status`, `provider`, provider customer/subscription ids, `current_period_end` |
 
+### Workspace & clients (`workspace.ts`, `clients.ts`) — Phase 1
+
+| Table                | Notes                                                                                                                                                                                                                                                          |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `workspace_profiles` | `workspace_id` (PK) — legal name, contact, address, `default_currency`, `timezone`, `locale`, `payment_terms_days`, `default_tax_rate_bps`, footer, brand color. Created on workspace bootstrap (or lazily on first read)                                      |
+| `clients`            | `workspace_id`, `type` (company/individual), contact + address fields, optional `currency` / `payment_terms_days` overrides (null = workspace default), `notes`, `archived_at`, `deleted_at` (soft delete). Listed newest-first by UUIDv7 `id` (keyset cursor) |
+| `client_contacts`    | `workspace_id`, `client_id`, name, email, phone, title, `is_primary` (at most one, enforced in the repository transaction)                                                                                                                                     |
+
+Plan limit: active (non-archived) clients count against `PLANS[plan].limits.clients`; restoring an archived client re-checks the limit.
+
 ## Planned business tables (Phase 1+)
 
-`clients`, `contacts`, `quotes`, `quote_lines`, `invoices`, `invoice_lines`, `tax_rates`, `payments`, `receipts`, `files`, `notifications`, then `projects`, `tasks`, `time_entries`, `contracts`, `contract_templates`.
+`quotes`, `quote_lines`, `invoices`, `invoice_lines`, `tax_rates`, `payments`, `receipts`, `files`, `notifications`, then `projects`, `tasks`, `time_entries`, `contracts`, `contract_templates`.
 
 ```mermaid
 erDiagram
@@ -63,7 +73,9 @@ erDiagram
   permissions ||--o{ role_permissions : in
   organization ||--o{ roles : defines
   organization ||--|| workspace_subscriptions : on
+  organization ||--|| workspace_profiles : has
   organization ||--o{ clients : owns
+  clients ||--o{ client_contacts : has
   clients ||--o{ quotes : receives
   clients ||--o{ invoices : billed
   invoices ||--o{ invoice_lines : contains

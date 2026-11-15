@@ -1,4 +1,4 @@
-# Local development dependencies. Apps run on the host via `pnpm dev`.
+# Local development dependencies (postgres, valkey, s3, mailpit). Apps run on the host via `pnpm dev`.
 #   pnpm infra:up   /   pnpm infra:down
 name: billleaf-dev
 
@@ -27,16 +27,15 @@ services:
       interval: 5s
       retries: 10
 
-  # S3-compatible storage (production uses Cloudflare R2)
-  minio:
-    image: minio/minio:latest
-    command: server /data --console-address ":9001"
+  # S3-compatible storage at http://localhost:8333 (production uses Cloudflare R2).
+  # SeaweedFS replaces MinIO, whose images are no longer published on Docker Hub.
+  # No auth locally: any access key/secret works.
+  s3:
+    image: chrislusf/seaweedfs:latest
+    command: server -dir=/data -s3 -s3.port=8333
     restart: unless-stopped
-    environment:
-      MINIO_ROOT_USER: billleaf
-      MINIO_ROOT_PASSWORD: billleaf-secret
-    ports: ["9000:9000", "9001:9001"]
-    volumes: [miniodata:/data]
+    ports: ["8333:8333"]
+    volumes: [s3data:/data]
 
   # Catches all outgoing email — UI at http://localhost:8025
   mailpit:
@@ -47,4 +46,4 @@ services:
 volumes:
   pgdata:
   valkeydata:
-  miniodata:
+  s3data:
