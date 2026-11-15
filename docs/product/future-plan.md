@@ -2,7 +2,7 @@
 
 Work we've agreed to do later, with enough detail to pick up without re-research. The [roadmap](roadmap.md) lists phases; this page holds the next concrete items and their order.
 
-**Done:** Clockify-style time tracking: tracker (timer bar, tags, entries without a project, continue/duplicate, bulk edit), weekly timesheet grid, Summary/Detailed/Weekly reports with CSV export, and Clockify CSV import. Next: the client portal (below).
+**Done:** Clockify-style time tracking: tracker (timer bar, tags, entries without a project, continue/duplicate, bulk edit), weekly timesheet grid, Summary/Detailed/Weekly reports with CSV export, and Clockify CSV import. Client portal, part 1 (magic-link sign-in, read-only quotes/contracts/invoices/receipts, portal links in document emails; [ADR-0012](../adr/0012-client-portal-magic-links.md)). Next: portal part 2 — accept/decline quotes and e-sign contracts.
 
 **Suggested order afterwards:** Client portal → Production deploy readiness → Online invoice payments → small follow-ups as capacity allows. The billing provider adapter goes in whenever the company's jurisdiction is settled.
 
@@ -23,7 +23,7 @@ Work we've agreed to do later, with enough detail to pick up without re-research
 
 **Depends on:** nothing new. It reuses the document services, snapshots and entitlements (`portal.enabled` flag for Team).
 
-**Size:** large (2–3 PRs: auth/links, quotes + contracts, invoices + receipts).
+**Size:** large. Part 1 (done): sign-in, sessions, read-only documents and PDFs, email links. Part 2: accept/decline quotes and typed-name e-sign for contracts (IP, user agent, timestamp, audit page on the signed PDF).
 
 ## Production deploy readiness
 

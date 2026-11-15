@@ -178,3 +178,12 @@ erDiagram
 - Drizzle Kit generates SQL migrations (`pnpm db:generate`) committed to `packages/db`.
 - Apply with `pnpm db:migrate`; in deploys a one-off **migrate job** runs before the api rolls ([deployment](../infrastructure/deployment.md)).
 - Migrations are **forward-only** and must be backward compatible with the previous api version (expand → migrate data → contract).
+
+### Client portal (`portal.ts`) — Phase 2
+
+| Table             | Notes                                                                                                                                                                                         |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `portal_tokens`   | Emailed links: `client_id` (cascade), `email`, `kind` (`sign_in`: single use, 20 min; `link`: in document emails, reusable, 14 days), `token_hash` (SHA-256, unique), `expires_at`, `used_at` |
+| `portal_sessions` | A signed-in client: `client_id` (cascade), `email`, `token_hash` (cookie `billleaf_portal`, HttpOnly, 30 days), `last_seen_at`, IP and user agent                                             |
+
+Portal routes live under `/v1/portal/{slug}`. `PortalGuard` turns the cookie into the workspace and client in the request context, with no member and no permissions. Lists and details never include drafts, and every document is checked against the session's client (otherwise 404). See [ADR-0012](../adr/0012-client-portal-magic-links.md).

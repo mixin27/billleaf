@@ -10,9 +10,10 @@ import {
 } from "@workspace/db"
 import { and, eq } from "drizzle-orm"
 import { ClsService } from "nestjs-cls"
-import { afterAll, beforeAll, describe, expect, it } from "vitest"
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
 
 import { BILLING_PROVIDER } from "../../src/billing/providers/billing-provider.js"
+import { MailService } from "../../src/mail/mail.service.js"
 import type { TestBillingProvider } from "../../src/billing/providers/test-billing.provider.js"
 import { RecurringService } from "../../src/modules/recurring/recurring.service.js"
 import { Client, startApp, type TestApp } from "./harness.js"
@@ -2201,5 +2202,225 @@ describe("timesheet, reports and Clockify import", () => {
     expect((await upload(owner, "Name,Amount\nA,1\n")).body.code).toBe(
       "invalid_csv"
     )
+  })
+})
+
+describe("client portal", () => {
+  /** A browser-like client for the portal (only the portal cookie). */
+  class PortalVisitor {
+    cookie: string | null = null
+    async request(method: string, url: string, body?: unknown) {
+      const res = await t.app.inject({
+        method: method as "GET",
+        url,
+        headers: {
+          origin: "http://localhost:3000",
+          ...(body !== undefined ? { "content-type": "application/json" } : {}),
+          ...(this.cookie ? { cookie: this.cookie } : {}),
+        },
+        payload: body === undefined ? undefined : JSON.stringify(body),
+      })
+      const set = res.headers["set-cookie"]
+      const c = (Array.isArray(set) ? set[0] : set) as string | undefined
+      if (c)
+        this.cookie = c.split(";")[0]!.endsWith("=") ? null : c.split(";")[0]!
+      let json: any
+      try {
+        json = res.body ? JSON.parse(res.body) : undefined
+      } catch {
+        json = res.body
+      }
+      return { status: res.statusCode, body: json, headers: res.headers }
+    }
+    get = (url: string) => this.request("GET", url)
+    post = (url: string, body: unknown = {}) => this.request("POST", url, body)
+  }
+
+  const tokenFrom = (url: string) => new URL(url).searchParams.get("token")!
+
+  it("signs clients in by emailed link and shows only their own, non-draft documents", async () => {
+    const mail = t.app.get(MailService)
+    const sent: any[] = []
+    const spy = vi
+      .spyOn(mail, "send")
+      .mockImplementation(async (m) => void sent.push(m))
+    try {
+      const owner = new Client(t)
+      await owner.signUp("Portal Owner")
+      const ws = await owner.createWorkspace("Portal Studio")
+      await owner.patch("/v1/workspace", { timezone: "UTC" })
+      const client = (
+        await owner.post("/v1/clients", {
+          name: "Portal Co",
+          email: "Billing@Portal.test",
+        })
+      ).body
+      await owner.post(`/v1/clients/${client.id}/contacts`, {
+        name: "Pat",
+        email: "pat@portal.test",
+      })
+      const other = (
+        await owner.post("/v1/clients", {
+          name: "Someone Else",
+          email: "else@portal.test",
+        })
+      ).body
+      const line = { description: "Design", quantity: 2, unitPrice: 50_000 }
+
+      const quote = (
+        await owner.post("/v1/quotes", { clientId: client.id, lines: [line] })
+      ).body
+      await owner.post(`/v1/quotes/${quote.id}/send`)
+      const draftQuote = (
+        await owner.post("/v1/quotes", { clientId: client.id, lines: [line] })
+      ).body
+      const invoice = (
+        await owner.post("/v1/invoices", { clientId: client.id, lines: [line] })
+      ).body
+      await owner.post(`/v1/invoices/${invoice.id}/issue`)
+      const payment = (
+        await owner.post(`/v1/invoices/${invoice.id}/payments`, {
+          amount: 40_000,
+        })
+      ).body
+      const contract = (
+        await owner.post("/v1/contracts", {
+          clientId: client.id,
+          title: "Services agreement",
+          body: "We agree.",
+        })
+      ).body
+      await owner.post(`/v1/contracts/${contract.id}/send`)
+      const otherInvoice = (
+        await owner.post("/v1/invoices", { clientId: other.id, lines: [line] })
+      ).body
+      await owner.post(`/v1/invoices/${otherInvoice.id}/issue`)
+
+      const visitor = new PortalVisitor()
+      const base = `/v1/portal/${encodeURIComponent(ws.slug)}`
+
+      // Public branding; unknown portals 404.
+      expect((await visitor.get(base)).body).toMatchObject({
+        name: "Portal Studio",
+        showBadge: true,
+        logoUrl: null,
+      })
+      expect((await visitor.get("/v1/portal/no-such-portal")).status).toBe(404)
+      expect((await visitor.get(`${base}/me`)).status).toBe(401)
+
+      // Unknown emails get the same answer and no email.
+      sent.length = 0
+      expect(
+        (await visitor.post(`${base}/sign-in`, { email: "who@nowhere.test" }))
+          .status
+      ).toBe(202)
+      expect(sent).toHaveLength(0)
+
+      // A contact's email (any case) gets a single-use sign-in link.
+      expect(
+        (await visitor.post(`${base}/sign-in`, { email: "PAT@portal.test" }))
+          .status
+      ).toBe(202)
+      expect(sent).toHaveLength(1)
+      expect(sent[0]).toMatchObject({ to: "pat@portal.test" })
+      const link = /https?:\/\/\S+?token=[\w-]+/.exec(sent[0].text)![0]
+      expect(link).toContain(
+        `/portal/${encodeURIComponent(ws.slug)}/auth?token=`
+      )
+      const token = tokenFrom(link)
+      const session = await visitor.post("/v1/portal/session", { token })
+      expect(session.status).toBe(200)
+      expect(session.body).toEqual({ workspaceSlug: ws.slug })
+      expect(String(session.headers["set-cookie"])).toMatch(
+        /billleaf_portal=.+; Path=\/; HttpOnly; SameSite=Lax; Max-Age=2592000/
+      )
+      // Used once only.
+      expect(
+        (await new PortalVisitor().post("/v1/portal/session", { token })).body
+          .code
+      ).toBe("portal_link_invalid")
+
+      const me = (await visitor.get(`${base}/me`)).body
+      expect(me).toMatchObject({
+        client: { id: client.id, name: "Portal Co" },
+        email: "pat@portal.test",
+        summary: {
+          openInvoices: 1,
+          amountDue: [{ currency: "USD", amount: 60_000 }],
+          quotesAwaitingReply: 1,
+          contractsAwaitingSignature: 1,
+        },
+      })
+
+      const quotes = (await visitor.get(`${base}/quotes`)).body.items
+      expect(quotes.map((q: any) => q.id)).toEqual([quote.id])
+      expect(quotes[0]).toMatchObject({ status: "sent", total: 100_000 })
+      const inv = (await visitor.get(`${base}/invoices/${invoice.id}`)).body
+      expect(inv).toMatchObject({
+        status: "partially_paid",
+        amountDue: 60_000,
+        lines: [{ description: "Design" }],
+        receipts: [{ id: payment.id, amount: 40_000 }],
+      })
+      expect(inv).not.toHaveProperty("lastSentTo")
+      expect(
+        (await visitor.get(`${base}/contracts/${contract.id}`)).body
+      ).toMatchObject({ status: "sent", body: "We agree." })
+      expect((await visitor.get(`${base}/receipts`)).body.items).toHaveLength(1)
+
+      const pdf = await visitor.get(`${base}/invoices/${invoice.id}/pdf`)
+      expect(pdf.status).toBe(200)
+      expect(pdf.headers["content-type"]).toBe("application/pdf")
+      expect(
+        (await visitor.get(`${base}/receipts/${payment.id}/pdf`)).status
+      ).toBe(200)
+
+      // Drafts and other clients' documents don't exist here.
+      for (const url of [
+        `${base}/quotes/${draftQuote.id}`,
+        `${base}/invoices/${otherInvoice.id}`,
+        `${base}/invoices/${otherInvoice.id}/pdf`,
+      ])
+        expect((await visitor.get(url)).status).toBe(404)
+
+      // A session is only good for its own workspace's portal.
+      const owner2 = new Client(t)
+      await owner2.signUp("Other Owner")
+      const ws2 = await owner2.createWorkspace("Elsewhere")
+      expect(
+        (await visitor.get(`/v1/portal/${encodeURIComponent(ws2.slug)}/me`))
+          .status
+      ).toBe(401)
+
+      // A member session alone doesn't open the portal.
+      expect((await owner.get(`${base}/me`)).status).toBe(401)
+
+      // Document emails carry a reusable link straight to the document.
+      sent.length = 0
+      await owner.post(`/v1/invoices/${invoice.id}/send`, {})
+      expect(sent[0].text).toContain("View invoice online:")
+      const docLink = /https?:\/\/\S+?token=[\w-]+\S*/.exec(sent[0].text)![0]
+      expect(new URL(docLink).searchParams.get("next")).toBe(
+        `/invoices/${invoice.id}`
+      )
+      const fresh = new PortalVisitor()
+      for (let i = 0; i < 2; i++)
+        expect(
+          (
+            await fresh.post("/v1/portal/session", {
+              token: tokenFrom(docLink),
+            })
+          ).status
+        ).toBe(200)
+      expect((await fresh.get(`${base}/me`)).body.email).toBe(
+        "billing@portal.test"
+      )
+
+      // Signing out ends the session.
+      expect((await visitor.post("/v1/portal/sign-out")).status).toBe(204)
+      expect((await visitor.get(`${base}/me`)).status).toBe(401)
+    } finally {
+      spy.mockRestore()
+    }
   })
 })

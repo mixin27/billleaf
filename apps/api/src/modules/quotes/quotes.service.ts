@@ -19,6 +19,7 @@ import { documentEmail } from "@workspace/emails"
 import { type PageArgs } from "../../common/pagination.js"
 import { AuditService } from "../../iam/audit/audit.service.js"
 import { MailService } from "../../mail/mail.service.js"
+import { PortalLinksService } from "../portal/portal-links.service.js"
 import { ClientsRepository } from "../clients/clients.repository.js"
 import { DocumentNumberingService } from "../documents/document-numbering.service.js"
 import { renderDocumentPdf } from "../documents/document-pdf.js"
@@ -99,7 +100,8 @@ export class QuotesService {
     private readonly profile: WorkspaceProfileService,
     private readonly numbering: DocumentNumberingService,
     private readonly audit: AuditService,
-    private readonly mail: MailService
+    private readonly mail: MailService,
+    private readonly portalLinks: PortalLinksService
   ) {}
 
   private async today() {
@@ -366,6 +368,11 @@ export class QuotesService {
     await this.mail.send(
       documentEmail({
         to,
+        portalUrl: await this.portalLinks.documentLink(
+          quote.clientId,
+          to,
+          `/quotes/${id}`
+        ),
         kind: "Quote",
         number: quote.number!,
         workspaceName: profile.name,

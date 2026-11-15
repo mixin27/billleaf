@@ -7,6 +7,9 @@ export interface RequestContextStore extends ClsStore {
   workspaceId?: string
   memberId?: string
   permissions?: ReadonlySet<Permission>
+  /** Client-portal requests: the signed-in client (set by PortalGuard). */
+  portalClientId?: string
+  portalEmail?: string
 }
 
 /**
@@ -38,6 +41,17 @@ export class RequestContext {
 
   get permissions(): ReadonlySet<Permission> {
     return this.cls.get("permissions") ?? new Set()
+  }
+
+  /** The client of a portal session (portal routes only). */
+  get portalClientId(): string {
+    const v = this.cls.get("portalClientId")
+    if (!v) throw new UnauthorizedException("Sign in to the client portal")
+    return v
+  }
+
+  get portalEmail(): string {
+    return this.cls.get("portalEmail") ?? ""
   }
 
   get hasWorkspace(): boolean {

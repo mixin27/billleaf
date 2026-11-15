@@ -82,6 +82,7 @@ function setup(
     numbering as never,
     ctx as never,
     { send: vi.fn() } as never,
+    { documentLink: vi.fn().mockResolvedValue("http://portal.test") } as never,
     { record: vi.fn() } as never
   )
   return { service, repo, invoices, numbering, tx }

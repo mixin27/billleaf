@@ -116,6 +116,8 @@ export function documentEmail(p: {
   message?: string | null
   replyTo?: string | null
   pdf: { filename: string; contentBase64: string }
+  /** Signs the recipient into the client portal at this document. */
+  portalUrl?: string | null
 }): EmailMessage {
   const intro =
     p.kind === "Invoice"
@@ -128,15 +130,53 @@ export function documentEmail(p: {
   const message = p.message
     ? `<p style="white-space:pre-line">${esc(p.message)}</p>`
     : ""
+  const action =
+    p.kind === "Quote"
+      ? "View quote"
+      : p.kind === "Contract"
+        ? "View contract"
+        : p.kind === "Receipt"
+          ? "View your account"
+          : "View invoice"
   return {
     to: p.to,
     subject: `${p.kind} ${p.number} from ${p.workspaceName}`,
     html: layout(
       `${p.kind} ${p.number}`,
-      `${message}<p>${esc(intro)}</p><p>The PDF is attached.</p>`
+      `${message}<p>${esc(intro)}</p><p>The PDF is attached${p.portalUrl ? `, and you can see all your documents from ${esc(p.workspaceName)} online` : ""}.</p>`,
+      p.portalUrl ? { label: action, url: p.portalUrl } : undefined
     ),
-    text: `${p.message ? `${p.message}\n\n` : ""}${intro}\nThe PDF is attached.`,
+    text: `${p.message ? `${p.message}\n\n` : ""}${intro}\nThe PDF is attached.${p.portalUrl ? `\n\n${action} online: ${p.portalUrl}` : ""}`,
     replyTo: p.replyTo ?? undefined,
     attachments: [{ ...p.pdf, contentType: "application/pdf" }],
+  }
+}
+
+/** Client portal sign-in: one link per client the email belongs to. */
+export function portalSignInEmail(p: {
+  to: string
+  workspaceName: string
+  links: { clientName: string; url: string }[]
+}): EmailMessage {
+  const many = p.links.length > 1
+  const list = many
+    ? `<p>Your email is on more than one account. Choose one:</p><ul>${p.links
+        .map(
+          (l) =>
+            `<li style="margin:8px 0"><a href="${esc(l.url)}">${esc(l.clientName)}</a></li>`
+        )
+        .join("")}</ul>`
+    : ""
+  return {
+    to: p.to,
+    subject: `Your sign-in link for ${p.workspaceName}`,
+    html: layout(
+      `Sign in to ${p.workspaceName}`,
+      `<p>Use this link to see your quotes, contracts and invoices from ${esc(p.workspaceName)}. It works once and expires in 20 minutes.</p>${list}<p style="font-size:12px;color:#5b6b6b">If you didn't ask for this, you can ignore this email.</p>`,
+      many ? undefined : { label: "Open client portal", url: p.links[0]!.url }
+    ),
+    text: `Sign in to ${p.workspaceName} (expires in 20 minutes):\n${p.links
+      .map((l) => `${many ? `${l.clientName}: ` : ""}${l.url}`)
+      .join("\n")}\n\nIf you didn't ask for this, ignore this email.`,
   }
 }

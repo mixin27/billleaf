@@ -17,7 +17,8 @@
 | Custom roles & permissions | —                          | —                    | ✓                 |
 
 Current values (code: `PLANS` in `@workspace/contracts`): Free — 1 member, 5 active clients, 10 issued invoices/month, 100 MB; Pro — US$12/mo or $120/yr, unlimited clients and invoices, 5 GB; Team — US$29/mo or $290/yr, unlimited members, 50 GB, custom roles. Prices are placeholders until the provider is live.
-| Client portal, approvals | — | — | ✓ |
+| Client portal (view documents, PDFs) | ✓ ("Made with Billleaf") | ✓ (your branding) | ✓ (your branding) |
+| Approvals | — | — | ✓ |
 
 - **Annual billing** at a discount (~2 months free).
 - Numbers above are placeholders — real values live in the entitlements catalog, so pricing changes need **no code changes** in feature modules.

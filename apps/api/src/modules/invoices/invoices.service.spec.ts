@@ -150,6 +150,7 @@ function setup(
     profile as never,
     numbering as never,
     mail as never,
+    { documentLink: vi.fn().mockResolvedValue("http://portal.test") } as never,
     audit as never,
     { assertWithinLimit: vi.fn() } as never,
     { invoicesPerMonth: vi.fn().mockResolvedValue(0) } as never

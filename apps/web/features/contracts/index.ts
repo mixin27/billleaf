@@ -8,3 +8,5 @@ export {
   ContractTemplateEdit,
 } from "./components/template-editor"
 export { contractKeys } from "./api/keys"
+export { ContractText } from "./components/contract-text"
+export { ContractStatusBadge } from "./components/contract-status-badge"
