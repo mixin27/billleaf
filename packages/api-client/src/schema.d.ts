@@ -4,6 +4,22 @@
  */
 
 export interface paths {
+  "/v1/account/deletion-check": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["AccountController_deletionCheck_v1"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   "/v1/audit": {
     parameters: {
       query?: never
@@ -910,6 +926,22 @@ export interface paths {
     get?: never
     put?: never
     post: operations["InvoicesController_send_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/invoices/{id}/reminders": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put: operations["InvoicesController_setReminders_v1"]
+    post?: never
     delete?: never
     options?: never
     head?: never
@@ -2344,6 +2376,13 @@ export interface paths {
 export type webhooks = Record<string, never>
 export interface components {
   schemas: {
+    AccountDeletionCheckDto_Output: {
+      soleOwnerOf: {
+        id: string
+        name: string
+        slug: string
+      }[]
+    }
     AuditListDto_Output: {
       items: {
         id: string
@@ -2883,6 +2922,7 @@ export interface components {
       timezone: string
       locale: string
       paymentTermsDays: number
+      invoiceReminderOffsets: number[]
       defaultTaxRateBps: number
       documentFooter: string | null
       brandColor: string | null
@@ -2901,6 +2941,7 @@ export interface components {
       timezone?: string
       locale?: string
       paymentTermsDays?: number
+      invoiceReminderOffsets?: number[]
       defaultTaxRateBps?: number
       documentFooter?: string | null
       brandColor?: (string | null) | ""
@@ -3432,6 +3473,13 @@ export interface components {
       /** Format: date-time */
       lastSentAt: string | null
       lastSentTo: string | null
+      remindersPaused: boolean
+      reminders: {
+        offsetDays: number
+        sentTo: string
+        /** Format: date-time */
+        sentAt: string
+      }[]
       clientSnapshot: {
         name: string
         legalName?: string | null
@@ -3487,6 +3535,9 @@ export interface components {
         /** @default 0 */
         taxRateBps: number
       }[]
+    }
+    InvoiceRemindersDto: {
+      paused: boolean
     }
     VoidInvoiceDto: {
       reason: string
@@ -5303,6 +5354,25 @@ export interface components {
 }
 export type $defs = Record<string, never>
 export interface operations {
+  AccountController_deletionCheck_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["AccountDeletionCheckDto_Output"]
+        }
+      }
+    }
+  }
   AuditController_list_v1: {
     parameters: {
       query?: {
@@ -7141,6 +7211,31 @@ export interface operations {
     requestBody: {
       content: {
         "application/json": components["schemas"]["SendDocumentDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["InvoiceDto_Output"]
+        }
+      }
+    }
+  }
+  InvoicesController_setReminders_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["InvoiceRemindersDto"]
       }
     }
     responses: {

@@ -16,7 +16,7 @@ import {
   type PartySnapshot,
   type UpdateInvoiceInput,
 } from "@workspace/contracts"
-import { documentEmail } from "@workspace/emails"
+import { documentEmail, invoiceReminderEmail } from "@workspace/emails"
 
 import { type PageArgs } from "../../common/pagination.js"
 import { EntitlementsService } from "../../billing/entitlements.service.js"
@@ -76,7 +76,8 @@ export function toInvoiceSummary(
 function toInvoice(
   inv: InvoiceWithRefs,
   lines: InvoiceLineRow[],
-  today: string
+  today: string,
+  reminders: { offsetDays: number; sentTo: string; sentAt: Date }[] = []
 ): Invoice {
   return {
     ...toInvoiceSummary(inv, today),
@@ -91,6 +92,12 @@ function toInvoice(
     voidReason: inv.voidReason,
     lastSentAt: inv.lastSentAt?.toISOString() ?? null,
     lastSentTo: inv.lastSentTo,
+    remindersPaused: inv.remindersPaused,
+    reminders: reminders.map((r) => ({
+      offsetDays: r.offsetDays,
+      sentTo: r.sentTo,
+      sentAt: r.sentAt.toISOString(),
+    })),
     clientSnapshot: inv.clientSnapshot ?? null,
     issuerSnapshot: inv.issuerSnapshot ?? null,
   }
@@ -156,11 +163,12 @@ export class InvoicesService {
 
   async get(id: string): Promise<Invoice> {
     const invoice = await this.require(id)
-    const [lines, today] = await Promise.all([
+    const [lines, today, reminders] = await Promise.all([
       this.repo.lines(id),
       this.today(),
+      this.repo.reminders(id),
     ])
-    return toInvoice(invoice, lines, today)
+    return toInvoice(invoice, lines, today, reminders)
   }
 
   async create(
@@ -488,6 +496,58 @@ export class InvoicesService {
       metadata: { to },
     })
     return this.get(id)
+  }
+
+  /** Turn automatic payment reminders off or on for one invoice. */
+  async setRemindersPaused(id: string, paused: boolean): Promise<Invoice> {
+    await this.require(id)
+    await this.repo.update(this.repo.database, id, { remindersPaused: paused })
+    await this.audit.record(
+      paused ? "invoice.reminders_paused" : "invoice.reminders_resumed",
+      { resourceType: "invoice", resourceId: id }
+    )
+    return this.get(id)
+  }
+
+  /** Who gets reminders: the last recipient, else the client's email. */
+  async reminderRecipient(invoice: {
+    clientId: string
+    lastSentTo: string | null
+  }) {
+    return invoice.lastSentTo ?? (await this.defaultRecipient(invoice.clientId))
+  }
+
+  /** Email one payment reminder (called by InvoiceRemindersService). */
+  async sendReminder(id: string, offsetDays: number, to: string) {
+    const invoice = await this.get(id)
+    const profile = await this.profile.get()
+    await this.mail.send(
+      invoiceReminderEmail({
+        to,
+        workspaceName: profile.name,
+        number: invoice.number!,
+        amountDue: formatMoney(
+          { amount: invoice.amountDue, currency: invoice.currency },
+          profile.locale
+        ),
+        dueDate: formatDocDate(invoice.dueDate, profile.locale),
+        offsetDays,
+        portalUrl: await this.portalLinks.documentLink(
+          invoice.clientId,
+          to,
+          `/invoices/${id}`
+        ),
+        paymentInstructions: (await this.howToPay(invoice, false)).map((m) =>
+          [m.label, ...m.lines].join(" · ")
+        ),
+        replyTo: profile.email,
+      })
+    )
+    await this.audit.record("invoice.reminder_sent", {
+      resourceType: "invoice",
+      resourceId: id,
+      metadata: { to, offsetDays },
+    })
   }
 
   private async defaultRecipient(clientId: string): Promise<string | null> {

@@ -36,6 +36,7 @@ const invoice = (over: Partial<InvoiceWithRefs> = {}): InvoiceWithRefs => ({
   voidReason: null,
   lastSentAt: null,
   lastSentTo: null,
+  remindersPaused: false,
   createdAt: now,
   updatedAt: now,
   ...over,
@@ -77,6 +78,7 @@ function setup(
       .mockResolvedValue(
         opts.alreadyConverted ? invoice({ number: "INV-0001" }) : null
       ),
+    reminders: vi.fn().mockResolvedValue([]),
     lines: vi.fn().mockResolvedValue(
       Array.from({ length: opts.lines ?? 1 }, (_, i) => ({
         id: `l${i}`,

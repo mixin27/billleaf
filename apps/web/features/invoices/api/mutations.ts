@@ -88,3 +88,18 @@ export function useDeleteInvoice(id: string) {
     onSuccess: invalidate,
   })
 }
+
+/** Pause or resume automatic payment reminders for one invoice. */
+export function useInvoiceReminders(id: string) {
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: (paused: boolean) =>
+      unwrap(
+        api.PUT("/v1/invoices/{id}/reminders", {
+          ...path(id),
+          body: { paused },
+        })
+      ),
+    onSuccess: invalidate,
+  })
+}

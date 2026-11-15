@@ -1,9 +1,17 @@
 import type { Metadata } from "next"
 
-import { WorkspaceProfileForm } from "@/features/workspace"
+import {
+  InvoiceReminderSettings,
+  WorkspaceProfileForm,
+} from "@/features/workspace"
 
 export const metadata: Metadata = { title: "Workspace settings" }
 
 export default function GeneralSettingsPage() {
-  return <WorkspaceProfileForm />
+  return (
+    <div className="flex flex-col gap-6">
+      <WorkspaceProfileForm />
+      <InvoiceReminderSettings />
+    </div>
+  )
 }

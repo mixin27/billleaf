@@ -78,6 +78,16 @@ export const invoiceSchema = invoiceSummarySchema.extend({
   voidReason: z.string().nullable(),
   lastSentAt: z.iso.datetime().nullable(),
   lastSentTo: z.string().nullable(),
+  /** Automatic payment reminders are off for this invoice. */
+  remindersPaused: z.boolean(),
+  /** Reminders already emailed, oldest first. */
+  reminders: z.array(
+    z.object({
+      offsetDays: z.number().int(),
+      sentTo: z.string(),
+      sentAt: z.iso.datetime(),
+    })
+  ),
   clientSnapshot: partySnapshotSchema.nullable(),
   issuerSnapshot: partySnapshotSchema.nullable(),
 })
@@ -185,3 +195,6 @@ export function invoiceState(
     amountDue: Math.max(0, inv.total - inv.amountPaid),
   }
 }
+
+export const invoiceRemindersSchema = z.object({ paused: z.boolean() })
+export type InvoiceRemindersInput = z.infer<typeof invoiceRemindersSchema>

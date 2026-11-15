@@ -11,6 +11,7 @@ import {
   rolePermissions,
   roles,
   syncPermissions,
+  timeEntries,
   workspaceSubscriptions,
 } from "@workspace/db"
 import { and, eq } from "drizzle-orm"
@@ -22,6 +23,7 @@ import { BILLING_PROVIDER } from "../../src/billing/providers/billing-provider.j
 import { REDIS } from "../../src/core/cache/redis.module.js"
 import { WORKER_HEARTBEAT_KEY } from "../../src/jobs/worker-heartbeat.js"
 import { addInterval } from "../../src/billing/period.js"
+import { InvoiceRemindersService } from "../../src/modules/invoices/invoice-reminders.service.js"
 import { SubscriptionRemindersService } from "../../src/billing/manual/subscription-reminders.service.js"
 import { MailService } from "../../src/mail/mail.service.js"
 import type { TestBillingProvider } from "../../src/billing/providers/test-billing.provider.js"
@@ -3664,5 +3666,174 @@ describe("launch readiness", () => {
       .from(auditLogs)
       .where(eq(auditLogs.resourceId, ws.id))
     expect(left).toContainEqual({ action: "workspace.deleted", ws: null })
+  })
+})
+
+describe("payment reminders", () => {
+  it("emails each reminder once, follows pause and payment, and logs them on the invoice", async () => {
+    const mail = t.app.get(MailService)
+    const sent: any[] = []
+    const spy = vi
+      .spyOn(mail, "send")
+      .mockImplementation(async (m) => void sent.push(m))
+    try {
+      const day = 86_400_000
+      const owner = new Client(t)
+      await owner.signUp("Reminding Owner")
+      await owner.createWorkspace("Reminding Studio")
+      expect(
+        (
+          await owner.patch("/v1/workspace", {
+            timezone: "UTC",
+            invoiceReminderOffsets: [5],
+          })
+        ).status
+      ).toBe(422) // only offsets from the list
+      const profile = (
+        await owner.patch("/v1/workspace", {
+          timezone: "UTC",
+          invoiceReminderOffsets: [7, -3, 0, 0],
+        })
+      ).body
+      expect(profile.invoiceReminderOffsets).toEqual([-3, 0, 7])
+
+      const client = (
+        await owner.post("/v1/clients", {
+          name: "Slow Payer",
+          email: "slow@payer.test",
+        })
+      ).body
+      const today = new Date().toISOString().slice(0, 10)
+      const due = new Date(Date.now() + 10 * day)
+      const dueDate = due.toISOString().slice(0, 10)
+      const invoice = (
+        await owner.post("/v1/invoices", {
+          clientId: client.id,
+          issueDate: today,
+          dueDate,
+          lines: [{ description: "Work", quantity: 1, unitPrice: 50_000 }],
+        })
+      ).body
+      await owner.post(`/v1/invoices/${invoice.id}/issue`)
+
+      const reminders = t.app.get(InvoiceRemindersService)
+      const at = (offset: number) =>
+        new Date(Date.parse(`${dueDate}T12:00:00Z`) + offset * day)
+      const mine = () => sent.filter((m) => m.to === "slow@payer.test")
+
+      sent.length = 0
+      await reminders.run(at(-4))
+      expect(mine()).toHaveLength(0)
+      await reminders.run(at(-3))
+      await reminders.run(at(-3))
+      expect(mine().map((m) => m.subject)).toEqual([
+        expect.stringContaining("is due on"),
+      ])
+      expect(mine()[0].attachments).toBeUndefined()
+      expect(mine()[0].text).toContain("/portal/")
+
+      // Paused: nothing on the due date. Resumed: the due-day one goes out.
+      expect(
+        (
+          await owner.put(`/v1/invoices/${invoice.id}/reminders`, {
+            paused: true,
+          })
+        ).body.remindersPaused
+      ).toBe(true)
+      await reminders.run(at(0))
+      expect(mine()).toHaveLength(1)
+      await owner.put(`/v1/invoices/${invoice.id}/reminders`, { paused: false })
+      await reminders.run(at(0))
+      expect(mine().map((m) => m.subject)).toEqual([
+        expect.stringContaining("is due on"),
+        expect.stringContaining("is due today"),
+      ])
+
+      const detail = (await owner.get(`/v1/invoices/${invoice.id}`)).body
+      expect(detail.reminders.map((r: any) => r.offsetDays)).toEqual([-3, 0])
+      expect(detail.reminders[0].sentTo).toBe("slow@payer.test")
+
+      // Paid in full: no overdue reminder.
+      await owner.post(`/v1/invoices/${invoice.id}/payments`, {
+        amount: 50_000,
+      })
+      await reminders.run(at(7))
+      expect(mine()).toHaveLength(2)
+    } finally {
+      spy.mockRestore()
+    }
+  })
+})
+
+describe("account deletion", () => {
+  it("refuses sole owners, removes a member's account but keeps their work", async () => {
+    const owner = new Client(t)
+    await owner.signUp("Staying Owner")
+    const ws = await owner.createWorkspace("Kept Studio")
+    await t.db
+      .update(workspaceSubscriptions)
+      .set({ planKey: "team" })
+      .where(eq(workspaceSubscriptions.workspaceId, ws.id))
+
+    // The sole owner can't delete their account yet.
+    const check = (await owner.get("/v1/account/deletion-check")).body
+    expect(check.soleOwnerOf.map((w: any) => w.id)).toEqual([ws.id])
+    const refused = await owner.post("/api/auth/delete-user", {
+      password: "integration-password-123",
+    })
+    expect(refused.status).toBe(400)
+    expect(JSON.stringify(refused.body)).toContain("only owner")
+
+    // A member with a running timer deletes their account.
+    const leaver = new Client(t)
+    const { email } = await leaver.signUp("Leaving Member")
+    const memberRole = (await owner.get("/v1/roles")).body.find(
+      (r: { slug: string }) => r.slug === "member"
+    )
+    const inv = (
+      await owner.post("/v1/invitations", { email, roleId: memberRole.id })
+    ).body
+    await leaver.post("/api/auth/organization/accept-invitation", {
+      invitationId: inv.id,
+    })
+    leaver.workspaceId = ws.id
+    const timer = await leaver.post("/v1/time-entries/start", {
+      description: "Last task",
+    })
+    expect(timer.status).toBe(201)
+    expect(
+      (await leaver.get("/v1/account/deletion-check")).body.soleOwnerOf
+    ).toEqual([])
+    expect(
+      (
+        await leaver.post("/api/auth/delete-user", {
+          password: "wrong-password",
+        })
+      ).status
+    ).toBe(400)
+    const deleted = await leaver.post("/api/auth/delete-user", {
+      password: "integration-password-123",
+    })
+    expect(deleted.status).toBe(200)
+
+    leaver.forgetSessionCache()
+    expect((await leaver.get("/v1/me")).status).toBe(401)
+    const [gone] = await t.db
+      .select({ id: userTable.id })
+      .from(userTable)
+      .where(eq(userTable.email, email))
+    expect(gone).toBeUndefined()
+    const members = (await owner.get("/v1/members")).body
+    expect(JSON.stringify(members)).not.toContain(email)
+    // Their time stays in the workspace, stopped, no longer tied to a member.
+    const [kept] = await t.db
+      .select({
+        memberId: timeEntries.memberId,
+        endedAt: timeEntries.endedAt,
+      })
+      .from(timeEntries)
+      .where(eq(timeEntries.id, timer.body.id))
+    expect(kept).toMatchObject({ memberId: null })
+    expect(kept!.endedAt).not.toBeNull()
   })
 })

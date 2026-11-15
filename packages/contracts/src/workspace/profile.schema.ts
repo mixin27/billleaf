@@ -33,6 +33,8 @@ export const workspaceProfileSchema = z.object({
   timezone: z.string(),
   locale: z.string(),
   paymentTermsDays: z.number().int(),
+  /** Payment reminder days relative to the due date; empty = off. */
+  invoiceReminderOffsets: z.array(z.number().int()),
   defaultTaxRateBps: z.number().int(),
   documentFooter: z.string().nullable(),
   brandColor: z.string().nullable(),
@@ -41,6 +43,21 @@ export const workspaceProfileSchema = z.object({
   updatedAt: z.iso.datetime(),
 })
 export type WorkspaceProfile = z.infer<typeof workspaceProfileSchema>
+
+/**
+ * When payment reminders can go out, in days relative to the due date
+ * (negative = before). Workspaces pick any of these.
+ */
+export const REMINDER_OFFSETS: readonly number[] = [
+  -7, -3, -1, 0, 1, 3, 7, 14, 30,
+]
+
+/** "3 days before", "On the due date", "1 day after". */
+export function reminderOffsetLabel(days: number) {
+  if (days === 0) return "On the due date"
+  const n = Math.abs(days)
+  return `${n} day${n === 1 ? "" : "s"} ${days < 0 ? "before" : "after"}`
+}
 
 export const updateWorkspaceProfileSchema = z
   .object({
@@ -54,6 +71,15 @@ export const updateWorkspaceProfileSchema = z
     timezone: z.string().min(1).max(64),
     locale: z.string().min(2).max(20),
     paymentTermsDays: z.number().int().min(0).max(365),
+    invoiceReminderOffsets: z
+      .array(
+        z
+          .number()
+          .int()
+          .refine((d) => REMINDER_OFFSETS.includes(d), "Pick from the list")
+      )
+      .max(REMINDER_OFFSETS.length)
+      .transform((v) => [...new Set(v)].sort((a, b) => a - b)),
     defaultTaxRateBps: z.number().int().min(0).max(10_000),
     documentFooter: optionalText(1000),
     brandColor: z

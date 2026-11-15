@@ -148,6 +148,13 @@
       "when": 1794753184132,
       "tag": "0020_lyrical_vin_gonzales",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1794759115202,
+      "tag": "0021_common_otto_octavius",
+      "breakpoints": true
     }
   ]
 }

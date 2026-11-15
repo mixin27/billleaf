@@ -379,3 +379,54 @@ export function subscriptionReminderEmail(p: {
     text: `${line}\n\nRenew: ${p.url}`,
   }
 }
+
+/** Automatic payment reminder for an unpaid invoice (no attachment). */
+export function invoiceReminderEmail(p: {
+  to: string
+  workspaceName: string
+  number: string
+  /** Formatted amount still due. */
+  amountDue: string
+  /** Formatted due date. */
+  dueDate: string
+  /** Days relative to the due date (negative = before). */
+  offsetDays: number
+  portalUrl: string
+  paymentInstructions?: string[]
+  replyTo?: string | null
+}): EmailMessage {
+  const late = p.offsetDays > 0
+  const subject =
+    p.offsetDays < 0
+      ? `Reminder: invoice ${p.number} is due on ${p.dueDate}`
+      : p.offsetDays === 0
+        ? `Invoice ${p.number} is due today`
+        : `Invoice ${p.number} is overdue`
+  const intro =
+    p.offsetDays < 0
+      ? `A friendly reminder that invoice ${p.number} from ${p.workspaceName} for ${p.amountDue} is due on ${p.dueDate}.`
+      : p.offsetDays === 0
+        ? `Invoice ${p.number} from ${p.workspaceName} for ${p.amountDue} is due today.`
+        : `Invoice ${p.number} from ${p.workspaceName} was due on ${p.dueDate}. ${p.amountDue} is still outstanding.`
+  const howToPay = p.paymentInstructions?.length
+    ? `<p style="margin:16px 0 4px;font-weight:600">How to pay</p><ul style="margin:0;padding-left:18px">${p.paymentInstructions
+        .map((l) => `<li>${esc(l)}</li>`)
+        .join("")}</ul>`
+    : ""
+  const howToPayText = p.paymentInstructions?.length
+    ? `\n\nHow to pay:\n${p.paymentInstructions.map((l) => `- ${l}`).join("\n")}`
+    : ""
+  const already =
+    "Already paid? Thank you — you can ignore this, or upload your payment screenshot online so it's confirmed."
+  return {
+    to: p.to,
+    subject,
+    html: layout(
+      late ? "Payment overdue" : "Payment reminder",
+      `<p>${esc(intro)}</p>${howToPay}<p style="font-size:13px;color:#5b6b6b">${esc(already)}</p>`,
+      { label: "View invoice", url: p.portalUrl }
+    ),
+    text: `${intro}${howToPayText}\n\n${already}\n\nView invoice: ${p.portalUrl}`,
+    replyTo: p.replyTo ?? undefined,
+  }
+}
