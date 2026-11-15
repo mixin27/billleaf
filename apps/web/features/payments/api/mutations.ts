@@ -17,6 +17,7 @@ function useInvalidate() {
   const workspaceId = useWorkspaceStore((s) => s.workspace?.id)
   return () =>
     Promise.all([
+      qc.invalidateQueries({ queryKey: ["dashboard", workspaceId] }),
       qc.invalidateQueries({ queryKey: paymentKeys.all(workspaceId) }),
       qc.invalidateQueries({ queryKey: ["invoices", workspaceId] }),
     ])

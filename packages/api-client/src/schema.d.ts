@@ -660,6 +660,22 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  "/v1/dashboard": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["DashboardController_get_v1"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
 }
 export type webhooks = Record<string, never>
 export interface components {
@@ -1519,6 +1535,88 @@ export interface components {
       /** Format: email */
       to?: string
       message?: string | null
+    }
+    DashboardDto_Output: {
+      /** Format: date */
+      today: string
+      primaryCurrency: string
+      receivables: {
+        totals: {
+          currency: string
+          outstanding: number
+          overdue: number
+          openCount: number
+          overdueCount: number
+        }[]
+        aging: {
+          currency: string
+          buckets: {
+            /** @enum {string} */
+            bucket: "current" | "1_30" | "31_60" | "61_90" | "90_plus"
+            amount: number
+          }[]
+        }[]
+        draftCount: number
+        overdueInvoices: {
+          id: string
+          number: string | null
+          clientName: string
+          currency: string
+          amountDue: number
+          /** Format: date */
+          dueDate: string
+          daysOverdue: number
+          /** @enum {string} */
+          displayStatus:
+            "draft" | "open" | "overdue" | "partially_paid" | "paid" | "void"
+        }[]
+      } | null
+      received: {
+        thisMonth: {
+          currency: string
+          amount: number
+          count: number
+        }[]
+        lastMonth: {
+          currency: string
+          amount: number
+          count: number
+        }[]
+        monthly: {
+          currency: string
+          months: {
+            month: string
+            amount: number
+          }[]
+        }[]
+        recent: {
+          id: string
+          invoiceId: string
+          invoiceNumber: string | null
+          receiptNumber: string | null
+          clientName: string
+          amount: number
+          currency: string
+          /** Format: date */
+          paidOn: string
+          /** @enum {string} */
+          method:
+            "bank_transfer" | "card" | "cash" | "cheque" | "online" | "other"
+        }[]
+      } | null
+      quotes: {
+        open: {
+          currency: string
+          amount: number
+          count: number
+        }[]
+        acceptedThisMonth: {
+          currency: string
+          amount: number
+          count: number
+        }[]
+        expiringSoonCount: number
+      } | null
     }
   }
   responses: never
@@ -2873,6 +2971,25 @@ export interface operations {
         }
         content: {
           "application/json": components["schemas"]["PaymentDto_Output"]
+        }
+      }
+    }
+  }
+  DashboardController_get_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["DashboardDto_Output"]
         }
       }
     }

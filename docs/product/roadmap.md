@@ -2,7 +2,7 @@
 
 Phases are scope buckets, not dates. Each phase ends with a production deploy.
 
-## Phase 0 — Foundation _(current)_
+## Phase 0 — Foundation _(done)_
 
 - Docs, ADRs, agent guidance (`AGENTS.md`, `.claude/skills/`).
 - Tooling: pnpm + Turborepo, lefthook, commitlint, CI.
@@ -13,16 +13,16 @@ Phases are scope buckets, not dates. Each phase ends with a production deploy.
 
 **Exit:** sign up → verify email → workspace with Owner → custom role → permission-guarded endpoint returns 403/200 correctly.
 
-## Phase 1 — MVP
+## Phase 1 — MVP _(feature-complete)_
 
-- Workspace profile & branding (logo, colors, address, tax IDs, default currency).
-- Clients.
-- Quotes.
-- Invoices: PDF, email, numbering, taxes, multi-currency, statuses.
-- Payments (manual recording) & Receipts.
-- Dashboard: outstanding, overdue, paid this month.
+- ✅ Workspace profile & branding (colors, address, tax IDs, default currency, timezone, terms). _Logo upload pending the Files module._
+- ✅ Clients & contacts.
+- ✅ Quotes (send, accept/decline, PDF, email, convert to invoice).
+- ✅ Invoices: PDF, email, gap-free numbering, per-line tax, multi-currency, derived statuses (open/overdue/partially paid/paid/void).
+- ✅ Payments (manual recording, refunds) & receipts (PDF, email).
+- ✅ Dashboard: outstanding & overdue, aging, received this month vs last, 6-month revenue, open quotes, most overdue, recent payments — per currency, filtered by permission.
 
-**Exit:** a freelancer can run their invoicing on Billleaf end-to-end.
+**Exit:** a freelancer can run their invoicing on Billleaf end-to-end. Remaining before calling Phase 1 shipped: production deploy (VPS + Dokploy), Unicode PDF font, logo upload (Files/R2).
 
 ## Phase 2 — Connected work
 
