@@ -113,7 +113,7 @@ function DeleteCard() {
       await authClient.organization.setActive({ organizationId: null })
       qc.clear()
       toast.success(`${ws.name} was deleted`)
-      window.location.assign("/")
+      window.location.assign("/app")
     } catch (err) {
       toast.error(errorMessage(err))
       setPending(false)

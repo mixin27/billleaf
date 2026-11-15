@@ -74,3 +74,44 @@ export const deleteWorkspaceSchema = z.object({
   confirmSlug: z.string().trim().min(1, "Type the workspace's URL name"),
 })
 export type DeleteWorkspaceInput = z.input<typeof deleteWorkspaceSchema>
+
+/**
+ * Workspace URL names that would clash with the app's own pages
+ * (billleaf.com/<slug> is the workspace). Checked when a workspace is
+ * created or renamed.
+ */
+export const RESERVED_WORKSPACE_SLUGS: readonly string[] = [
+  "about",
+  "accept-invitation",
+  "account",
+  "admin",
+  "api",
+  "app",
+  "blog",
+  "contact",
+  "docs",
+  "help",
+  "healthz",
+  "login",
+  "logout",
+  "new",
+  "onboarding",
+  "portal",
+  "pricing",
+  "privacy",
+  "security",
+  "settings",
+  "sign-in",
+  "sign-out",
+  "sign-up",
+  "signin",
+  "signup",
+  "status",
+  "support",
+  "terms",
+  "verify-email",
+  "www",
+]
+
+export const isReservedWorkspaceSlug = (slug: string) =>
+  RESERVED_WORKSPACE_SLUGS.includes(slug.trim().toLowerCase())

@@ -1,12 +1,12 @@
 import type { Metadata } from "next"
 
-import { Pricing } from "@/features/marketing"
+import { hasSessionCookie, Pricing } from "@/features/marketing"
 
 export const metadata: Metadata = {
   title: "Pricing",
   description: "Billleaf plans: start free, upgrade when you grow.",
 }
 
-export default function PricingPage() {
-  return <Pricing />
+export default async function PricingPage() {
+  return <Pricing signedIn={await hasSessionCookie()} />
 }

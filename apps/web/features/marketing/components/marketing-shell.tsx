@@ -3,8 +3,15 @@ import Link from "next/link"
 
 import { siteConfig } from "@/config/site"
 
+import { hasSessionCookie } from "../lib/signed-in"
+
 /** Header and footer for the public pages (home, pricing, legal). */
-export function MarketingShell({ children }: { children: React.ReactNode }) {
+export async function MarketingShell({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  const signedIn = await hasSessionCookie()
   return (
     <div className="flex min-h-svh flex-col bg-background">
       <header className="sticky top-0 z-20 border-b bg-background/90 backdrop-blur">
@@ -21,21 +28,33 @@ export function MarketingShell({ children }: { children: React.ReactNode }) {
             >
               Pricing
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              nativeButton={false}
-              render={<Link href="/sign-in" />}
-            >
-              Sign in
-            </Button>
-            <Button
-              size="sm"
-              nativeButton={false}
-              render={<Link href="/sign-up" />}
-            >
-              Start free
-            </Button>
+            {signedIn ? (
+              <Button
+                size="sm"
+                nativeButton={false}
+                render={<Link href="/app" />}
+              >
+                Open app
+              </Button>
+            ) : (
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  nativeButton={false}
+                  render={<Link href="/sign-in" />}
+                >
+                  Sign in
+                </Button>
+                <Button
+                  size="sm"
+                  nativeButton={false}
+                  render={<Link href="/sign-up" />}
+                >
+                  Start free
+                </Button>
+              </>
+            )}
           </nav>
         </div>
       </header>

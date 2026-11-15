@@ -3,6 +3,8 @@ import Link from "next/link"
 
 import { siteConfig } from "@/config/site"
 
+import { hasSessionCookie } from "../lib/signed-in"
+
 const FLOW = [
   "Client",
   "Quote",
@@ -42,7 +44,11 @@ const FEATURES: { title: string; body: string }[] = [
 ]
 
 /** The public home page. */
-export function Landing() {
+export async function Landing() {
+  const signedIn = await hasSessionCookie()
+  const start = signedIn
+    ? { href: "/app", label: "Open app" }
+    : { href: "/sign-up", label: "Start free" }
   return (
     <>
       <section className="mx-auto flex max-w-6xl flex-col items-start gap-6 px-4 py-16 sm:px-6 sm:py-24">
@@ -61,9 +67,9 @@ export function Landing() {
           <Button
             size="lg"
             nativeButton={false}
-            render={<Link href="/sign-up" />}
+            render={<Link href={start.href} />}
           >
-            Start free
+            {start.label}
           </Button>
           <Button
             size="lg"
@@ -74,9 +80,11 @@ export function Landing() {
             See pricing
           </Button>
         </div>
-        <p className="text-sm text-muted-foreground">
-          Free for your first clients. No card needed.
-        </p>
+        {signedIn ? null : (
+          <p className="text-sm text-muted-foreground">
+            Free for your first clients. No card needed.
+          </p>
+        )}
       </section>
 
       <section className="border-y bg-muted/30">
@@ -125,8 +133,8 @@ export function Landing() {
               limits.
             </p>
           </div>
-          <Button nativeButton={false} render={<Link href="/sign-up" />}>
-            Create your workspace
+          <Button nativeButton={false} render={<Link href={start.href} />}>
+            {signedIn ? "Open app" : "Create your workspace"}
           </Button>
         </div>
       </section>

@@ -94,7 +94,7 @@ function PlanPrice({
 }
 
 /** Plan cards for the public pricing page. Prices come from the API. */
-export function Pricing() {
+export function Pricing({ signedIn = false }: { signedIn?: boolean }) {
   const pricing = useQuery({
     queryKey: ["public-pricing"],
     queryFn: () => unwrap(api.GET("/v1/billing/pricing")),
@@ -202,9 +202,13 @@ export function Pricing() {
               <Button
                 variant={key === "pro" ? "default" : "outline"}
                 nativeButton={false}
-                render={<Link href="/sign-up" />}
+                render={<Link href={signedIn ? "/app" : "/sign-up"} />}
               >
-                {key === "free" ? "Start free" : `Start with ${plan.name}`}
+                {signedIn
+                  ? "Open app"
+                  : key === "free"
+                    ? "Start free"
+                    : `Start with ${plan.name}`}
               </Button>
             </div>
           )

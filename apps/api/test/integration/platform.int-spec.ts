@@ -3543,6 +3543,37 @@ describe("manual subscriptions", () => {
 })
 
 describe("launch readiness", () => {
+  it("answers malformed JSON with 400, not 500", async () => {
+    const owner = new Client(t)
+    await owner.signUp("Bad JSON")
+    await owner.createWorkspace("Bad JSON Studio")
+    const res = await t.app.inject({
+      method: "POST",
+      url: "/v1/clients",
+      headers: { ...owner.headers(), "content-type": "application/json" },
+      payload: "{not json",
+    })
+    expect(res.statusCode).toBe(400)
+    expect(res.headers["content-type"]).toContain("application/problem+json")
+  })
+
+  it("refuses workspace URLs that clash with the app's pages", async () => {
+    const owner = new Client(t)
+    await owner.signUp("Slug Picker")
+    for (const slug of ["pricing", "admin", "app"]) {
+      const res = await owner.post("/api/auth/organization/create", {
+        name: "Clash",
+        slug,
+      })
+      expect(res.status, slug).toBe(400)
+    }
+    const ok = await owner.post("/api/auth/organization/create", {
+      name: "Fine",
+      slug: `pricing-studio-${Date.now()}`,
+    })
+    expect(ok.status).toBe(200)
+  })
+
   it("serves public pricing without a session", async () => {
     const anon = new Client(t)
     const res = await anon.get("/v1/billing/pricing")

@@ -26,7 +26,7 @@ export function SignInForm() {
   const rawNext = useSearchParams().get("next")
   // Only same-origin relative paths, never protocol-relative URLs.
   const next =
-    rawNext?.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/"
+    rawNext?.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/app"
   const form = useForm<Values>({ resolver: zodResolver(schema) })
   const [needsCode, setNeedsCode] = React.useState(false)
 

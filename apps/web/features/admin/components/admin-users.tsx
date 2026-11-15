@@ -577,7 +577,7 @@ function ImpersonateDialog({
           onSubmit={(e) => {
             e.preventDefault()
             impersonate.mutate(reason, {
-              onSuccess: () => window.location.assign("/"),
+              onSuccess: () => window.location.assign("/app"),
               onError: (err) => toast.error(errorMessage(err)),
             })
           }}

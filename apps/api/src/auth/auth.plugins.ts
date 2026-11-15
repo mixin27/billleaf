@@ -1,3 +1,4 @@
+import { isReservedWorkspaceSlug } from "@workspace/contracts"
 import {
   invitationEmail,
   magicLinkEmail,
@@ -10,6 +11,7 @@ import {
   organization,
   twoFactor,
 } from "better-auth/plugins"
+import { APIError } from "better-auth/api"
 
 export interface AuthPluginDeps {
   webUrl: string
@@ -50,6 +52,19 @@ export function buildAuthPlugins(deps: AuthPluginDeps) {
           })
         ),
       organizationHooks: {
+        // billleaf.com/<slug> is the workspace: keep the app's own paths free.
+        beforeCreateOrganization: async ({ organization: org }) => {
+          if (org.slug && isReservedWorkspaceSlug(org.slug))
+            throw new APIError("BAD_REQUEST", {
+              message: "That URL is reserved. Pick another one.",
+            })
+        },
+        beforeUpdateOrganization: async ({ organization: org }) => {
+          if (org.slug && isReservedWorkspaceSlug(org.slug))
+            throw new APIError("BAD_REQUEST", {
+              message: "That URL is reserved. Pick another one.",
+            })
+        },
         afterCreateOrganization: async ({ organization: org, member }) => {
           await deps.onWorkspaceCreated(org.id, member.id)
         },

@@ -87,7 +87,11 @@ export function AcceptInvitation({ invitationId }: { invitationId: string }) {
         >
           Sign out and switch account
         </Button>
-        <Button variant="ghost" nativeButton={false} render={<Link href="/" />}>
+        <Button
+          variant="ghost"
+          nativeButton={false}
+          render={<Link href="/app" />}
+        >
           Go to Billleaf
         </Button>
       </AuthCard>
@@ -123,7 +127,7 @@ export function AcceptInvitation({ invitationId }: { invitationId: string }) {
       return
     }
     toast.success("Invitation declined")
-    router.push("/")
+    router.push("/app")
   }
 
   return (

@@ -45,7 +45,10 @@ wait_for "Web" "$WEB_URL/healthz"
 code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "$API_URL/health")
 [ "$code" = 200 ] && pass "API ready (database, redis)" || fail "GET /health returned $code"
 
-# 3. The sign-in page renders.
+# 3. The home and sign-in pages render.
+code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 "$WEB_URL/")
+[ "$code" = 200 ] && pass "Home page renders" || fail "GET $WEB_URL/ returned $code"
+
 code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 "$WEB_URL/sign-in")
 [ "$code" = 200 ] && pass "Sign-in page renders" || fail "GET $WEB_URL/sign-in returned $code"
 
