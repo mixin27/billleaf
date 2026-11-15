@@ -1524,6 +1524,38 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  "/v1/portal/{slug}/quotes/{id}/accept": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["PortalController_acceptQuote_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/portal/{slug}/quotes/{id}/decline": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["PortalController_declineQuote_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   "/v1/portal/{slug}/invoices": {
     parameters: {
       query?: never
@@ -1582,6 +1614,38 @@ export interface paths {
     get: operations["PortalController_contract_v1"]
     put?: never
     post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/portal/{slug}/contracts/{id}/sign": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["PortalController_signContract_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/portal/{slug}/contracts/{id}/decline": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["PortalController_declineContract_v1"]
     delete?: never
     options?: never
     head?: never
@@ -2284,6 +2348,10 @@ export interface components {
       acceptedAt: string | null
       /** Format: date-time */
       declinedAt: string | null
+      respondedByName: string | null
+      /** @enum {string|null} */
+      respondedVia: "manual" | "portal" | null
+      declineReason: string | null
       clientSnapshot: {
         name: string
         legalName?: string | null
@@ -2419,8 +2487,11 @@ export interface components {
       projectId: string | null
       projectName: string | null
       signedByName: string | null
+      /** @enum {string|null} */
+      signedVia: "manual" | "portal" | null
       /** Format: date-time */
       declinedAt: string | null
+      declineReason: string | null
       /** Format: date-time */
       voidedAt: string | null
       voidReason: string | null
@@ -3560,6 +3631,14 @@ export interface components {
       acceptedAt: string | null
       /** Format: date-time */
       declinedAt: string | null
+      respondedByName: string | null
+      declineReason: string | null
+    }
+    PortalAcceptQuoteDto: {
+      name: string
+    }
+    PortalDeclineDto: {
+      reason?: string
     }
     PortalInvoiceListDto_Output: {
       items: {
@@ -3671,8 +3750,11 @@ export interface components {
       signedAt: string | null
       body: string
       signedByName: string | null
+      /** @enum {string|null} */
+      signedVia: "manual" | "portal" | null
       /** Format: date-time */
       declinedAt: string | null
+      declineReason: string | null
       /** Format: date-time */
       voidedAt: string | null
       issuer: {
@@ -3691,6 +3773,11 @@ export interface components {
         taxId?: string | null
         addressLines: string[]
       } | null
+    }
+    PortalSignContractDto: {
+      name: string
+      /** @enum {boolean} */
+      agree: true
     }
     PortalReceiptListDto_Output: {
       items: {
@@ -6800,6 +6887,58 @@ export interface operations {
       }
     }
   }
+  PortalController_acceptQuote_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+        slug: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PortalAcceptQuoteDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["PortalQuoteDto_Output"]
+        }
+      }
+    }
+  }
+  PortalController_declineQuote_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+        slug: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PortalDeclineDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["PortalQuoteDto_Output"]
+        }
+      }
+    }
+  }
   PortalController_invoices_v1: {
     parameters: {
       query?: never
@@ -6875,6 +7014,58 @@ export interface operations {
       cookie?: never
     }
     requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["PortalContractDto_Output"]
+        }
+      }
+    }
+  }
+  PortalController_signContract_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+        slug: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PortalSignContractDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["PortalContractDto_Output"]
+        }
+      }
+    }
+  }
+  PortalController_declineContract_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+        slug: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PortalDeclineDto"]
+      }
+    }
     responses: {
       200: {
         headers: {

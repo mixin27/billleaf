@@ -20,6 +20,7 @@ import {
   usePortalQuote,
 } from "../api/queries"
 import { PortalQuoteBadge } from "./portal-pages"
+import { ContractSigning, QuoteResponse } from "./portal-respond"
 
 function DocHeader({
   title,
@@ -77,12 +78,26 @@ export function PortalQuoteView({ slug, id }: { slug: string; id: string }) {
         pdf={portalPdfUrl(slug, "quotes", id)}
         sub={
           d.acceptedAt
-            ? `Accepted ${formatDate(d.acceptedAt.slice(0, 10))}`
+            ? `Accepted ${formatDate(d.acceptedAt.slice(0, 10))}${d.respondedByName ? ` by ${d.respondedByName}` : ""}`
             : d.declinedAt
-              ? `Declined ${formatDate(d.declinedAt.slice(0, 10))}`
+              ? `Declined ${formatDate(d.declinedAt.slice(0, 10))}${d.declineReason ? ` · “${d.declineReason}”` : ""}`
               : d.title
         }
       />
+      {d.status === "sent" ? (
+        <div className="mb-4">
+          <QuoteResponse
+            slug={slug}
+            id={id}
+            businessName={d.issuer?.name ?? "The business"}
+          />
+        </div>
+      ) : d.status === "expired" ? (
+        <p className="mb-4 rounded-lg border bg-background p-4 text-sm text-muted-foreground">
+          This quote has expired. Ask {d.issuer?.name ?? "the sender"} for an
+          updated one.
+        </p>
+      ) : null}
       <DocumentSheet
         issuer={d.issuer}
         recipient={d.client}
@@ -206,7 +221,7 @@ export function PortalContractView({ slug, id }: { slug: string; id: string }) {
           <>
             {d.number}
             {d.signedAt
-              ? ` · signed ${formatDate(d.signedAt)}${d.signedByName ? ` by ${d.signedByName}` : ""}`
+              ? ` · signed ${formatDate(d.signedAt)}${d.signedByName ? ` by ${d.signedByName}` : ""}${d.signedVia === "portal" ? " (electronically)" : ""}`
               : d.effectiveDate
                 ? ` · starts ${formatDate(d.effectiveDate)}`
                 : ""}
@@ -219,10 +234,9 @@ export function PortalContractView({ slug, id }: { slug: string; id: string }) {
         </CardContent>
       </Card>
       {d.status === "sent" ? (
-        <p className="mt-4 text-sm text-muted-foreground">
-          To sign, reply to the email this contract came with, or contact{" "}
-          {d.issuer?.name ?? "the sender"}. Online signing is coming soon.
-        </p>
+        <div className="mt-4">
+          <ContractSigning slug={slug} id={id} />
+        </div>
       ) : null}
       <p className="mt-4 text-sm">
         <Link

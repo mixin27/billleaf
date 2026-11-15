@@ -4,12 +4,15 @@ import {
   clients,
   contracts,
   invoices,
+  member,
   organization,
   payments,
+  portalResponses,
   portalSessions,
   portalTokens,
   quotes,
   receipts,
+  user,
 } from "@workspace/db"
 import {
   and,
@@ -293,5 +296,21 @@ export class PortalRepository {
       .where(and(eq(table.workspaceId, workspaceId), eq(table.id, id)))
       .limit(1)
     return row && !row.draft ? row.clientId : null
+  }
+
+  async insertResponse(values: typeof portalResponses.$inferInsert) {
+    await this.db.insert(portalResponses).values(values)
+  }
+
+  /** Emails of the workspace owners (fallback for response notices). */
+  async ownerEmails(workspaceId: string): Promise<string[]> {
+    const rows = await this.db
+      .select({ email: user.email })
+      .from(member)
+      .innerJoin(user, eq(user.id, member.userId))
+      .where(
+        and(eq(member.organizationId, workspaceId), eq(member.role, "owner"))
+      )
+    return rows.map((r) => r.email)
   }
 }

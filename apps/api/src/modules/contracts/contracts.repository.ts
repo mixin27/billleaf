@@ -3,11 +3,22 @@ import {
   clients,
   contracts,
   contractTemplates,
+  portalResponses,
   projects,
   quotes,
   type Transaction,
 } from "@workspace/db"
-import { and, asc, count, eq, ilike, or, sql, type SQL } from "drizzle-orm"
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  ilike,
+  or,
+  sql,
+  type SQL,
+} from "drizzle-orm"
 
 import { RequestContext } from "../../common/context/request-context.js"
 import { offsetOf, orderBy, type PageArgs } from "../../common/pagination.js"
@@ -238,5 +249,23 @@ export class ContractsRepository {
     await this.db
       .delete(contractTemplates)
       .where(and(this.templateScope(), eq(contractTemplates.id, id)))
+  }
+
+  /** The client's e-signature evidence from the portal (latest), if any. */
+  async signatureEvidence(contractId: string) {
+    const [row] = await this.db
+      .select()
+      .from(portalResponses)
+      .where(
+        and(
+          eq(portalResponses.workspaceId, this.ctx.workspaceId),
+          eq(portalResponses.documentType, "contract"),
+          eq(portalResponses.documentId, contractId),
+          eq(portalResponses.action, "signed")
+        )
+      )
+      .orderBy(desc(portalResponses.createdAt))
+      .limit(1)
+    return row ?? null
   }
 }

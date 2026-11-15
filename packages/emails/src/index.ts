@@ -180,3 +180,50 @@ export function portalSignInEmail(p: {
       .join("\n")}\n\nIf you didn't ask for this, ignore this email.`,
   }
 }
+
+/** Tells the business a client responded in the portal. */
+export function portalResponseEmail(p: {
+  to: string
+  clientName: string
+  kind: "Quote" | "Contract"
+  number: string
+  action: "accepted" | "declined" | "signed"
+  name: string | null
+  reason?: string | null
+  url: string
+}): EmailMessage {
+  const who = p.name ? `${p.name} (${p.clientName})` : p.clientName
+  const line = `${who} ${p.action} ${p.kind.toLowerCase()} ${p.number} in the client portal.`
+  const reason = p.reason
+    ? `<p>Their reason:</p><p style="white-space:pre-line;border-left:3px solid #d0d7d4;padding-left:12px">${esc(p.reason)}</p>`
+    : ""
+  return {
+    to: p.to,
+    subject: `${p.clientName} ${p.action} ${p.kind.toLowerCase()} ${p.number}`,
+    html: layout(
+      `${p.kind} ${p.number} ${p.action}`,
+      `<p>${esc(line)}</p>${reason}`,
+      { label: `Open ${p.kind.toLowerCase()}`, url: p.url }
+    ),
+    text: `${line}${p.reason ? `\n\nReason: ${p.reason}` : ""}\n\n${p.url}`,
+  }
+}
+
+/** The signer's copy of a contract they e-signed in the portal. */
+export function signedContractEmail(p: {
+  to: string
+  workspaceName: string
+  number: string
+  title: string
+  signedByName: string
+  pdf: { filename: string; contentBase64: string }
+}): EmailMessage {
+  const line = `You signed contract ${p.number}, "${p.title}", with ${p.workspaceName} as ${p.signedByName}. Your signed copy, with its signature certificate, is attached.`
+  return {
+    to: p.to,
+    subject: `Signed: ${p.title} (${p.number})`,
+    html: layout(`Contract ${p.number} signed`, `<p>${esc(line)}</p>`),
+    text: line,
+    attachments: [{ ...p.pdf, contentType: "application/pdf" }],
+  }
+}

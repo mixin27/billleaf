@@ -12,6 +12,7 @@ import {
   type ContractTemplate,
   type CreateContractInput,
   type CreateContractTemplateInput,
+  E_SIGN_CONSENT,
   formatMoney,
   type MergeValues,
   type PartySnapshot,
@@ -255,28 +256,53 @@ export class ContractsService {
   }
 
   /** Record the client's signature (manual until e-sign). */
-  async sign(id: string, input: SignContractInput): Promise<Contract> {
+  /** Record a signature: by a member ("manual") or the client's e-signature in the portal. */
+  async sign(
+    id: string,
+    input: SignContractInput,
+    by: { via: "manual" | "portal"; email?: string | null } = { via: "manual" }
+  ): Promise<Contract> {
     const today = todayIn((await this.profile.get()).timezone)
-    const signedAt = input.signedAt ?? today
+    const signedAt = by.via === "portal" ? today : (input.signedAt ?? today)
     if (signedAt > today)
       throw new BadRequestException("The signing date can't be in the future")
     await this.transition(id, ["sent"], "signed", {
       signedAt,
       signedByName: input.signedByName,
+      signedVia: by.via,
     })
     await this.audit.record("contract.signed", {
       resourceType: "contract",
       resourceId: id,
-      metadata: { signedByName: input.signedByName, signedAt },
+      metadata: {
+        signedByName: input.signedByName,
+        signedAt,
+        via: by.via,
+        ...(by.email ? { email: by.email } : {}),
+      },
     })
     return this.get(id)
   }
 
-  async decline(id: string): Promise<Contract> {
-    await this.transition(id, ["sent"], "declined", { declinedAt: new Date() })
+  async decline(
+    id: string,
+    by: {
+      via: "manual" | "portal"
+      reason?: string | null
+      email?: string | null
+    } = {
+      via: "manual",
+    }
+  ): Promise<Contract> {
+    await this.transition(id, ["sent"], "declined", {
+      declinedAt: new Date(),
+      declineReason: by.reason ?? null,
+    })
     await this.audit.record("contract.declined", {
       resourceType: "contract",
       resourceId: id,
+      metadata:
+        by.via === "portal" ? { via: "portal", email: by.email } : undefined,
     })
     return this.get(id)
   }
@@ -307,7 +333,22 @@ export class ContractsService {
           : c.status === "void"
             ? "VOID"
             : null
+    const evidence =
+      c.status === "signed" && c.signedVia === "portal"
+        ? await this.repo.signatureEvidence(id)
+        : null
     const content = await renderContractPdf({
+      certificate: evidence
+        ? {
+            name: evidence.name ?? c.signedByName ?? "",
+            email: evidence.email,
+            signedAt: `${evidence.createdAt.toISOString().replace("T", " ").slice(0, 19)} UTC`,
+            ipAddress: evidence.ipAddress,
+            userAgent: evidence.userAgent,
+            documentHash: evidence.documentHash,
+            consent: E_SIGN_CONSENT,
+          }
+        : null,
       title: c.title,
       number: c.number,
       stamp,
@@ -328,6 +369,7 @@ export class ContractsService {
           ? {
               name: c.signedByName,
               date: formatDocDate(c.signedAt, profile.locale),
+              electronic: c.signedVia === "portal",
             }
           : null,
       ...(await this.profile.documentBranding()),
@@ -439,7 +481,9 @@ export class ContractsService {
       projectId: c.projectId,
       projectName: c.projectName,
       signedByName: c.signedByName,
+      signedVia: c.signedVia ?? null,
       declinedAt: c.declinedAt?.toISOString() ?? null,
+      declineReason: c.declineReason ?? null,
       voidedAt: c.voidedAt?.toISOString() ?? null,
       voidReason: c.voidReason,
       clientSnapshot: c.clientSnapshot ?? null,

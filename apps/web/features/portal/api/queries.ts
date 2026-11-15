@@ -163,3 +163,58 @@ export function usePortalSignOut(slug: string) {
     onSuccess: () => qc.removeQueries({ queryKey: portalKeys.all(slug) }),
   })
 }
+
+function useRespond<TBody>(
+  slug: string,
+  run: (body: TBody) => Promise<unknown>
+) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: run,
+    onSuccess: () => qc.invalidateQueries({ queryKey: portalKeys.all(slug) }),
+  })
+}
+
+export function useAcceptQuote(slug: string, id: string) {
+  return useRespond(slug, (name: string) =>
+    unwrap(
+      api.POST("/v1/portal/{slug}/quotes/{id}/accept", {
+        params: { path: { slug, id } },
+        body: { name },
+      })
+    )
+  )
+}
+
+export function useDeclineQuote(slug: string, id: string) {
+  return useRespond(slug, (reason: string) =>
+    unwrap(
+      api.POST("/v1/portal/{slug}/quotes/{id}/decline", {
+        params: { path: { slug, id } },
+        body: { reason } as never,
+      })
+    )
+  )
+}
+
+export function useSignContract(slug: string, id: string) {
+  return useRespond(slug, (name: string) =>
+    unwrap(
+      api.POST("/v1/portal/{slug}/contracts/{id}/sign", {
+        params: { path: { slug, id } },
+        body: { name, agree: true },
+      })
+    )
+  )
+}
+
+export function useDeclineContract(slug: string, id: string) {
+  return useRespond(slug, (reason: string) =>
+    unwrap(
+      api.POST("/v1/portal/{slug}/contracts/{id}/decline", {
+        params: { path: { slug, id } },
+        body: { reason } as never,
+      })
+    )
+  )
+}

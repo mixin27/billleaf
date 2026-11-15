@@ -1,4 +1,12 @@
-import { Inject, Injectable, NotFoundException } from "@nestjs/common"
+import { createHash } from "node:crypto"
+
+import {
+  ConflictException,
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from "@nestjs/common"
 import {
   invoiceState,
   type PortalContract,
@@ -11,7 +19,11 @@ import {
   type PortalReceipt,
   type PortalWorkspace,
 } from "@workspace/contracts"
-import { portalSignInEmail } from "@workspace/emails"
+import {
+  portalResponseEmail,
+  portalSignInEmail,
+  signedContractEmail,
+} from "@workspace/emails"
 
 import { EntitlementsService } from "../../billing/entitlements.service.js"
 import { RequestContext } from "../../common/context/request-context.js"
@@ -33,6 +45,9 @@ import {
 } from "./portal-tokens.js"
 
 type Kind = "quote" | "invoice" | "contract" | "payment"
+type Meta = { ip?: string; userAgent?: string }
+
+const sha256 = (v: string) => createHash("sha256").update(v).digest("hex")
 
 /**
  * The client portal: clients of a workspace sign in with an emailed link and
@@ -42,6 +57,8 @@ type Kind = "quote" | "invoice" | "contract" | "payment"
  */
 @Injectable()
 export class PortalService {
+  private readonly logger = new Logger(PortalService.name)
+
   constructor(
     private readonly repo: PortalRepository,
     private readonly ctx: RequestContext,
@@ -265,6 +282,8 @@ export class PortalService {
       client: q.clientSnapshot,
       acceptedAt: q.acceptedAt,
       declinedAt: q.declinedAt,
+      respondedByName: q.respondedByName,
+      declineReason: q.declineReason,
     }
   }
 
@@ -310,7 +329,9 @@ export class PortalService {
       signedAt: c.signedAt,
       body: c.renderedBody,
       signedByName: c.signedByName,
+      signedVia: c.signedVia,
       declinedAt: c.declinedAt,
+      declineReason: c.declineReason,
       voidedAt: c.voidedAt,
       issuer: c.issuerSnapshot,
       client: c.clientSnapshot,
@@ -329,5 +350,209 @@ export class PortalService {
       case "payment":
         return this.payments.receiptPdf(id)
     }
+  }
+
+  // ── Responses (accept / decline / sign) ──────────────
+
+  /** What the client saw, for the evidence record. */
+  private quoteHash(q: Awaited<ReturnType<QuotesService["get"]>>) {
+    return sha256(
+      JSON.stringify({
+        number: q.number,
+        currency: q.currency,
+        validUntil: q.validUntil,
+        subtotal: q.subtotal,
+        taxTotal: q.taxTotal,
+        total: q.total,
+        lines: q.lines.map((l) => [
+          l.description,
+          l.quantity,
+          l.unitPrice,
+          l.taxRateBps,
+          l.amount,
+        ]),
+        notes: q.notes,
+        terms: q.terms,
+      })
+    )
+  }
+
+  private async record(
+    doc: { type: "quote" | "contract"; id: string; number: string | null },
+    action: "accepted" | "declined" | "signed",
+    hash: string,
+    meta: Meta,
+    extra: { name?: string | null; reason?: string | null }
+  ) {
+    await this.repo.insertResponse({
+      workspaceId: this.ctx.workspaceId,
+      clientId: this.ctx.portalClientId,
+      documentType: doc.type,
+      documentId: doc.id,
+      documentNumber: doc.number,
+      action,
+      name: extra.name ?? null,
+      email: this.ctx.portalEmail,
+      reason: extra.reason ?? null,
+      documentHash: hash,
+      ipAddress: meta.ip?.slice(0, 100) ?? null,
+      userAgent: meta.userAgent?.slice(0, 500) ?? null,
+    })
+  }
+
+  /** Email the business (its email, else the owners). Never fails the response. */
+  private async notify(
+    kind: "Quote" | "Contract",
+    doc: { id: string; number: string | null },
+    action: "accepted" | "declined" | "signed",
+    name: string | null,
+    reason?: string | null
+  ) {
+    try {
+      const [profile, clientName] = await Promise.all([
+        this.profile.get(),
+        this.repo.clientName(this.ctx.workspaceId, this.ctx.portalClientId),
+      ])
+      const to = profile.email
+        ? [profile.email]
+        : await this.repo.ownerEmails(this.ctx.workspaceId)
+      const path = kind === "Quote" ? "quotes" : "contracts"
+      for (const address of to)
+        await this.mail.send(
+          portalResponseEmail({
+            to: address,
+            clientName: clientName ?? "Your client",
+            kind,
+            number: doc.number ?? "",
+            action,
+            name,
+            reason,
+            url: `${this.env.WEB_URL}/${encodeURIComponent(profile.slug)}/${path}/${doc.id}`,
+          })
+        )
+    } catch (err) {
+      this.logger.error({ err }, "Failed to send portal response notice")
+    }
+  }
+
+  async acceptQuote(id: string, name: string, meta: Meta) {
+    await this.own("quote", id)
+    const q = await this.quotes.get(id)
+    if (q.isExpired)
+      throw new ConflictException({
+        message: `This quote expired${q.validUntil ? ` on ${q.validUntil}` : ""}. Ask for an updated one.`,
+        code: "quote_expired",
+      })
+    if (q.status !== "sent")
+      throw new ConflictException({
+        message: "This quote has already been answered",
+        code: "quote_not_open",
+      })
+    await this.quotes.respond(id, "accepted", {
+      via: "portal",
+      name,
+      email: this.ctx.portalEmail,
+    })
+    await this.record(
+      { type: "quote", id, number: q.number },
+      "accepted",
+      this.quoteHash(q),
+      meta,
+      { name }
+    )
+    await this.notify("Quote", q, "accepted", name)
+    return this.quote(id)
+  }
+
+  async declineQuote(id: string, reason: string | null, meta: Meta) {
+    await this.own("quote", id)
+    const q = await this.quotes.get(id)
+    if (q.status !== "sent")
+      throw new ConflictException({
+        message: "This quote has already been answered",
+        code: "quote_not_open",
+      })
+    await this.quotes.respond(id, "declined", {
+      via: "portal",
+      reason,
+      email: this.ctx.portalEmail,
+    })
+    await this.record(
+      { type: "quote", id, number: q.number },
+      "declined",
+      this.quoteHash(q),
+      meta,
+      { reason }
+    )
+    await this.notify("Quote", q, "declined", null, reason)
+    return this.quote(id)
+  }
+
+  async signContract(id: string, name: string, meta: Meta) {
+    await this.own("contract", id)
+    const c = await this.contracts.get(id)
+    if (c.status !== "sent")
+      throw new ConflictException({
+        message: "This contract isn't waiting for a signature",
+        code: "contract_not_open",
+      })
+    // The status change is the lock (a second click gets a 409); the
+    // evidence is written before the PDF, whose certificate page reads it.
+    await this.contracts.sign(
+      id,
+      { signedByName: name },
+      { via: "portal", email: this.ctx.portalEmail }
+    )
+    await this.record(
+      { type: "contract", id, number: c.number },
+      "signed",
+      sha256(c.renderedBody),
+      meta,
+      { name }
+    )
+    await this.notify("Contract", c, "signed", name)
+    try {
+      const [{ filename, content }, profile] = await Promise.all([
+        this.contracts.pdf(id),
+        this.profile.get(),
+      ])
+      await this.mail.send(
+        signedContractEmail({
+          to: this.ctx.portalEmail,
+          workspaceName: profile.name,
+          number: c.number ?? "",
+          title: c.title,
+          signedByName: name,
+          pdf: { filename, contentBase64: content.toString("base64") },
+        })
+      )
+    } catch (err) {
+      this.logger.error({ err }, "Failed to send signed contract copy")
+    }
+    return this.contract(id)
+  }
+
+  async declineContract(id: string, reason: string | null, meta: Meta) {
+    await this.own("contract", id)
+    const c = await this.contracts.get(id)
+    if (c.status !== "sent")
+      throw new ConflictException({
+        message: "This contract isn't waiting for a signature",
+        code: "contract_not_open",
+      })
+    await this.contracts.decline(id, {
+      via: "portal",
+      reason,
+      email: this.ctx.portalEmail,
+    })
+    await this.record(
+      { type: "contract", id, number: c.number },
+      "declined",
+      sha256(c.renderedBody),
+      meta,
+      { reason }
+    )
+    await this.notify("Contract", c, "declined", null, reason)
+    return this.contract(id)
   }
 }

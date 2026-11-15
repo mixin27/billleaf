@@ -18,7 +18,12 @@ Clients should see and act on their quotes, contracts and invoices without the f
   - Only SHA-256 hashes of link and session tokens are stored.
   - The session grants no member permissions: `PortalGuard` sets the workspace and client in the request context, and every portal query checks the document belongs to that client and isn't a draft.
 - **Available on every plan.** Free shows "Made with Billleaf"; paid plans show the workspace logo and colour (`customBranding`). This changes the earlier "Team only" line in the business model; approvals stay a Team feature.
-- **Rollout:** this first version is read-only. It covers quotes, contracts, invoices, receipts and PDFs. Accepting or declining quotes and e-signing contracts come next, on the same sessions.
+- **Rollout:** part 1 is read-only (quotes, contracts, invoices, receipts and PDFs). Part 2 adds client responses on the same sessions:
+  - **Quotes:** accept with a typed name, or decline with an optional reason. Expired quotes can't be accepted.
+  - **Contracts:** a **typed-name e-signature**. The client ticks an explicit consent statement (`E_SIGN_CONSENT`), or declines with a reason.
+  - **Evidence:** each response writes a `portal_responses` row. It records the typed name, the session's email (proven by the sign-in link), the time, IP, user agent, and a SHA-256 of exactly what was shown: the rendered contract text, or the quote's lines and totals.
+  - **Signed PDF:** an e-signed contract's PDF gets a **signature certificate** page built from that row.
+  - **Emails:** the business is emailed for every response (its business email, otherwise the owners). The signer is emailed the signed PDF.
 
 ## Consequences
 
@@ -28,6 +33,8 @@ Clients should see and act on their quotes, contracts and invoices without the f
   - A forwarded sign-in link is single-use and expires in 20 minutes.
 - Sign-in requests are rate-limited per IP (throttler) and per email (5 per 15 minutes).
 - Clients who share an email across workspaces get separate sessions per workspace. One browser holds one portal session at a time.
+
+- **E-sign standard:** this is a simple electronic signature (typed name, consent, identity by email, audit evidence), which is accepted for ordinary service contracts in most jurisdictions. Advanced or qualified signatures, such as certificate-based or ID-verified ones, are out of scope. A third-party e-sign provider can be added later for clients who need them.
 
 ## Alternatives considered
 

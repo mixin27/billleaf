@@ -52,6 +52,10 @@ export const quoteSchema = quoteSummarySchema.extend({
   sentAt: z.iso.datetime().nullable(),
   acceptedAt: z.iso.datetime().nullable(),
   declinedAt: z.iso.datetime().nullable(),
+  /** Who accepted/declined, and whether a member recorded it or the client did in the portal. */
+  respondedByName: z.string().nullable(),
+  respondedVia: z.enum(["manual", "portal"]).nullable(),
+  declineReason: z.string().nullable(),
   /** Frozen at send time; null while draft (use live client/workspace data). */
   clientSnapshot: partySnapshotSchema.nullable(),
   issuerSnapshot: partySnapshotSchema.nullable(),

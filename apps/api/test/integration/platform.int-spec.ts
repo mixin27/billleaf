@@ -1,8 +1,11 @@
 import { readFileSync } from "node:fs"
 import zlib from "node:zlib"
 
+import { createHash } from "node:crypto"
+
 import {
   billingEvents,
+  portalResponses,
   rolePermissions,
   roles,
   syncPermissions,
@@ -2419,6 +2422,202 @@ describe("client portal", () => {
       // Signing out ends the session.
       expect((await visitor.post("/v1/portal/sign-out")).status).toBe(204)
       expect((await visitor.get(`${base}/me`)).status).toBe(401)
+    } finally {
+      spy.mockRestore()
+    }
+  })
+
+  it("lets clients accept or decline quotes and e-sign contracts, with evidence", async () => {
+    const mail = t.app.get(MailService)
+    const sent: any[] = []
+    const spy = vi
+      .spyOn(mail, "send")
+      .mockImplementation(async (m) => void sent.push(m))
+    try {
+      const owner = new Client(t)
+      const { email: ownerEmail } = await owner.signUp("Responder Owner")
+      const ws = await owner.createWorkspace("Respond Studio")
+      await owner.patch("/v1/workspace", { timezone: "UTC" })
+      const client = (
+        await owner.post("/v1/clients", {
+          name: "Answer Co",
+          email: "boss@answer.test",
+        })
+      ).body
+      const line = { description: "Build", quantity: 1, unitPrice: 90_000 }
+      const sentQuote = async (extra: Record<string, unknown> = {}) => {
+        const q = (
+          await owner.post("/v1/quotes", {
+            clientId: client.id,
+            lines: [line],
+            ...extra,
+          })
+        ).body
+        await owner.post(`/v1/quotes/${q.id}/send`)
+        return q
+      }
+      const toAccept = await sentQuote()
+      const toDecline = await sentQuote()
+      const expired = await sentQuote({
+        issueDate: "2020-01-01",
+        validUntil: "2020-01-31",
+      })
+      const sentContract = async (title: string) => {
+        const c = (
+          await owner.post("/v1/contracts", {
+            clientId: client.id,
+            title,
+            body: "## Terms\nWe build, you pay.",
+          })
+        ).body
+        await owner.post(`/v1/contracts/${c.id}/send`)
+        return c
+      }
+      const toSign = await sentContract("Build agreement")
+      const toRefuse = await sentContract("Retainer")
+
+      const base = `/v1/portal/${encodeURIComponent(ws.slug)}`
+      const visitor = new PortalVisitor()
+      sent.length = 0
+      await visitor.post(`${base}/sign-in`, { email: "boss@answer.test" })
+      const link = /https?:\/\/\S+?token=[\w-]+/.exec(sent[0].text)![0]
+      await visitor.post("/v1/portal/session", { token: tokenFrom(link) })
+      sent.length = 0
+
+      // Accept with a typed name; only once.
+      expect(
+        (
+          await visitor.post(`${base}/quotes/${toAccept.id}/accept`, {
+            name: "B",
+          })
+        ).status
+      ).toBe(422)
+      const accepted = await visitor.post(
+        `${base}/quotes/${toAccept.id}/accept`,
+        { name: "Bea Boss" }
+      )
+      expect(accepted.status).toBe(200)
+      expect(accepted.body).toMatchObject({
+        status: "accepted",
+        respondedByName: "Bea Boss",
+      })
+      expect(
+        (
+          await visitor.post(`${base}/quotes/${toAccept.id}/accept`, {
+            name: "Bea Boss",
+          })
+        ).body.code
+      ).toBe("quote_not_open")
+      expect((await owner.get(`/v1/quotes/${toAccept.id}`)).body).toMatchObject(
+        {
+          status: "accepted",
+          respondedByName: "Bea Boss",
+          respondedVia: "portal",
+        }
+      )
+      // The business hears about it (no business email set → owners).
+      expect(sent[0]).toMatchObject({
+        to: ownerEmail,
+        subject: `Answer Co accepted quote ${toAccept.number ?? accepted.body.number}`,
+      })
+
+      expect(
+        (
+          await visitor.post(`${base}/quotes/${toDecline.id}/decline`, {
+            reason: "Over budget",
+          })
+        ).body
+      ).toMatchObject({ status: "declined", declineReason: "Over budget" })
+      expect(
+        (
+          await visitor.post(`${base}/quotes/${expired.id}/accept`, {
+            name: "Bea Boss",
+          })
+        ).body.code
+      ).toBe("quote_expired")
+
+      // E-sign: the box must be ticked; then signed, with evidence.
+      expect(
+        (
+          await visitor.post(`${base}/contracts/${toSign.id}/sign`, {
+            name: "Bea Boss",
+            agree: false,
+          })
+        ).status
+      ).toBe(422)
+      const pages = async (id: string) =>
+        Number(
+          /\/Type \/Pages[\s\S]*?\/Count (\d+)/.exec(
+            (
+              await t.app.inject({
+                method: "GET",
+                url: `/v1/contracts/${id}/pdf`,
+                headers: owner.headers(),
+              })
+            ).body
+          )?.[1]
+        )
+      const before = await pages(toSign.id)
+      sent.length = 0
+      const signed = await visitor.post(`${base}/contracts/${toSign.id}/sign`, {
+        name: "Bea Boss",
+        agree: true,
+      })
+      expect(signed.body).toMatchObject({
+        status: "signed",
+        signedByName: "Bea Boss",
+        signedVia: "portal",
+      })
+      expect(await pages(toSign.id)).toBe(before + 1) // signature certificate
+      const [evidence] = await t.db
+        .select()
+        .from(portalResponses)
+        .where(eq(portalResponses.documentId, toSign.id))
+      expect(evidence).toMatchObject({
+        action: "signed",
+        name: "Bea Boss",
+        email: "boss@answer.test",
+        documentHash: createHash("sha256")
+          .update("## Terms\nWe build, you pay.")
+          .digest("hex"),
+      })
+      expect(evidence!.ipAddress).toBeTruthy()
+      // Owner notice + the signer's copy with the PDF.
+      expect(sent.map((m) => m.to).sort()).toEqual(
+        [ownerEmail, "boss@answer.test"].sort()
+      )
+      expect(
+        sent.find((m) => m.to === "boss@answer.test").attachments[0]
+      ).toMatchObject({ contentType: "application/pdf" })
+
+      expect(
+        (await visitor.post(`${base}/contracts/${toRefuse.id}/decline`, {}))
+          .body
+      ).toMatchObject({ status: "declined", declineReason: null })
+      expect(
+        (
+          await visitor.post(`${base}/contracts/${toSign.id}/sign`, {
+            name: "Bea Boss",
+            agree: true,
+          })
+        ).body.code
+      ).toBe("contract_not_open")
+
+      // Other clients' documents can't be answered.
+      const other = (
+        await owner.post("/v1/clients", { name: "Not You", email: "x@y.test" })
+      ).body
+      const theirs = (
+        await owner.post("/v1/quotes", { clientId: other.id, lines: [line] })
+      ).body
+      await owner.post(`/v1/quotes/${theirs.id}/send`)
+      expect(
+        (
+          await visitor.post(`${base}/quotes/${theirs.id}/accept`, {
+            name: "Bea Boss",
+          })
+        ).status
+      ).toBe(404)
     } finally {
       spy.mockRestore()
     }

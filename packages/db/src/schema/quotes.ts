@@ -55,6 +55,10 @@ export const quotes = pgTable(
     sentAt: timestamp({ withTimezone: true }),
     acceptedAt: timestamp({ withTimezone: true }),
     declinedAt: timestamp({ withTimezone: true }),
+    /** Who accepted or declined, and how (recorded by a member, or the client in the portal). */
+    respondedByName: text(),
+    respondedVia: text({ enum: ["manual", "portal"] }),
+    declineReason: text(),
     ...timestamps,
   },
   (t) => [

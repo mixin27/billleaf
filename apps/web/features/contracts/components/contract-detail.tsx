@@ -144,9 +144,12 @@ function ContractDetailView({ contract: c }: { contract: Contract }) {
       ? ([
           [
             "Signed",
-            `${c.signedByName ?? ""} · ${formatDate(c.signedAt, locale)}`,
+            `${c.signedByName ?? ""} · ${formatDate(c.signedAt, locale)}${c.signedVia === "portal" ? " · e-signed in the client portal" : ""}`,
           ],
         ] as [string, React.ReactNode][])
+      : []),
+    ...(c.status === "declined" && c.declineReason
+      ? ([["Reason declined", c.declineReason]] as [string, React.ReactNode][])
       : []),
   ]
 

@@ -72,7 +72,10 @@ export const contracts = pgTable(
     sentAt: timestamp({ withTimezone: true }),
     signedAt: date({ mode: "string" }),
     signedByName: text(),
+    /** "portal" = typed-name e-signature (evidence in portal_responses). */
+    signedVia: text({ enum: ["manual", "portal"] }),
     declinedAt: timestamp({ withTimezone: true }),
+    declineReason: text(),
     voidedAt: timestamp({ withTimezone: true }),
     voidReason: text(),
     ...timestamps,

@@ -16,7 +16,17 @@ export interface ContractPdfData {
   meta: { label: string; value: string }[]
   issuer: PartySnapshot
   client: PartySnapshot
-  signature?: { name: string; date: string } | null
+  signature?: { name: string; date: string; electronic?: boolean } | null
+  /** Typed-name e-signature evidence, printed on a final page. */
+  certificate?: {
+    name: string
+    email: string
+    signedAt: string
+    ipAddress: string | null
+    userAgent: string | null
+    documentHash: string
+    consent: string
+  } | null
   footer?: string | null
   brandColor?: string | null
   logo?: Buffer | null
@@ -150,7 +160,7 @@ export function renderContractPdf(d: ContractPdfData): Promise<Buffer> {
     label: string,
     party: PartySnapshot,
     x: number,
-    signed?: { name: string; date: string } | null
+    signed?: { name: string; date: string; electronic?: boolean } | null
   ) => {
     write(label.toUpperCase(), x, top, {}, { size: 8, color: MUTED })
     write(
@@ -183,7 +193,11 @@ export function renderContractPdf(d: ContractPdfData): Promise<Buffer> {
       .strokeColor(RULE)
       .stroke()
     write(
-      signed ? "Signature recorded" : "Signature, name and date",
+      signed
+        ? signed.electronic
+          ? "Signed electronically (see signature certificate)"
+          : "Signature recorded"
+        : "Signature, name and date",
       x,
       lineY + 4,
       { width: colW },
@@ -192,6 +206,59 @@ export function renderContractPdf(d: ContractPdfData): Promise<Buffer> {
   }
   signatureBlock("Provider", d.issuer, left)
   signatureBlock("Client", d.client, left + width / 2 + 16, d.signature)
+
+  if (d.certificate) {
+    const c = d.certificate
+    doc.addPage()
+    write(
+      "SIGNATURE CERTIFICATE",
+      left,
+      46,
+      {},
+      { bold: true, size: 11, color: accent }
+    )
+    write(
+      `${d.title}${d.number ? ` · ${d.number}` : ""}`,
+      left,
+      66,
+      { width },
+      { size: 10, color: MUTED }
+    )
+    let cy = 104
+    const row = (label: string, value: string, size = 10) => {
+      write(
+        label.toUpperCase(),
+        left,
+        cy,
+        { width: 130 },
+        { size: 8, color: MUTED }
+      )
+      write(
+        value,
+        left + 140,
+        cy - 1,
+        { width: width - 140 },
+        { size, color: INK }
+      )
+      cy = Math.max(doc.y, cy + 14) + 10
+    }
+    row("Signed by", c.name)
+    row("Email", `${c.email} (verified by a sign-in link sent to this address)`)
+    row("Signed at", c.signedAt)
+    row("Method", "Typed name in the client portal")
+    row("Agreement", `"${c.consent}"`)
+    row("IP address", c.ipAddress ?? "Not recorded")
+    row("Device", c.userAgent ?? "Not recorded")
+    // 64 hex characters: small enough to stay on one line.
+    row("Document SHA-256", c.documentHash, 8)
+    write(
+      "The document fingerprint is the SHA-256 hash of the contract text exactly as it was shown to the signer. Any later change to the text produces a different fingerprint.",
+      left,
+      cy + 8,
+      { width },
+      { size: 8, color: MUTED }
+    )
+  }
 
   if (d.footer) {
     const range = doc.bufferedPageRange()
