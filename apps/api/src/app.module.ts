@@ -14,6 +14,7 @@ import { IamModule } from "./iam/iam.module.js"
 import { WorkspaceGuard } from "./iam/workspace.guard.js"
 import { ClientsModule } from "./modules/clients/clients.module.js"
 import { InvoicesModule } from "./modules/invoices/invoices.module.js"
+import { PaymentsModule } from "./modules/payments/payments.module.js"
 import { QuotesModule } from "./modules/quotes/quotes.module.js"
 import { WorkspaceProfileModule } from "./modules/workspace/workspace-profile.module.js"
 
@@ -31,6 +32,7 @@ import { WorkspaceProfileModule } from "./modules/workspace/workspace-profile.mo
     ClientsModule,
     QuotesModule,
     InvoicesModule,
+    PaymentsModule,
   ],
   providers: [
     // Guard order matters: rate limit → session → workspace/RBAC.

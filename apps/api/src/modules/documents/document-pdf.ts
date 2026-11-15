@@ -10,6 +10,8 @@ export interface DocumentPdfData {
   meta: { label: string; value: string }[]
   issuer: PartySnapshot
   recipient: PartySnapshot
+  /** Heading above the recipient block (default "Bill to"). */
+  recipientLabel?: string
   currency: string
   locale: string
   lines: {
@@ -25,6 +27,8 @@ export interface DocumentPdfData {
   /** Invoices: amount already paid and balance due. */
   amountPaid?: number
   amountDue?: number
+  /** Replace the standard Subtotal/Tax/Total block (e.g. receipts). */
+  totals?: { label: string; amount: number; bold?: boolean }[]
   notes?: string | null
   terms?: string | null
   footer?: string | null
@@ -113,7 +117,7 @@ export function renderDocumentPdf(d: DocumentPdfData): Promise<Buffer> {
     return y
   }
   const y1 = party("From", d.issuer, left)
-  const y2 = party("Bill to", d.recipient, left + width / 2)
+  const y2 = party(d.recipientLabel ?? "Bill to", d.recipient, left + width / 2)
   let y = Math.max(y1, y2) + 16
 
   // Meta row
@@ -148,7 +152,8 @@ export function renderDocumentPdf(d: DocumentPdfData): Promise<Buffer> {
       width: width * 0.14,
       align: "right",
     })
-    doc.text("TAX", cols.tax, yy, { width: width * 0.06, align: "right" })
+    if (!d.totals)
+      doc.text("TAX", cols.tax, yy, { width: width * 0.06, align: "right" })
     doc.text("AMOUNT", cols.amt, yy, { width: width * 0.13, align: "right" })
     doc
       .moveTo(left, yy + 13)
@@ -175,10 +180,12 @@ export function renderDocumentPdf(d: DocumentPdfData): Promise<Buffer> {
       width: width * 0.14,
       align: "right",
     })
-    doc.text(l.taxRateBps ? `${l.taxRateBps / 100}%` : "—", cols.tax, y, {
-      width: width * 0.06,
-      align: "right",
-    })
+    if (!d.totals) {
+      doc.text(l.taxRateBps ? `${l.taxRateBps / 100}%` : "—", cols.tax, y, {
+        width: width * 0.06,
+        align: "right",
+      })
+    }
     doc.text(money(l.amount), cols.amt, y, {
       width: width * 0.13,
       align: "right",
@@ -205,13 +212,17 @@ export function renderDocumentPdf(d: DocumentPdfData): Promise<Buffer> {
       .text(value, totalsX, y, { width: width * 0.45, align: "right" })
     y += bold ? 18 : 14
   }
-  totalRow("Subtotal", money(d.subtotal))
-  totalRow("Tax", money(d.taxTotal))
-  totalRow(`Total (${d.currency})`, money(d.total), true)
-  if (d.amountPaid !== undefined && d.amountPaid > 0)
-    totalRow("Paid", money(d.amountPaid))
-  if (d.amountDue !== undefined)
-    totalRow("Amount due", money(d.amountDue), true)
+  if (d.totals) {
+    for (const t of d.totals) totalRow(t.label, money(t.amount), t.bold)
+  } else {
+    totalRow("Subtotal", money(d.subtotal))
+    totalRow("Tax", money(d.taxTotal))
+    totalRow(`Total (${d.currency})`, money(d.total), true)
+    if (d.amountPaid !== undefined && d.amountPaid > 0)
+      totalRow("Paid", money(d.amountPaid))
+    if (d.amountDue !== undefined)
+      totalRow("Amount due", money(d.amountDue), true)
+  }
   y += 10
 
   // Notes, terms, footer
