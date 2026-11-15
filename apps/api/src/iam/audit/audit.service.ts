@@ -28,6 +28,8 @@ export class AuditService {
       await this.db.insert(auditLogs).values({
         action,
         actorUserId: this.cls.get("userId") ?? null,
+        ipAddress: this.cls.get("ip") ?? null,
+        userAgent: this.cls.get("userAgent") ?? null,
         ...entry,
         workspaceId: entry.workspaceId ?? this.cls.get("workspaceId") ?? null,
       })

@@ -13,6 +13,7 @@ import { eq } from "drizzle-orm"
 import { createZodDto, ZodResponse } from "nestjs-zod"
 
 import { EntitlementsService } from "../../billing/entitlements.service.js"
+import { AdminAccessService } from "../../admin/admin-access.service.js"
 import { RequestContext } from "../../common/context/request-context.js"
 import { RequireWorkspace } from "../../common/decorators/require-permission.decorator.js"
 import { InjectDb, type Database } from "../../core/database/database.module.js"
@@ -26,7 +27,8 @@ export class MeController {
   constructor(
     @InjectDb() private readonly db: Database,
     private readonly ctx: RequestContext,
-    private readonly entitlements: EntitlementsService
+    private readonly entitlements: EntitlementsService,
+    private readonly adminAccess: AdminAccessService
   ) {}
 
   /** Current user, active workspace and effective permissions (for UI gating). */
@@ -50,6 +52,10 @@ export class MeController {
         name: session.user.name,
         email: session.user.email,
         image: session.user.image ?? null,
+        isPlatformAdmin: this.adminAccess.isAdminEmail(session.user.email),
+        impersonatedBy:
+          (session.session as { impersonatedBy?: string | null })
+            .impersonatedBy ?? null,
       },
       workspace: ws ?? null,
       permissions: [...this.ctx.permissions],

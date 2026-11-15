@@ -4,6 +4,22 @@
  */
 
 export interface paths {
+  "/v1/audit": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["AuditController_list_v1"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   "/v1/me": {
     parameters: {
       query?: never
@@ -1844,6 +1860,246 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  "/v1/admin/overview": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["AdminController_overview_v1"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/admin/workspaces": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["AdminController_workspaces_v1"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/admin/workspaces/{id}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["AdminController_workspace_v1"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/admin/workspaces/{id}/plan": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put: operations["AdminController_setPlan_v1"]
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/admin/users": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["AdminController_users_v1"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/admin/users/{id}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["AdminController_user_v1"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/admin/users/{id}/ban": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["AdminController_ban_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/admin/users/{id}/unban": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["AdminController_unban_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/admin/users/{id}/revoke-sessions": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["AdminController_revokeSessions_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/admin/users/{id}/resend-verification": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["AdminController_resendVerification_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/admin/users/{id}/impersonation": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["AdminController_impersonate_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/admin/jobs": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["AdminController_jobs_v1"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/admin/jobs/{queue}/{id}/retry": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["AdminController_retryJob_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/admin/jobs/{queue}/{id}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    delete: operations["AdminController_removeJob_v1"]
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/admin/audit": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["AdminController_auditLog_v1"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   "/v1/dashboard": {
     parameters: {
       query?: never
@@ -1864,6 +2120,33 @@ export interface paths {
 export type webhooks = Record<string, never>
 export interface components {
   schemas: {
+    AuditListDto_Output: {
+      items: {
+        id: string
+        /** Format: date-time */
+        createdAt: string
+        action: string
+        actor: {
+          id: string
+          name: string
+          email: string
+        } | null
+        workspace: {
+          id: string
+          name: string
+          slug: string
+        } | null
+        resourceType: string | null
+        resourceId: string | null
+        metadata: {
+          [key: string]: unknown
+        } | null
+        ipAddress: string | null
+      }[]
+      total: number
+      page: number
+      pageSize: number
+    }
     MeDto_Output: {
       user: {
         id: string
@@ -1871,6 +2154,8 @@ export interface components {
         /** Format: email */
         email: string
         image?: string | null
+        isPlatformAdmin: boolean
+        impersonatedBy: string | null
       }
       workspace: {
         id: string
@@ -4143,6 +4428,241 @@ export interface components {
         status: "completed" | "refunded"
       }[]
     }
+    AdminOverviewDto_Output: {
+      users: {
+        total: number
+        verified: number
+        last7Days: number
+      }
+      workspaces: {
+        total: number
+        active30Days: number
+      }
+      plans: {
+        /** @enum {string} */
+        planKey: "free" | "pro" | "team"
+        count: number
+      }[]
+      signupsByWeek: {
+        /** Format: date */
+        week: string
+        count: number
+      }[]
+      failedJobs: {
+        queue: string
+        count: number
+      }[]
+    }
+    AdminWorkspaceListDto_Output: {
+      items: {
+        id: string
+        name: string
+        slug: string
+        /** Format: date-time */
+        createdAt: string
+        owner: {
+          name: string
+          email: string
+        } | null
+        members: number
+        /** @enum {string} */
+        effectivePlanKey: "free" | "pro" | "team"
+        /** Format: date-time */
+        currentPeriodEnd: string | null
+      }[]
+      total: number
+      page: number
+      pageSize: number
+    }
+    AdminWorkspaceDto_Output: {
+      id: string
+      name: string
+      slug: string
+      /** Format: date-time */
+      createdAt: string
+      owner: {
+        name: string
+        email: string
+      } | null
+      members: number
+      /** @enum {string} */
+      effectivePlanKey: "free" | "pro" | "team"
+      /** Format: date-time */
+      currentPeriodEnd: string | null
+      profile: {
+        email: string | null
+        country: string | null
+        defaultCurrency: string
+        timezone: string
+      }
+      memberList: {
+        userId: string
+        name: string
+        email: string
+        role: string
+        /** Format: date-time */
+        joinedAt: string
+      }[]
+      usage: {
+        activeClients: number
+        invoicesThisMonth: number
+        storageMb: number
+      }
+      subscription: {
+        /** @enum {string} */
+        planKey: "free" | "pro" | "team"
+        /** @enum {string} */
+        effectivePlanKey: "free" | "pro" | "team"
+        /** @enum {string} */
+        status: "active" | "trialing" | "past_due" | "canceled"
+        /** @enum {string|null} */
+        interval: "month" | "year" | null
+        cancelAtPeriodEnd: boolean
+        /** Format: date-time */
+        currentPeriodEnd: string | null
+        provider: string | null
+      }
+      billingEvents: {
+        id: string
+        provider: string
+        type: string
+        /** Format: date-time */
+        occurredAt: string
+        /** Format: date-time */
+        processedAt: string | null
+        error: string | null
+      }[]
+    }
+    AdminSetPlanDto: {
+      /** @enum {string} */
+      planKey: "free" | "pro" | "team"
+      /**
+       * @default month
+       * @enum {string}
+       */
+      interval: "month" | "year"
+      /** Format: date */
+      periodEnd?: string | null
+      reason: string
+    }
+    AdminUserListDto_Output: {
+      items: {
+        id: string
+        name: string
+        email: string
+        emailVerified: boolean
+        twoFactorEnabled: boolean
+        isPlatformAdmin: boolean
+        banned: boolean
+        banReason: string | null
+        /** Format: date-time */
+        banExpires: string | null
+        /** Format: date-time */
+        createdAt: string
+        /** Format: date-time */
+        lastSeenAt: string | null
+        workspaces: number
+      }[]
+      total: number
+      page: number
+      pageSize: number
+    }
+    AdminUserDto_Output: {
+      id: string
+      name: string
+      email: string
+      emailVerified: boolean
+      twoFactorEnabled: boolean
+      isPlatformAdmin: boolean
+      banned: boolean
+      banReason: string | null
+      /** Format: date-time */
+      banExpires: string | null
+      /** Format: date-time */
+      createdAt: string
+      /** Format: date-time */
+      lastSeenAt: string | null
+      workspaces: number
+      memberships: {
+        workspaceId: string
+        name: string
+        slug: string
+        role: string
+      }[]
+      sessions: {
+        id: string
+        /** Format: date-time */
+        createdAt: string
+        /** Format: date-time */
+        updatedAt: string
+        /** Format: date-time */
+        expiresAt: string
+        ipAddress: string | null
+        userAgent: string | null
+        impersonatedBy: string | null
+      }[]
+    }
+    AdminBanDto: {
+      reason: string
+      /** Format: date-time */
+      expiresAt?: string | null
+    }
+    AdminReasonDto: {
+      reason: string
+    }
+    AdminImpersonationDto_Output: {
+      userId: string
+    }
+    AdminJobListDto_Output: {
+      items: {
+        id: string
+        /** @enum {string} */
+        queue: "email" | "recurring" | "billing"
+        name: string
+        attemptsMade: number
+        failedReason: string | null
+        /** Format: date-time */
+        createdAt: string
+        /** Format: date-time */
+        finishedAt: string | null
+        summary: string
+      }[]
+      counts: {
+        /** @enum {string} */
+        queue: "email" | "recurring" | "billing"
+        failed: number
+        waiting: number
+        active: number
+        delayed: number
+      }[]
+    }
+    AdminAuditListDto_Output: {
+      items: {
+        id: string
+        /** Format: date-time */
+        createdAt: string
+        action: string
+        actor: {
+          id: string
+          name: string
+          email: string
+        } | null
+        workspace: {
+          id: string
+          name: string
+          slug: string
+        } | null
+        resourceType: string | null
+        resourceId: string | null
+        metadata: {
+          [key: string]: unknown
+        } | null
+        ipAddress: string | null
+      }[]
+      total: number
+      page: number
+      pageSize: number
+    }
     DashboardDto_Output: {
       /** Format: date */
       today: string
@@ -4253,6 +4773,33 @@ export interface components {
 }
 export type $defs = Record<string, never>
 export interface operations {
+  AuditController_list_v1: {
+    parameters: {
+      query?: {
+        page?: number
+        pageSize?: number
+        sort?: string
+        action?: string
+        actor?: string
+        from?: string
+        to?: string
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["AuditListDto_Output"]
+        }
+      }
+    }
+  }
   MeController_me_v1: {
     parameters: {
       query?: never
@@ -7770,6 +8317,351 @@ export interface operations {
           [name: string]: unknown
         }
         content?: never
+      }
+    }
+  }
+  AdminController_overview_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["AdminOverviewDto_Output"]
+        }
+      }
+    }
+  }
+  AdminController_workspaces_v1: {
+    parameters: {
+      query?: {
+        page?: number
+        pageSize?: number
+        sort?: string
+        q?: string
+        plan?: "free" | "pro" | "team"
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["AdminWorkspaceListDto_Output"]
+        }
+      }
+    }
+  }
+  AdminController_workspace_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["AdminWorkspaceDto_Output"]
+        }
+      }
+    }
+  }
+  AdminController_setPlan_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AdminSetPlanDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["AdminWorkspaceDto_Output"]
+        }
+      }
+    }
+  }
+  AdminController_users_v1: {
+    parameters: {
+      query?: {
+        page?: number
+        pageSize?: number
+        sort?: string
+        q?: string
+        banned?: "true"
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["AdminUserListDto_Output"]
+        }
+      }
+    }
+  }
+  AdminController_user_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["AdminUserDto_Output"]
+        }
+      }
+    }
+  }
+  AdminController_ban_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AdminBanDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["AdminUserDto_Output"]
+        }
+      }
+    }
+  }
+  AdminController_unban_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AdminReasonDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["AdminUserDto_Output"]
+        }
+      }
+    }
+  }
+  AdminController_revokeSessions_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AdminReasonDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["AdminUserDto_Output"]
+        }
+      }
+    }
+  }
+  AdminController_resendVerification_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  AdminController_impersonate_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AdminReasonDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["AdminImpersonationDto_Output"]
+        }
+      }
+    }
+  }
+  AdminController_jobs_v1: {
+    parameters: {
+      query?: {
+        queue?: "email" | "recurring" | "billing"
+        state?: "failed" | "delayed" | "waiting" | "active" | "completed"
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["AdminJobListDto_Output"]
+        }
+      }
+    }
+  }
+  AdminController_retryJob_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        queue: string
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  AdminController_removeJob_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        queue: string
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  AdminController_auditLog_v1: {
+    parameters: {
+      query?: {
+        page?: number
+        pageSize?: number
+        sort?: string
+        action?: string
+        actor?: string
+        from?: string
+        to?: string
+        workspaceId?: string
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["AdminAuditListDto_Output"]
+        }
       }
     }
   }

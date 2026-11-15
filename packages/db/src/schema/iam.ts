@@ -106,7 +106,12 @@ export const auditLogs = pgTable(
     userAgent: text(),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index().on(t.workspaceId, t.createdAt)]
+  (t) => [
+    index().on(t.workspaceId, t.createdAt),
+    // Admin portal filters: by action prefix and by actor.
+    index().on(t.action, t.createdAt),
+    index().on(t.actorUserId, t.createdAt),
+  ]
 )
 
 /**

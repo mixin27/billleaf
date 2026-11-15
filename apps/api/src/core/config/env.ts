@@ -24,6 +24,11 @@ export const envSchema = z.object({
   API_URL: z.url(),
   WEB_URL: z.url(),
   TRUSTED_ORIGINS: csv,
+  /**
+   * Platform admins (comma-separated emails). Synced to user.role on boot;
+   * removing an email demotes that user. Never granted from the UI.
+   */
+  PLATFORM_ADMIN_EMAILS: csv,
   COOKIE_DOMAIN: z
     .string()
     .optional()

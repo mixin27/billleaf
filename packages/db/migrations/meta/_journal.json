@@ -134,6 +134,13 @@
       "when": 1794750002645,
       "tag": "0018_wakeful_stryfe",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1794751594421,
+      "tag": "0019_third_talon",
+      "breakpoints": true
     }
   ]
 }

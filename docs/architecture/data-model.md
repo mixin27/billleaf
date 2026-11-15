@@ -35,14 +35,14 @@ Exact columns follow the Better Auth schema for the enabled plugins; regenerate 
 
 ### IAM (`iam.ts`)
 
-| Table                | Columns (key)                                                                                                                      |
-| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `permissions`        | `id`, `key` (`invoice.create`), `resource`, `action`, `description` — synced from code catalog                                     |
-| `roles`              | `id`, `workspace_id`, `slug`, `name`, `description`, `is_system`, `is_locked` (templates live in code: `SYSTEM_ROLES`)             |
-| `role_permissions`   | `role_id`, `permission_id`                                                                                                         |
-| `member_roles`       | `member_id`, `role_id`, `workspace_id` (denormalized for scoping)                                                                  |
-| `audit_logs`         | `workspace_id`, `actor_user_id`, `action`, `resource_type`, `resource_id`, `metadata`, `ip_address`, `user_agent`, `created_at`    |
-| `document_sequences` | PK (`workspace_id`, `scope`), `prefix`, `padding`, `next_value` — incremented with `UPDATE … RETURNING` in the issuing transaction |
+| Table                | Columns (key)                                                                                                                                                                                                                |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `permissions`        | `id`, `key` (`invoice.create`), `resource`, `action`, `description` — synced from code catalog                                                                                                                               |
+| `roles`              | `id`, `workspace_id`, `slug`, `name`, `description`, `is_system`, `is_locked` (templates live in code: `SYSTEM_ROLES`)                                                                                                       |
+| `role_permissions`   | `role_id`, `permission_id`                                                                                                                                                                                                   |
+| `member_roles`       | `member_id`, `role_id`, `workspace_id` (denormalized for scoping)                                                                                                                                                            |
+| `audit_logs`         | `workspace_id`, `actor_user_id`, `action`, `resource_type`, `resource_id`, `metadata`, `ip_address`, `user_agent`, `created_at`; indexed on (`action`, `created_at`) and (`actor_user_id`, `created_at`) for the audit pages |
+| `document_sequences` | PK (`workspace_id`, `scope`), `prefix`, `padding`, `next_value` — incremented with `UPDATE … RETURNING` in the issuing transaction                                                                                           |
 
 ### Billing (`billing.ts`)
 

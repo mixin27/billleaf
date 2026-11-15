@@ -23,6 +23,7 @@ const items: { title: string; href: string; permission: Permission }[] = [
     permission: "workspace.read",
   },
   { title: "Billing", href: "/settings/billing", permission: "billing.read" },
+  { title: "Audit log", href: "/settings/audit", permission: "audit.read" },
 ]
 
 export function SettingsNav() {

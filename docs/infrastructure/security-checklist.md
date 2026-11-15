@@ -30,6 +30,8 @@ Review before first production launch and quarterly after.
 - [ ] Every non-public endpoint has `@RequirePermission` (test enforces it).
 - [ ] Every repository query scoped by `workspace_id`; cross-tenant tests in CI.
 - [ ] Platform admin endpoints separate and audited.
+- [ ] `PLATFORM_ADMIN_EMAILS` lists only current staff; each admin has 2FA on (the portal refuses without it).
+- [ ] Review `admin.*` entries in the audit log (impersonations, bans, plan changes) monthly.
 - [ ] Sensitive actions written to `audit_logs`.
 
 ## Data
