@@ -433,3 +433,136 @@ describe("payments & receipts", () => {
     ).toHaveLength(1)
   })
 })
+
+describe("dashboard", () => {
+  it("aggregates receivables, aging, payments and quotes by currency, filtered by permission", async () => {
+    const owner = new Client(t)
+    await owner.signUp("Dash")
+    const ws = await owner.createWorkspace("Dashboard")
+    await owner.patch("/v1/workspace", {
+      defaultCurrency: "USD",
+      timezone: "UTC",
+    })
+    const client = (
+      await owner.post("/v1/clients", { name: "Big Co", email: "ap@big.test" })
+    ).body
+    const today = (await owner.get("/v1/dashboard")).body.today as string
+    const daysAgo = (n: number) => {
+      const d = new Date(`${today}T00:00:00Z`)
+      d.setUTCDate(d.getUTCDate() - n)
+      return d.toISOString().slice(0, 10)
+    }
+
+    const issue = async (amount: number, dueDate: string, currency = "USD") => {
+      const inv = (
+        await owner.post("/v1/invoices", {
+          clientId: client.id,
+          currency,
+          issueDate: daysAgo(120),
+          dueDate,
+          lines: [{ description: "Work", quantity: 1, unitPrice: amount }],
+        })
+      ).body
+      await owner.post(`/v1/invoices/${inv.id}/issue`)
+      return inv.id as string
+    }
+    const notDue = await issue(10_000, daysAgo(-10)) // current
+    await issue(20_000, daysAgo(15)) // 1–30
+    await issue(30_000, daysAgo(100)) // 90+
+    await issue(5_000, daysAgo(45), "EUR") // 31–60 in EUR
+    await owner.post(`/v1/invoices/${notDue}/payments`, {
+      amount: 4_000,
+      paidOn: today,
+    })
+    await owner.post("/v1/invoices", {
+      clientId: client.id,
+      lines: [{ description: "Draft", quantity: 1, unitPrice: 1 }],
+    })
+
+    const quote = (
+      await owner.post("/v1/quotes", {
+        clientId: client.id,
+        lines: [{ description: "Q", quantity: 1, unitPrice: 7_500 }],
+      })
+    ).body
+    await owner.post(`/v1/quotes/${quote.id}/send`)
+
+    const d = (await owner.get("/v1/dashboard")).body
+    expect(d.primaryCurrency).toBe("USD")
+    expect(
+      d.receivables.totals.map((t: { currency: string }) => t.currency)
+    ).toEqual(["USD", "EUR"])
+    expect(d.receivables.totals[0]).toMatchObject({
+      outstanding: 56_000,
+      overdue: 50_000,
+      openCount: 3,
+      overdueCount: 2,
+    })
+    expect(d.receivables.draftCount).toBe(1)
+    const usdAging = Object.fromEntries(
+      d.receivables.aging[0].buckets.map(
+        (b: { bucket: string; amount: number }) => [b.bucket, b.amount]
+      )
+    )
+    expect(usdAging).toEqual({
+      current: 6_000,
+      "1_30": 20_000,
+      "31_60": 0,
+      "61_90": 0,
+      "90_plus": 30_000,
+    })
+    expect(
+      d.receivables.aging[1].buckets.find(
+        (b: { bucket: string }) => b.bucket === "31_60"
+      ).amount
+    ).toBe(5_000)
+    expect(d.receivables.overdueInvoices[0]).toMatchObject({
+      amountDue: 30_000,
+      daysOverdue: 100,
+    })
+
+    expect(d.received.thisMonth).toEqual([
+      { currency: "USD", amount: 4_000, count: 1 },
+    ])
+    expect(d.received.monthly[0].months).toHaveLength(6)
+    expect(d.received.monthly[0].months.at(-1)).toEqual({
+      month: today.slice(0, 7),
+      amount: 4_000,
+    })
+    expect(d.received.recent[0]).toMatchObject({
+      amount: 4_000,
+      receiptNumber: "RCT-0001",
+    })
+
+    expect(d.quotes.open).toEqual([
+      { currency: "USD", amount: 7_500, count: 1 },
+    ])
+
+    // A custom role that can only read quotes sees just the quotes section.
+    const viewer = new Client(t)
+    const { email } = await viewer.signUp("Viewer")
+    await t.db
+      .update(workspaceSubscriptions)
+      .set({ planKey: "team" })
+      .where(eq(workspaceSubscriptions.workspaceId, ws.id))
+    const role = (
+      await owner.post("/v1/roles", {
+        name: "Quote viewer",
+        permissions: ["quote.read"],
+      })
+    ).body
+    const inv = (
+      await owner.post("/v1/invitations", { email, roleId: role.id })
+    ).body
+    await viewer.post("/api/auth/organization/accept-invitation", {
+      invitationId: inv.id,
+    })
+    viewer.workspaceId = ws.id
+    const vd = (await viewer.get("/v1/dashboard")).body
+    expect(vd.received).toBeNull()
+    expect(vd.receivables).toBeNull()
+    expect(vd.quotes.open).toEqual([
+      { currency: "USD", amount: 7_500, count: 1 },
+    ])
+  })
+})
