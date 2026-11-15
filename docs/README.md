@@ -34,6 +34,7 @@ Billleaf is an all-in-one business workspace for freelancers — **Client → Qu
 | ---------------------------------------------------------- | --------------------------------------------------------------------------------- |
 | [Environments](infrastructure/environments.md)             | local / staging / production, config & secrets                                    |
 | [Deployment](infrastructure/deployment.md)                 | VPS + Dokploy + Vercel, GHCR, migrate job                                         |
+| [Dokploy runbook](infrastructure/dokploy-runbook.md)       | Step by step: server → Dokploy → first deploy; release, roll back, troubleshoot   |
 | [Hosting playbook](infrastructure/hosting-playbook.md)     | How Dokploy works, costs, sizing, DO/Hetzner, migration (reusable for other SaaS) |
 | [Observability](infrastructure/observability.md)           | Sentry, logs, traces, alerts                                                      |
 | [Backup & restore](infrastructure/backup-restore.md)       | Runbook and restore drill                                                         |
