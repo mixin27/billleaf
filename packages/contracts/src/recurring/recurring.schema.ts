@@ -2,6 +2,7 @@ import { z } from "zod"
 
 import { optionalText } from "../common/locale.js"
 import { currencyCodeSchema } from "../common/money.js"
+import { paged, pageQuerySchema, sortQuery } from "../common/pagination.js"
 import { lineItemInputSchema, MAX_LINES } from "../documents/line-items.js"
 
 /**
@@ -109,6 +110,15 @@ export const updateRecurringInvoiceSchema = z
 export type UpdateRecurringInvoiceInput = z.input<
   typeof updateRecurringInvoiceSchema
 >
+
+export const listRecurringQuerySchema = pageQuerySchema.extend({
+  sort: sortQuery(["clientName", "nextRunDate", "createdAt"]),
+  status: recurringStatusSchema.optional(),
+  q: z.string().trim().max(100).optional(),
+})
+export type ListRecurringQuery = z.input<typeof listRecurringQuerySchema>
+export const recurringListSchema = paged(recurringInvoiceSchema)
+export type RecurringList = z.infer<typeof recurringListSchema>
 
 export const recurringRunResultSchema = z.object({
   schedule: recurringInvoiceSchema,

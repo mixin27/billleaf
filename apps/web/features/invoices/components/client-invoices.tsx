@@ -26,8 +26,8 @@ export function ClientInvoices({
 }) {
   const slug = useWorkspaceStore((s) => s.workspace?.slug)
   const locale = useWorkspaceProfile().data?.locale
-  const invoices = useInvoices({ clientId }, 10)
-  const rows = invoices.data?.pages[0]?.items ?? []
+  const invoices = useInvoices({ clientId, pageSize: 10 })
+  const rows = invoices.data?.items ?? []
   const outstanding = rows.filter((r) => r.status === "issued")
 
   return (

@@ -57,8 +57,8 @@ export function ProjectFormDialog({
   onSaved?: (p: Project) => void
 }) {
   const profile = useWorkspaceProfile()
-  const clients = useClients({ status: "active" }, 100)
-  const clientOptions = clients.data?.pages.flatMap((p) => p.items) ?? []
+  const clients = useClients({ status: "active", pageSize: 100 })
+  const clientOptions = clients.data?.items ?? []
   const create = useCreateProject()
   const update = useUpdateProject(project?.id ?? "")
 

@@ -27,9 +27,9 @@ export function InvoicePayments({
   defaultEmail?: string | null
 }) {
   const { can } = usePermissions()
-  const payments = usePayments({ invoiceId }, 50, can("payment.read"))
+  const payments = usePayments({ invoiceId, pageSize: 50 }, can("payment.read"))
   if (!can("payment.read")) return null
-  const rows = payments.data?.pages.flatMap((p) => p.items) ?? []
+  const rows = payments.data?.items ?? []
 
   return (
     <Card>

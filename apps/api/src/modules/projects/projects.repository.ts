@@ -12,11 +12,10 @@ import {
 import {
   and,
   asc,
-  desc,
+  count,
   eq,
   ilike,
   inArray,
-  lt,
   max,
   min,
   or,
@@ -25,6 +24,7 @@ import {
 } from "drizzle-orm"
 
 import { RequestContext } from "../../common/context/request-context.js"
+import { offsetOf, orderBy, type PageArgs } from "../../common/pagination.js"
 import { InjectDb, type Database } from "../../core/database/database.module.js"
 
 export type ProjectRow = typeof projects.$inferSelect
@@ -101,13 +101,13 @@ export class ProjectsRepository {
       .leftJoin(quotes, eq(quotes.id, projects.quoteId))
   }
 
-  async list(opts: {
-    status?: ProjectRow["status"]
-    clientId?: string
-    q?: string
-    cursor?: string
-    limit: number
-  }): Promise<{ items: ProjectWithRefs[]; nextCursor: string | null }> {
+  async list(
+    opts: PageArgs & {
+      status?: ProjectRow["status"]
+      clientId?: string
+      q?: string
+    }
+  ): Promise<{ items: ProjectWithRefs[]; total: number }> {
     const filters: SQL[] = [this.scope()]
     if (opts.status) filters.push(eq(projects.status, opts.status))
     if (opts.clientId) filters.push(eq(projects.clientId, opts.clientId))
@@ -115,16 +115,31 @@ export class ProjectsRepository {
       const like = `%${escapeLike(opts.q)}%`
       filters.push(or(ilike(projects.name, like), ilike(clients.name, like))!)
     }
-    if (opts.cursor) filters.push(lt(projects.id, opts.cursor))
-    const rows = await this.select()
-      .where(and(...filters))
-      .orderBy(desc(projects.id))
-      .limit(opts.limit + 1)
-    const items = await this.withCounts(rows.slice(0, opts.limit))
-    return {
-      items,
-      nextCursor: rows.length > opts.limit ? items[items.length - 1]!.id : null,
-    }
+    const where = and(...filters)
+    const [rows, [counted]] = await Promise.all([
+      this.select()
+        .where(where)
+        .orderBy(
+          ...orderBy(
+            opts.sort,
+            {
+              name: sql`lower(${projects.name})`,
+              clientName: sql`lower(${clients.name})`,
+              dueDate: projects.dueDate,
+              createdAt: projects.createdAt,
+            },
+            projects.id
+          )
+        )
+        .limit(opts.pageSize)
+        .offset(offsetOf(opts.page, opts.pageSize)),
+      this.db
+        .select({ n: count() })
+        .from(projects)
+        .leftJoin(clients, eq(clients.id, projects.clientId))
+        .where(where),
+    ])
+    return { items: await this.withCounts(rows), total: counted?.n ?? 0 }
   }
 
   async findById(id: string): Promise<ProjectWithRefs | null> {

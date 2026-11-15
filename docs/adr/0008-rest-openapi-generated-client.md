@@ -10,7 +10,7 @@ Web now and mobile later must consume the API with end-to-end types. Third-party
 
 ## Decision
 
-Expose **REST under `/v1`** with Zod DTOs (from `@workspace/contracts`) via `nestjs-zod`, generating **OpenAPI**; serve Scalar docs at `/docs` in non-prod. Generate `packages/api-client` with **openapi-typescript + openapi-fetch** (`pnpm gen:api-client`), checked in CI. Errors are RFC 9457 problem+json; cursor pagination; idempotency keys on payment/webhook endpoints.
+Expose **REST under `/v1`** with Zod DTOs (from `@workspace/contracts`) via `nestjs-zod`, generating **OpenAPI**; serve Scalar docs at `/docs` in non-prod. Generate `packages/api-client` with **openapi-typescript + openapi-fetch** (`pnpm gen:api-client`), checked in CI. Errors are RFC 9457 problem+json; paginated lists (originally cursor-based; now numbered pages with whitelisted server-side sorting for data tables); idempotency keys on payment/webhook endpoints.
 
 ## Consequences
 

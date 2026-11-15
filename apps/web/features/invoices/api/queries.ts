@@ -1,33 +1,25 @@
 "use client"
 
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
+import type { ListInvoicesQuery } from "@workspace/contracts"
+
+import { useQuery } from "@tanstack/react-query"
 
 import { useWorkspaceStore } from "@/features/workspace"
 import { api, unwrap } from "@/lib/api"
 
 import { invoiceKeys, type InvoiceFilters } from "./keys"
 
-export function useInvoices(filters: InvoiceFilters, pageSize = 25) {
+/**
+ * One page of the list (server-side paging, sorting and filters). Pickers
+ * pass `pageSize: 100`.
+ */
+export function useInvoices(query: ListInvoicesQuery, enabled = true) {
   const workspaceId = useWorkspaceStore((s) => s.workspace?.id)
-  return useInfiniteQuery({
-    queryKey: invoiceKeys.list(workspaceId, filters, pageSize),
-    queryFn: ({ pageParam }) =>
-      unwrap(
-        api.GET("/v1/invoices", {
-          params: {
-            query: {
-              status: filters.status,
-              clientId: filters.clientId,
-              q: filters.q || undefined,
-              limit: pageSize,
-              cursor: pageParam ?? undefined,
-            },
-          },
-        })
-      ),
-    initialPageParam: null as string | null,
-    getNextPageParam: (last) => last.nextCursor,
-    enabled: Boolean(workspaceId),
+  return useQuery({
+    queryKey: [...invoiceKeys.all(workspaceId), "list", query],
+    queryFn: () =>
+      unwrap(api.GET("/v1/invoices", { params: { query: query as never } })),
+    enabled: Boolean(workspaceId) && enabled,
     placeholderData: (prev) => prev,
   })
 }

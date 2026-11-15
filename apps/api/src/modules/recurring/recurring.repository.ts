@@ -1,8 +1,20 @@
 import { Injectable } from "@nestjs/common"
 import { clients, invoices, recurringInvoices } from "@workspace/db"
-import { and, desc, eq, isNotNull, lte, type SQL } from "drizzle-orm"
+import {
+  and,
+  count,
+  desc,
+  eq,
+  ilike,
+  isNotNull,
+  lte,
+  or,
+  type SQL,
+  sql,
+} from "drizzle-orm"
 
 import { RequestContext } from "../../common/context/request-context.js"
+import { offsetOf, orderBy, type PageArgs } from "../../common/pagination.js"
 import { InjectDb, type Database } from "../../core/database/database.module.js"
 
 export type RecurringRow = typeof recurringInvoices.$inferSelect & {
@@ -31,12 +43,44 @@ export class RecurringRepository {
       .innerJoin(clients, eq(clients.id, recurringInvoices.clientId))
   }
 
-  async list(): Promise<RecurringRow[]> {
-    const rows = await this.select()
-      .where(this.scope())
-      .orderBy(desc(recurringInvoices.id))
-      .limit(500)
-    return rows.map((r) => ({ ...r.schedule, clientName: r.clientName }))
+  async list(
+    opts: PageArgs & { status?: RecurringRow["status"]; q?: string }
+  ): Promise<{ items: RecurringRow[]; total: number }> {
+    const filters: SQL[] = [this.scope()]
+    if (opts.status) filters.push(eq(recurringInvoices.status, opts.status))
+    if (opts.q) {
+      const like = `%${opts.q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`
+      filters.push(
+        or(ilike(recurringInvoices.title, like), ilike(clients.name, like))!
+      )
+    }
+    const where = and(...filters)
+    const [rows, [counted]] = await Promise.all([
+      this.select()
+        .where(where)
+        .orderBy(
+          ...orderBy(
+            opts.sort,
+            {
+              clientName: sql`lower(${clients.name})`,
+              nextRunDate: recurringInvoices.nextRunDate,
+              createdAt: recurringInvoices.createdAt,
+            },
+            recurringInvoices.id
+          )
+        )
+        .limit(opts.pageSize)
+        .offset(offsetOf(opts.page, opts.pageSize)),
+      this.db
+        .select({ n: count() })
+        .from(recurringInvoices)
+        .innerJoin(clients, eq(clients.id, recurringInvoices.clientId))
+        .where(where),
+    ])
+    return {
+      items: rows.map((r) => ({ ...r.schedule, clientName: r.clientName })),
+      total: counted?.n ?? 0,
+    }
   }
 
   async findById(id: string): Promise<RecurringRow | null> {

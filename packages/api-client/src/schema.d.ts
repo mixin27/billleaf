@@ -1666,7 +1666,9 @@ export interface components {
         /** Format: date-time */
         updatedAt: string
       }[]
-      nextCursor: string | null
+      total: number
+      page: number
+      pageSize: number
     }
     ClientDetailDto_Output: {
       id: string
@@ -1823,7 +1825,9 @@ export interface components {
         /** Format: date-time */
         updatedAt: string
       }[]
-      nextCursor: string | null
+      total: number
+      page: number
+      pageSize: number
     }
     QuoteDto_Output: {
       id: string
@@ -1966,7 +1970,9 @@ export interface components {
         /** Format: date-time */
         updatedAt: string
       }[]
-      nextCursor: string | null
+      total: number
+      page: number
+      pageSize: number
     }
     ContractDto_Output: {
       id: string
@@ -2086,7 +2092,9 @@ export interface components {
         /** Format: date-time */
         updatedAt: string
       }[]
-      nextCursor: string | null
+      total: number
+      page: number
+      pageSize: number
     }
     InvoiceDto_Output: {
       id: string
@@ -2198,6 +2206,48 @@ export interface components {
     }
     VoidInvoiceDto: {
       reason: string
+    }
+    RecurringListDto_Output: {
+      items: {
+        id: string
+        clientId: string
+        clientName: string
+        title: string | null
+        currency: string
+        lines: {
+          description: string
+          quantity: number
+          unitPrice: number
+          taxRateBps: number
+        }[]
+        total: number
+        every: number
+        /** @enum {string} */
+        unit: "week" | "month" | "year"
+        /** Format: date */
+        startDate: string
+        /** Format: date */
+        endDate: string | null
+        maxOccurrences: number | null
+        /** Format: date */
+        nextRunDate: string | null
+        dueDays: number | null
+        /** @enum {string} */
+        mode: "draft" | "send"
+        /** @enum {string} */
+        status: "active" | "paused" | "ended"
+        notes: string | null
+        terms: string | null
+        generatedCount: number
+        /** Format: date-time */
+        lastRunAt: string | null
+        lastError: string | null
+        /** Format: date-time */
+        createdAt: string
+      }[]
+      total: number
+      page: number
+      pageSize: number
     }
     RecurringDto_Output: {
       id: string
@@ -2373,7 +2423,9 @@ export interface components {
         /** Format: date-time */
         createdAt: string
       }[]
-      nextCursor: string | null
+      total: number
+      page: number
+      pageSize: number
     }
     PaymentDto_Output: {
       id: string
@@ -2452,7 +2504,9 @@ export interface components {
         /** Format: date-time */
         updatedAt: string
       }[]
-      nextCursor: string | null
+      total: number
+      page: number
+      pageSize: number
     }
     ProjectDto_Output: {
       id: string
@@ -3465,8 +3519,9 @@ export interface operations {
   ClientsController_list_v1: {
     parameters: {
       query?: {
-        cursor?: string
-        limit?: number
+        page?: number
+        pageSize?: number
+        sort?: string
         q?: string
         status?: "active" | "archived"
       }
@@ -3690,8 +3745,9 @@ export interface operations {
   QuotesController_list_v1: {
     parameters: {
       query?: {
-        cursor?: string
-        limit?: number
+        page?: number
+        pageSize?: number
+        sort?: string
         status?: "draft" | "sent" | "accepted" | "declined"
         clientId?: string
         q?: string
@@ -4038,8 +4094,9 @@ export interface operations {
   ContractsController_list_v1: {
     parameters: {
       query?: {
-        cursor?: string
-        limit?: number
+        page?: number
+        pageSize?: number
+        sort?: string
         status?: "draft" | "sent" | "signed" | "declined" | "void"
         clientId?: string
         q?: string
@@ -4287,8 +4344,9 @@ export interface operations {
   InvoicesController_list_v1: {
     parameters: {
       query?: {
-        cursor?: string
-        limit?: number
+        page?: number
+        pageSize?: number
+        sort?: string
         status?:
           "draft" | "open" | "overdue" | "partially_paid" | "paid" | "void"
         clientId?: string
@@ -4532,7 +4590,13 @@ export interface operations {
   }
   RecurringController_list_v1: {
     parameters: {
-      query?: never
+      query?: {
+        page?: number
+        pageSize?: number
+        sort?: string
+        status?: "active" | "paused" | "ended"
+        q?: string
+      }
       header?: never
       path?: never
       cookie?: never
@@ -4544,7 +4608,7 @@ export interface operations {
           [name: string]: unknown
         }
         content: {
-          "application/json": components["schemas"]["RecurringDto_Output"][]
+          "application/json": components["schemas"]["RecurringListDto_Output"]
         }
       }
     }
@@ -4682,8 +4746,9 @@ export interface operations {
   PaymentsController_list_v1: {
     parameters: {
       query?: {
-        cursor?: string
-        limit?: number
+        page?: number
+        pageSize?: number
+        sort?: string
         invoiceId?: string
         clientId?: string
         status?: "completed" | "refunded"
@@ -4823,8 +4888,9 @@ export interface operations {
   ProjectsController_list_v1: {
     parameters: {
       query?: {
-        cursor?: string
-        limit?: number
+        page?: number
+        pageSize?: number
+        sort?: string
         status?: "active" | "on_hold" | "completed" | "archived"
         clientId?: string
         q?: string

@@ -7,9 +7,10 @@ import {
   quotes,
   type Transaction,
 } from "@workspace/db"
-import { and, asc, desc, eq, ilike, lt, or, type SQL } from "drizzle-orm"
+import { and, asc, count, eq, ilike, or, sql, type SQL } from "drizzle-orm"
 
 import { RequestContext } from "../../common/context/request-context.js"
+import { offsetOf, orderBy, type PageArgs } from "../../common/pagination.js"
 import { InjectDb, type Database } from "../../core/database/database.module.js"
 
 export type ContractRow = typeof contracts.$inferSelect & {
@@ -68,13 +69,13 @@ export class ContractsRepository {
     }
   }
 
-  async list(opts: {
-    status?: ContractRow["status"]
-    clientId?: string
-    q?: string
-    cursor?: string
-    limit: number
-  }) {
+  async list(
+    opts: PageArgs & {
+      status?: ContractRow["status"]
+      clientId?: string
+      q?: string
+    }
+  ) {
     const filters: SQL[] = [this.scope()]
     if (opts.status) filters.push(eq(contracts.status, opts.status))
     if (opts.clientId) filters.push(eq(contracts.clientId, opts.clientId))
@@ -88,15 +89,34 @@ export class ContractsRepository {
         )!
       )
     }
-    if (opts.cursor) filters.push(lt(contracts.id, opts.cursor))
-    const rows = await this.select()
-      .where(and(...filters))
-      .orderBy(desc(contracts.id))
-      .limit(opts.limit + 1)
-    const items = rows.slice(0, opts.limit).map(ContractsRepository.flatten)
+    const where = and(...filters)
+    const [rows, [counted]] = await Promise.all([
+      this.select()
+        .where(where)
+        .orderBy(
+          ...orderBy(
+            opts.sort,
+            {
+              title: sql`lower(${contracts.title})`,
+              number: contracts.number,
+              clientName: sql`lower(${clients.name})`,
+              effectiveDate: contracts.effectiveDate,
+              createdAt: contracts.createdAt,
+            },
+            contracts.id
+          )
+        )
+        .limit(opts.pageSize)
+        .offset(offsetOf(opts.page, opts.pageSize)),
+      this.db
+        .select({ n: count() })
+        .from(contracts)
+        .innerJoin(clients, eq(clients.id, contracts.clientId))
+        .where(where),
+    ])
     return {
-      items,
-      nextCursor: rows.length > opts.limit ? items[items.length - 1]!.id : null,
+      items: rows.map(ContractsRepository.flatten),
+      total: counted?.n ?? 0,
     }
   }
 

@@ -2,7 +2,7 @@ import { z } from "zod"
 
 import { optionalText } from "../common/locale.js"
 import { currencyCodeSchema } from "../common/money.js"
-import { cursorPaginationQuerySchema, paginated } from "../common/pagination.js"
+import { paged, pageQuerySchema, sortQuery } from "../common/pagination.js"
 import {
   lineItemInputSchema,
   lineItemSchema,
@@ -126,14 +126,23 @@ export const sendDocumentSchema = z.object({
 })
 export type SendDocumentInput = z.input<typeof sendDocumentSchema>
 
-export const listInvoicesQuerySchema = cursorPaginationQuerySchema.extend({
+export const listInvoicesQuerySchema = pageQuerySchema.extend({
+  sort: sortQuery([
+    "number",
+    "clientName",
+    "issueDate",
+    "dueDate",
+    "total",
+    "amountDue",
+    "createdAt",
+  ]),
   status: invoiceDisplayStatusSchema.optional(),
   clientId: z.uuid().optional(),
   q: z.string().trim().max(100).optional(),
 })
 export type ListInvoicesQuery = z.input<typeof listInvoicesQuerySchema>
 
-export const invoiceListSchema = paginated(invoiceSummarySchema)
+export const invoiceListSchema = paged(invoiceSummarySchema)
 export type InvoiceList = z.infer<typeof invoiceListSchema>
 
 /** Derive payment/display state (shared by API and tests). */

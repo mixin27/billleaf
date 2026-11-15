@@ -1,7 +1,7 @@
 import { z } from "zod"
 
 import { optionalText } from "../common/locale.js"
-import { cursorPaginationQuerySchema, paginated } from "../common/pagination.js"
+import { paged, pageQuerySchema, sortQuery } from "../common/pagination.js"
 
 /**
  * Payments are recorded against issued invoices (always in the invoice's
@@ -71,7 +71,8 @@ export const refundPaymentSchema = z.object({
 })
 export type RefundPaymentInput = z.input<typeof refundPaymentSchema>
 
-export const listPaymentsQuerySchema = cursorPaginationQuerySchema.extend({
+export const listPaymentsQuerySchema = pageQuerySchema.extend({
+  sort: sortQuery(["paidOn", "amount", "clientName", "createdAt"]),
   invoiceId: z.uuid().optional(),
   clientId: z.uuid().optional(),
   status: paymentStatusSchema.optional(),
@@ -79,5 +80,5 @@ export const listPaymentsQuerySchema = cursorPaginationQuerySchema.extend({
 })
 export type ListPaymentsQuery = z.input<typeof listPaymentsQuerySchema>
 
-export const paymentListSchema = paginated(paymentSchema)
+export const paymentListSchema = paged(paymentSchema)
 export type PaymentList = z.infer<typeof paymentListSchema>

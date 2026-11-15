@@ -11,6 +11,7 @@ import type {
   ClientList,
 } from "@workspace/contracts"
 
+import { type PageArgs } from "../../common/pagination.js"
 import { EntitlementsService } from "../../billing/entitlements.service.js"
 import { AuditService } from "../../iam/audit/audit.service.js"
 import {
@@ -72,14 +73,16 @@ export class ClientsService {
     private readonly audit: AuditService
   ) {}
 
-  async list(query: {
-    q?: string
-    status: "active" | "archived"
-    cursor?: string
-    limit: number
-  }): Promise<ClientList> {
-    const { items, nextCursor } = await this.repo.list(query)
-    return { items: items.map(toClientDto), nextCursor }
+  async list(
+    query: PageArgs & { q?: string; status: "active" | "archived" }
+  ): Promise<ClientList> {
+    const { items, total } = await this.repo.list(query)
+    return {
+      items: items.map(toClientDto),
+      total,
+      page: query.page,
+      pageSize: query.pageSize,
+    }
   }
 
   async get(id: string): Promise<ClientDetail> {

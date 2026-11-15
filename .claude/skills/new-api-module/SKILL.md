@@ -14,7 +14,7 @@ Inputs: feature name (plural, kebab-case, e.g. `clients`) and its fields.
 2. **Contracts** — add `packages/contracts/src/<feature>/<feature>.schema.ts` with
    `<entity>Schema`, `create<Entity>Schema`, `update<Entity>Schema` (explicit
    optional fields — do **not** `.partial()` a schema that has `.default()`s),
-   and list query schema (extend `cursorPaginationQuerySchema`). Export from `src/index.ts`.
+   and list query schema (extend `pageQuerySchema` with `sort: sortQuery([...fields])`; respond with `paged(item)`; build ORDER BY with `orderBy()` from `apps/api/src/common/pagination.ts`). Export from `src/index.ts`.
 3. **Schema** — add the table via the `db-migration` skill (must include
    `workspaceId`, `timestamps`, usually `softDelete`).
 4. **Module files** in `apps/api/src/modules/<feature>/`:

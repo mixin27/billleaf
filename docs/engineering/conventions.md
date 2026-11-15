@@ -35,7 +35,7 @@
 
 - REST `/v1`, plural nouns, `kebab-case` paths: `GET /v1/invoices/:id`, `POST /v1/invoices/:id/void`.
 - Errors as RFC 9457 problem+json; validation errors list field paths.
-- Cursor pagination; filter params via query string.
+- Numbered pages + server-side sort (`page`, `pageSize`, `sort=field:dir`); filter params via query string.
 - Controllers → services → repositories ([api.md](../architecture/api.md)).
 
 ## Web

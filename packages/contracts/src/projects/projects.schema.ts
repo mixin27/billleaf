@@ -2,7 +2,7 @@ import { z } from "zod"
 
 import { optionalText } from "../common/locale.js"
 import { currencyCodeSchema } from "../common/money.js"
-import { cursorPaginationQuerySchema, paginated } from "../common/pagination.js"
+import { paged, pageQuerySchema, sortQuery } from "../common/pagination.js"
 
 /**
  * Projects group work for a client (or internal work with no client).
@@ -114,14 +114,15 @@ export const updateProjectSchema = z
   })
 export type UpdateProjectInput = z.input<typeof updateProjectSchema>
 
-export const listProjectsQuerySchema = cursorPaginationQuerySchema.extend({
+export const listProjectsQuerySchema = pageQuerySchema.extend({
+  sort: sortQuery(["name", "clientName", "dueDate", "createdAt"]),
   status: projectStatusSchema.optional(),
   clientId: z.uuid().optional(),
   q: z.string().trim().max(100).optional(),
 })
 export type ListProjectsQuery = z.input<typeof listProjectsQuerySchema>
 
-export const projectListSchema = paginated(projectSchema)
+export const projectListSchema = paged(projectSchema)
 export type ProjectList = z.infer<typeof projectListSchema>
 
 export const taskSchema = z.object({

@@ -16,12 +16,13 @@ import {
   ilike,
   isNotNull,
   isNull,
-  lt,
   or,
+  sql,
   type SQL,
 } from "drizzle-orm"
 
 import { RequestContext } from "../../common/context/request-context.js"
+import { offsetOf, orderBy, type PageArgs } from "../../common/pagination.js"
 import { InjectDb, type Database } from "../../core/database/database.module.js"
 
 export type ClientRow = typeof clients.$inferSelect
@@ -53,12 +54,9 @@ export class ClientsRepository {
   }
 
   /** Keyset pagination on the UUIDv7 id (time-ordered → newest first). */
-  async list(opts: {
-    q?: string
-    status: "active" | "archived"
-    cursor?: string
-    limit: number
-  }): Promise<{ items: ClientRow[]; nextCursor: string | null }> {
+  async list(
+    opts: PageArgs & { q?: string; status: "active" | "archived" }
+  ): Promise<{ items: ClientRow[]; total: number }> {
     const filters: SQL[] = [
       this.scope(),
       opts.status === "active"
@@ -69,19 +67,28 @@ export class ClientsRepository {
       const like = `%${escapeLike(opts.q)}%`
       filters.push(or(ilike(clients.name, like), ilike(clients.email, like))!)
     }
-    if (opts.cursor) filters.push(lt(clients.id, opts.cursor))
-
-    const rows = await this.db
-      .select()
-      .from(clients)
-      .where(and(...filters))
-      .orderBy(desc(clients.id))
-      .limit(opts.limit + 1)
-    const items = rows.slice(0, opts.limit)
-    return {
-      items,
-      nextCursor: rows.length > opts.limit ? items[items.length - 1]!.id : null,
-    }
+    const where = and(...filters)
+    const [items, [counted]] = await Promise.all([
+      this.db
+        .select()
+        .from(clients)
+        .where(where)
+        .orderBy(
+          ...orderBy(
+            opts.sort ?? "name:asc",
+            {
+              name: sql`lower(${clients.name})`,
+              email: clients.email,
+              createdAt: clients.createdAt,
+            },
+            clients.id
+          )
+        )
+        .limit(opts.pageSize)
+        .offset(offsetOf(opts.page, opts.pageSize)),
+      this.db.select({ n: count() }).from(clients).where(where),
+    ])
+    return { items, total: counted?.n ?? 0 }
   }
 
   /** Non-archived clients — what counts against the plan's `clients` limit. */

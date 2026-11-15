@@ -19,7 +19,7 @@ Next.js 16 (App Router) · React 19 · Tailwind 4 · shadcn (Base UI) via `@work
 | --------------- | --------------------------------------------------------- | ------------------------------------------- |
 | Server state    | TanStack Query (query-key factories per feature)          | clients list, invoice detail, `/me`         |
 | Client/UI state | Zustand (small, feature-local stores)                     | sidebar, wizards, invoice line editor draft |
-| URL state       | `nuqs`                                                    | filters, pagination cursor, active tab      |
+| URL state       | `nuqs`                                                    | filters, page, sort, search, active tab     |
 | Form state      | react-hook-form + Zod schemas from `@workspace/contracts` | create invoice form                         |
 
 Never copy server data into Zustand.

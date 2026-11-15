@@ -15,6 +15,7 @@ import type {
   UpdateTaskInput,
 } from "@workspace/contracts"
 
+import { type PageArgs } from "../../common/pagination.js"
 import { AuditService } from "../../iam/audit/audit.service.js"
 import { ClientsRepository } from "../clients/clients.repository.js"
 import { todayIn } from "../documents/party-snapshot.js"
@@ -81,18 +82,23 @@ export class ProjectsService {
     return todayIn((await this.profile.get()).timezone)
   }
 
-  async list(query: {
-    status?: ProjectStatus
-    clientId?: string
-    q?: string
-    cursor?: string
-    limit: number
-  }): Promise<ProjectList> {
-    const [{ items, nextCursor }, today] = await Promise.all([
+  async list(
+    query: PageArgs & {
+      status?: ProjectStatus
+      clientId?: string
+      q?: string
+    }
+  ): Promise<ProjectList> {
+    const [{ items, total }, today] = await Promise.all([
       this.repo.list(query),
       this.today(),
     ])
-    return { items: items.map((p) => toProjectDto(p, today)), nextCursor }
+    return {
+      items: items.map((p) => toProjectDto(p, today)),
+      total,
+      page: query.page,
+      pageSize: query.pageSize,
+    }
   }
 
   async get(id: string): Promise<Project> {

@@ -1,7 +1,7 @@
 import type { QuoteSummary } from "@workspace/contracts"
 import { Badge } from "@workspace/ui/components/badge"
 
-const LABELS = {
+export const QUOTE_STATUS_LABELS = {
   draft: "Draft",
   sent: "Sent",
   accepted: "Accepted",
@@ -22,5 +22,5 @@ export function QuoteStatusBadge({
         : quote.status === "sent"
           ? "secondary"
           : "outline"
-  return <Badge variant={variant}>{LABELS[quote.status]}</Badge>
+  return <Badge variant={variant}>{QUOTE_STATUS_LABELS[quote.status]}</Badge>
 }

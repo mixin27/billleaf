@@ -8,14 +8,10 @@ import { Skeleton } from "@workspace/ui/components/skeleton"
 import { Tabs, TabsList, TabsTrigger } from "@workspace/ui/components/tabs"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import {
-  parseAsBoolean,
-  parseAsString,
-  parseAsStringLiteral,
-  useQueryState,
-} from "nuqs"
+import { parseAsBoolean, parseAsStringLiteral, useQueryState } from "nuqs"
 import * as React from "react"
 
+import { DataTablePagination, useDataTableState } from "@/components/data-table"
 import { Can } from "@/components/permissions/can"
 import { useWorkspaceProfile, useWorkspaceStore } from "@/features/workspace"
 import { formatDate, money } from "@/lib/format"
@@ -40,21 +36,19 @@ export function ProjectsList() {
     "status",
     parseAsStringLiteral(TABS).withDefault("active")
   )
-  const [q, setQ] = useQueryState("q", parseAsString.withDefault(""))
-  const [search, setSearch] = React.useState(q)
+  const table = useDataTableState({ sort: "name:asc" })
   // ?new=true opens the create dialog (used by the command menu).
   const [creating, setCreatingParam] = useQueryState(
     "new",
     parseAsBoolean.withDefault(false)
   )
   const setCreating = (v: boolean) => void setCreatingParam(v || null)
-  React.useEffect(() => {
-    const t = setTimeout(() => void setQ(search || null), 250)
-    return () => clearTimeout(t)
-  }, [search, setQ])
-
-  const projects = useProjects({ status: tab as ProjectStatus, q })
-  const rows = projects.data?.pages.flatMap((p) => p.items) ?? []
+  const projects = useProjects({
+    ...table.query,
+    pageSize: 24,
+    status: tab as ProjectStatus,
+  })
+  const rows = projects.data?.items ?? []
 
   return (
     <div className="flex flex-col gap-4">
@@ -62,7 +56,10 @@ export function ProjectsList() {
         <div className="flex flex-wrap items-center gap-3">
           <Tabs
             value={tab}
-            onValueChange={(v) => void setTab(v as (typeof TABS)[number])}
+            onValueChange={(v) => {
+              void setTab(v as (typeof TABS)[number])
+              table.resetPage()
+            }}
           >
             <TabsList>
               {TABS.map((t) => (
@@ -74,9 +71,9 @@ export function ProjectsList() {
           </Tabs>
           <Input
             placeholder="Search project or client…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-64"
+            value={table.search}
+            onChange={(e) => table.setSearch(e.target.value)}
+            className="w-full sm:w-64"
           />
         </div>
         <Can permission="project.create">
@@ -90,7 +87,7 @@ export function ProjectsList() {
         <p className="text-sm text-destructive">{projects.error.message}</p>
       ) : rows.length === 0 ? (
         <div className="rounded-lg border border-dashed p-12 text-center text-sm text-muted-foreground">
-          {q || tab !== "active"
+          {table.q || tab !== "active"
             ? "No matching projects."
             : "No active projects. Create one, or start one from an accepted quote."}
         </div>
@@ -154,15 +151,12 @@ export function ProjectsList() {
         </div>
       )}
 
-      {projects.hasNextPage ? (
-        <Button
-          variant="outline"
-          className="self-center"
-          disabled={projects.isFetchingNextPage}
-          onClick={() => void projects.fetchNextPage()}
-        >
-          {projects.isFetchingNextPage ? "Loading…" : "Load more"}
-        </Button>
+      {projects.data && projects.data.total > 24 ? (
+        <DataTablePagination
+          state={{ ...table, pageSize: 24 }}
+          total={projects.data.total}
+          showPageSize={false}
+        />
       ) : null}
 
       <ProjectFormDialog

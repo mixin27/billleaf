@@ -28,8 +28,8 @@ export function ClientProjects({
 }) {
   const router = useRouter()
   const slug = useWorkspaceStore((s) => s.workspace?.slug)
-  const projects = useProjects({ clientId }, 10)
-  const rows = projects.data?.pages[0]?.items ?? []
+  const projects = useProjects({ clientId, pageSize: 10 })
+  const rows = projects.data?.items ?? []
   const [creating, setCreating] = React.useState(false)
   return (
     <Card>
