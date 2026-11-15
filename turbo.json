@@ -32,6 +32,11 @@
     "test:integration": {
       "dependsOn": ["^build"],
       "cache": false
+    },
+    "web#build": {
+      "dependsOn": ["^build", "web#typecheck"],
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "outputs": [".next/**", "!.next/cache/**", "!.next/dev/**", "dist/**"]
     }
   }
 }
