@@ -27,6 +27,15 @@ Work we've agreed to do later, with enough detail to pick up without re-research
 
 ## Production deploy readiness
 
+**Status:** the repo side is ready:
+
+- the hardened compose stack and a production env template;
+- pinned image tags, an approval gate and GHCR cleanup;
+- a smoke test with a deep health check;
+- the [Dokploy runbook](../infrastructure/dokploy-runbook.md).
+
+What remains is the deploy session itself (VPS, Dokploy, DNS, R2, email), done by the founder with the runbook.
+
 **Goal:** Phase 1 counts as shipped once it runs on the VPS (Dokploy + Cloudflare R2).
 
 **Scope:**

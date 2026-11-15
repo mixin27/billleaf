@@ -28,7 +28,9 @@ RUN pnpm --filter api deploy --legacy --prod /prod/api
 # 3. Runtime
 FROM node:${NODE_VERSION} AS runner
 WORKDIR /app
-ENV NODE_ENV=production PORT=4000
+# Git sha of the build, shown by /health/live (the smoke test checks it).
+ARG APP_VERSION=dev
+ENV NODE_ENV=production PORT=4000 APP_VERSION=${APP_VERSION}
 RUN addgroup -S app && adduser -S app -G app
 COPY --from=builder --chown=app:app /prod/api ./
 USER app

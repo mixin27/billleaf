@@ -100,3 +100,11 @@ jobs:
       # Real Postgres + Valkey (job services above) + SeaweedFS. Recreates billleaf_test each run.
       - name: Integration tests
         run: pnpm turbo test:integration --cache-dir=.turbo/cache
+
+      # The production stack must resolve with the documented variables, and
+      # the smoke script must be valid shell.
+      - name: Validate production compose and smoke script
+        run: |
+          docker compose -f infra/docker-compose.prod.yml \
+            --env-file infra/.env.production.example config --quiet
+          bash -n infra/smoke.sh

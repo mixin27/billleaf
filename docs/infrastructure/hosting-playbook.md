@@ -229,11 +229,11 @@ Copy this per product (Billleaf, FOM Order Manager, …):
 - **Domains:** `app.<domain>` → web:3000, `api.<domain>` → api:4000. Set `COOKIE_DOMAIN=.<domain>` so the session and client-portal cookies work across both.
 - **Deploy order and rollback rules:** [Deployment](deployment.md). Backups: [Backup & restore](backup-restore.md). Hardening: [Security checklist](security-checklist.md).
 - **Start with:** one Hetzner CX33 (8 GB) or the existing 4 GB droplet, Cloudflare in front, R2 for files and backups, Resend's free tier.
-- **Known gaps:** the deploy-readiness work closes these:
-  - the compose file falls back to `IMAGE_TAG=latest`, which should be a required, pinned tag;
-  - there's no GHCR cleanup workflow;
-  - there's no smoke-test script;
-  - the deploy doc describes separate Dokploy apps, but we deploy the compose stack.
+- **Release mechanics:**
+  - immutable `<env>-sha-<7>` tags, with a moving `production`/`staging` pointer set only after approval;
+  - a weekly GHCR cleanup;
+  - `infra/smoke.sh` with a token-protected deep check after every deploy;
+  - the setup steps in the [Dokploy runbook](dokploy-runbook.md).
 
 ---
 

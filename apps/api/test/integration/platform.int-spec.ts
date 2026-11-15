@@ -16,6 +16,8 @@ import { ClsService } from "nestjs-cls"
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
 
 import { BILLING_PROVIDER } from "../../src/billing/providers/billing-provider.js"
+import { REDIS } from "../../src/core/cache/redis.module.js"
+import { WORKER_HEARTBEAT_KEY } from "../../src/jobs/worker-heartbeat.js"
 import { MailService } from "../../src/mail/mail.service.js"
 import type { TestBillingProvider } from "../../src/billing/providers/test-billing.provider.js"
 import { RecurringService } from "../../src/modules/recurring/recurring.service.js"
@@ -2621,5 +2623,45 @@ describe("client portal", () => {
     } finally {
       spy.mockRestore()
     }
+  })
+})
+
+describe("health checks", () => {
+  it("reports the build, and runs the token-protected deep check", async () => {
+    const anon = new Client(t)
+    expect((await anon.get("/health/live")).body).toEqual({
+      status: "ok",
+      version: "test-build",
+    })
+    expect((await anon.get("/health")).status).toBe(200)
+
+    // Hidden without the right token.
+    expect((await anon.get("/health/deep")).status).toBe(404)
+    expect(
+      (
+        await anon.request("GET", "/health/deep", undefined, {
+          "x-health-token": "wrong-token-wrong-token-wrong",
+        })
+      ).status
+    ).toBe(404)
+
+    const deep = () =>
+      anon.request("GET", "/health/deep", undefined, {
+        "x-health-token": "integration-health-token-0123456789",
+      })
+    const redis = t.app.get(REDIS)
+    await redis.del(WORKER_HEARTBEAT_KEY)
+    const down = await deep()
+    expect(down.status).toBe(503)
+    expect(down.body.error).toHaveProperty("worker")
+    expect(Object.keys(down.body.info).sort()).toEqual(
+      ["database", "pdf", "queue", "redis", "storage"].sort()
+    )
+
+    await redis.set(WORKER_HEARTBEAT_KEY, new Date().toISOString(), "EX", 60)
+    const up = await deep()
+    expect(up.status).toBe(200)
+    expect(up.body.status).toBe("ok")
+    await redis.del(WORKER_HEARTBEAT_KEY)
   })
 })

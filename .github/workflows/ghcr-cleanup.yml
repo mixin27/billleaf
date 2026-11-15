@@ -1,0 +1,38 @@
+name: GHCR cleanup
+
+# Keeps the container registry small (private packages on GitHub Free get
+# 500 MB). Per image: keeps the moving tags (staging, production, v*), the
+# 10 newest other tagged builds (rollback targets), and deletes untagged
+# layers left behind by re-tagging.
+
+on:
+  schedule:
+    - cron: "17 3 * * 1" # Mondays 03:17 UTC
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: Only list what would be deleted
+        type: boolean
+        default: true
+
+permissions:
+  packages: write
+
+jobs:
+  cleanup:
+    name: Clean ${{ matrix.package }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package: [billleaf-api, billleaf-web]
+    steps:
+      - uses: dataaxiom/ghcr-cleanup-action@v1
+        with:
+          package: ${{ matrix.package }}
+          exclude-tags: "staging,production,v*"
+          keep-n-tagged: 10
+          delete-untagged: true
+          delete-partial-images: true
+          dry-run: ${{ github.event_name == 'workflow_dispatch' && inputs.dry-run || false }}
+          token: ${{ secrets.GITHUB_TOKEN }}

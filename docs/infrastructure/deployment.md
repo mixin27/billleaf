@@ -11,53 +11,85 @@ Decision: [ADR-0007 Self-hosted VPS + Dokploy](../adr/0007-self-hosted-vps-dokpl
 | Services      | `web` (Next standalone), `api`, `worker`, `migrate` (one-off), `postgres:17`, `valkey`                                                          |
 | Storage       | Cloudflare R2 (files + backups)                                                                                                                 |
 | Edge          | Cloudflare DNS + proxy (WAF, DDoS, static caching), SSL mode _Full (strict)_                                                                    |
-| Static sites  | `apps/docs` (later marketing) on **Vercel free**, Git-integrated                                                                                |
+| Static sites  | `apps/docs` (later marketing): **Cloudflare Pages** (free, commercial use allowed) or the same VPS. Vercel Hobby is non-commercial only         |
 
-## Images
+## Images and tags
 
-- Built in GitHub Actions, pushed to **GHCR**: `ghcr.io/<org>/billleaf-web`, `ghcr.io/<org>/billleaf-api`.
-- Tags: `sha-<short>` on every `main` build, plus `vX.Y.Z` on release tags. Never deploy `latest`.
-- The **api image** runs three roles via command: `node dist/main.js` (api), `node dist/worker.js` (worker), `pnpm db:migrate`-equivalent (migrate).
-- Web uses Next `output: "standalone"`; `NEXT_PUBLIC_*` values are build args per environment.
+- CI builds two images and pushes them to **GHCR**: `ghcr.io/<owner>/billleaf-api` and `ghcr.io/<owner>/billleaf-web`.
+- The **api image** runs three roles in the compose stack: `migrate` (`node dist/migrate.js`), `api` (default command) and `worker` (`dist/worker.js`).
+- The **web image is built per environment**, because Next inlines `NEXT_PUBLIC_*` (API URL, Sentry DSN) at build time.
+- Both images carry the git sha (`APP_VERSION`), shown by `GET /health/live` and `GET /healthz`.
+
+| Tag                     | Meaning                                                                   | Who sets it                    |
+| ----------------------- | ------------------------------------------------------------------------- | ------------------------------ |
+| `<env>-sha-<7>`         | One immutable build for that environment. Use it to **pin or roll back**. | Build job                      |
+| `vX.Y.Z`                | Release tag (production)                                                  | Build job, on `v*` tags        |
+| `staging`, `production` | Moving pointer to what that environment should run                        | Deploy job, **after approval** |
+
+There is no `latest`. Dokploy runs `IMAGE_TAG=production` (or `staging`) with `pull_policy: always`. The pointer only moves after the GitHub environment approval, so a restart can never pick up an unapproved build.
+
+**Registry hygiene:** `.github/workflows/ghcr-cleanup.yml` runs weekly. It keeps the moving and version tags plus the 10 newest builds, and deletes the rest. Private packages on GitHub Free only get 500 MB.
 
 ## Pipeline
 
 ```mermaid
 flowchart LR
-  pr[Pull request] --> ci[CI: lint · typecheck · unit + integration tests · build]
+  pr[Pull request] --> ci[CI: lint · typecheck · tests · build · compose check]
   ci --> merge[Merge to main]
-  merge --> img[Build & push images to GHCR sha-xxx]
-  img --> stg[Dokploy webhook → staging]
-  stg --> tag[Tag v* + approval in GitHub Environment 'production']
-  tag --> prod[Dokploy webhook → production]
+  merge --> run[Tag v* → production · or Run workflow → staging/production]
+  run --> build[Build api + web → env-sha-xxx]
+  build --> approve[Approval: GitHub environment]
+  approve --> point[Move env tag → this build]
+  point --> hook[Dokploy webhook]
+  hook --> smoke[infra/smoke.sh until the new version is live]
 ```
 
-## Deploy order (each environment)
+Workflow: `.github/workflows/deploy.yml`. Setup (variables, secrets, Dokploy app): [Dokploy runbook](dokploy-runbook.md).
 
-1. **Migrate job** — run the api image with the migrate command against the target DB. Abort the deploy on failure.
-2. **Permission sync** — on api boot (or part of migrate): upsert `PERMISSION_CATALOG` into `permissions`.
-3. **api** and **worker** roll (health-checked on `/health`; Traefik switches only when healthy).
-4. **web** rolls.
+## Deploy order (inside Dokploy)
 
-Migrations must be backward compatible with the currently running api (expand → deploy → contract in a later release).
+The stack is **one Dokploy "Compose" app** using `infra/docker-compose.prod.yml` from this repo. Dependency conditions in the compose file enforce the order:
+
+1. **postgres** and **valkey** are healthy.
+2. **migrate** runs Drizzle migrations and syncs the permission catalog, then exits. If it fails, nothing else is replaced and the old version keeps serving.
+3. **api** and **worker** start. The api is healthy on `/health/live`; the worker on a heartbeat file it touches every 30 seconds.
+4. **web** starts once the api is healthy (`/healthz`). Traefik switches traffic to healthy containers only.
+
+Migrations must be **backward compatible** with the running app (expand → deploy → contract in a later release).
+
+## After every deploy: smoke test
+
+`infra/smoke.sh` runs in the deploy job, and you can run it locally too. It waits until both services report the expected build, then checks:
+
+- readiness (database, Redis);
+- the sign-in page;
+- the auth endpoint, and that CORS allows the web origin with cookies;
+- with `HEALTH_CHECK_TOKEN`, the **deep check** `GET /health/deep`: database, Redis, an R2 write/read/delete, a PDF render, the job queue, and a live worker (heartbeat).
+
+`/health/deep` returns 404 unless the token matches.
 
 ## Rollback
 
-- App: redeploy the previous image tag in Dokploy (one click) — safe because migrations are backward compatible.
-- Data: never roll back migrations automatically; write a forward fix. For corruption, follow [backup-restore](backup-restore.md).
+- **App:** in Dokploy set `IMAGE_TAG=production-sha-<previous>` and redeploy. This is safe because migrations are backward compatible. Set it back to `production` with the next release.
+- **Data:** never roll back migrations automatically; write a forward fix. For corruption, follow [backup-restore](backup-restore.md).
+
+## Container defaults
+
+Every service in the production compose has:
+
+- a **health check** and `restart: unless-stopped`;
+- a **memory limit**: api and worker 768 MB, web 512 MB, Postgres 1 GB, Valkey 256 MB;
+- **log rotation**: 3 × 10 MB.
+
+The app images run as a **non-root** user. Valkey uses `noeviction`, so BullMQ jobs are never dropped under memory pressure. The worker gets 60 seconds to finish in-flight jobs on deploy.
 
 ## Vercel (docs)
+
+Only if the docs stay on Vercel: commercial use needs the Pro plan ($20/month). Cloudflare Pages or the VPS are free alternatives.
 
 - Project root `apps/docs`, build via `turbo build --filter=docs`, ignored build step when `apps/docs` unchanged.
 - Custom domain `docs.billleaf.com` via Cloudflare DNS (DNS-only, not proxied).
 
-## First-time server setup (checklist)
+## First-time setup
 
-- [ ] Harden VPS per [security checklist](security-checklist.md) (SSH keys, firewall, unattended upgrades).
-- [ ] Install Dokploy; create projects `billleaf-staging`, `billleaf-production`.
-- [ ] Add GHCR registry credentials (read-only token).
-- [ ] Create Postgres + Valkey services with volumes; configure WAL archiving to R2.
-- [ ] Create apps (web, api, worker) from GHCR images; set env vars; set domains.
-- [ ] Copy each app's deploy webhook URL into GitHub Environment secrets.
-- [ ] Point Cloudflare DNS records; enable proxy.
-- [ ] Run first deploy; verify `/health`; run a restore drill.
+Follow the [Dokploy runbook](dokploy-runbook.md): server, Dokploy, Cloudflare, R2, email, GHCR access, GitHub environments, the compose app, first deploy and restore drill. Every variable is listed in [`infra/.env.production.example`](../../infra/.env.production.example).
