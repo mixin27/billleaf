@@ -71,6 +71,7 @@ export function DocumentSheet({
   notes,
   terms,
   footer,
+  logoUrl,
 }: {
   issuer: PartySnapshot | null
   recipient: PartySnapshot | null
@@ -86,10 +87,19 @@ export function DocumentSheet({
   notes?: string | null
   terms?: string | null
   footer?: string | null
+  logoUrl?: string | null
 }) {
   return (
     <Card>
       <CardContent className="flex flex-col gap-8 p-6 sm:p-10">
+        {logoUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element -- presigned, short-lived URL
+          <img
+            src={logoUrl}
+            alt=""
+            className="max-h-12 max-w-40 self-end object-contain"
+          />
+        ) : null}
         <div className="grid gap-6 sm:grid-cols-2">
           <Party label="From" party={issuer} />
           <Party label={recipientLabel} party={recipient} />

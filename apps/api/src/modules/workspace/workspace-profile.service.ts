@@ -5,12 +5,18 @@ import type {
 } from "@workspace/contracts"
 
 import { AuditService } from "../../iam/audit/audit.service.js"
+import { FilesService } from "../files/files.service.js"
+
+export const LOGO_MAX_BYTES = 1024 * 1024
 import {
   type ProfileRow,
   WorkspaceProfileRepository,
 } from "./workspace-profile.repository.js"
 
-export function toProfileDto(r: ProfileRow): WorkspaceProfile {
+export function toProfileDto(
+  r: ProfileRow,
+  logoUrl: string | null = null
+): WorkspaceProfile {
   return {
     workspaceId: r.workspaceId,
     name: r.name,
@@ -33,6 +39,7 @@ export function toProfileDto(r: ProfileRow): WorkspaceProfile {
     defaultTaxRateBps: r.defaultTaxRateBps,
     documentFooter: r.documentFooter,
     brandColor: r.brandColor,
+    logoUrl,
     updatedAt: r.updatedAt.toISOString(),
   }
 }
@@ -50,11 +57,54 @@ function isValidTimeZone(tz: string) {
 export class WorkspaceProfileService {
   constructor(
     private readonly repo: WorkspaceProfileRepository,
+    private readonly files: FilesService,
     private readonly audit: AuditService
   ) {}
 
   async get(): Promise<WorkspaceProfile> {
-    return toProfileDto(await this.repo.getOrCreate())
+    const row = await this.repo.getOrCreate()
+    return toProfileDto(row, await this.files.url(row.logoFileId))
+  }
+
+  /** Raw logo bytes for documents (PDFs), or null. */
+  async logoImage(): Promise<Buffer | null> {
+    const row = await this.repo.getOrCreate()
+    if (!row.logoFileId) return null
+    try {
+      return (await this.files.read(row.logoFileId)).body
+    } catch {
+      return null // a missing logo must never break document rendering
+    }
+  }
+
+  async setLogo(filename: string, body: Buffer): Promise<WorkspaceProfile> {
+    const previous = (await this.repo.getOrCreate()).logoFileId
+    const file = await this.files.uploadImage(
+      "logo",
+      filename,
+      body,
+      LOGO_MAX_BYTES
+    )
+    await this.repo.update(undefined, { logoFileId: file.id })
+    if (previous) await this.files.remove(previous)
+    await this.audit.record("workspace.logo_updated", {
+      resourceType: "file",
+      resourceId: file.id,
+    })
+    return this.get()
+  }
+
+  async removeLogo(): Promise<WorkspaceProfile> {
+    const previous = (await this.repo.getOrCreate()).logoFileId
+    if (previous) {
+      await this.repo.update(undefined, { logoFileId: null })
+      await this.files.remove(previous)
+      await this.audit.record("workspace.logo_removed", {
+        resourceType: "file",
+        resourceId: previous,
+      })
+    }
+    return this.get()
   }
 
   /** `input` is already parsed by the Zod pipe (transforms applied). */
@@ -71,6 +121,6 @@ export class WorkspaceProfileService {
       resourceId: row.workspaceId,
       metadata: { fields: Object.keys(input) },
     })
-    return toProfileDto(row)
+    return toProfileDto(row, await this.files.url(row.logoFileId))
   }
 }

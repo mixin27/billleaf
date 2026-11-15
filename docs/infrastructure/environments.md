@@ -35,3 +35,15 @@ pnpm dev               # web :3000, api :4000
 - Staging/production secrets live in **Dokploy environment settings** (per app). CI secrets live in GitHub Environments (`staging`, `production`).
 - Key variables (api): `DATABASE_URL`, `REDIS_URL`, `BETTER_AUTH_SECRET`, `API_URL`, `WEB_URL`, `TRUSTED_ORIGINS`, `COOKIE_DOMAIN`, `GOOGLE_CLIENT_ID/SECRET`, `SMTP_URL`/Resend key, `EMAIL_FROM`, S3/R2 credentials, billing provider keys, `SENTRY_DSN`.
 - `BETTER_AUTH_SECRET` and DB passwords differ per environment; rotate on staff changes.
+
+## Object storage
+
+| Variable                                    | Local                                | Production (Cloudflare R2)                               |
+| ------------------------------------------- | ------------------------------------ | -------------------------------------------------------- |
+| `S3_ENDPOINT`                               | `http://localhost:8333` (SeaweedFS)  | `https://<account-id>.r2.cloudflarestorage.com`          |
+| `S3_REGION`                                 | `us-east-1`                          | `auto`                                                   |
+| `S3_BUCKET`                                 | `billleaf-dev` (auto-created in dev) | private bucket, created once in R2                       |
+| `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` | any value                            | R2 API token (Object Read & Write, scoped to the bucket) |
+| `S3_FORCE_PATH_STYLE`                       | `true`                               | `false`                                                  |
+
+The API presigns reads (15 min), so the bucket never needs public access.

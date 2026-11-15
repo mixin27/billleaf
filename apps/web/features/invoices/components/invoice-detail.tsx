@@ -253,6 +253,7 @@ function InvoiceDetailView({ invoice }: { invoice: Invoice }) {
         notes={invoice.notes}
         terms={invoice.terms}
         footer={profile.data?.documentFooter}
+        logoUrl={profile.data?.logoUrl}
       />
 
       {invoice.status !== "draft" ? (

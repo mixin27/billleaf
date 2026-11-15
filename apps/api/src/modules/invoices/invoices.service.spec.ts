@@ -113,6 +113,7 @@ function setup(
     }),
   }
   const profile = {
+    logoImage: vi.fn().mockResolvedValue(null),
     get: vi.fn().mockResolvedValue({
       name: "Studio",
       legalName: null,

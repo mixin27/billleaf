@@ -325,6 +325,7 @@ export class QuotesService {
       terms: quote.terms,
       footer: profile.documentFooter,
       brandColor: profile.brandColor,
+      logo: await this.profile.logoImage(),
     })
     return { filename: `${quote.number ?? "quote-draft"}.pdf`, content }
   }

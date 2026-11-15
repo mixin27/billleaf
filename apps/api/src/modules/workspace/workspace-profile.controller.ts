@@ -1,4 +1,14 @@
-import { Body, Controller, Get, Patch } from "@nestjs/common"
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Patch,
+  Put,
+  Req,
+} from "@nestjs/common"
+import type { FastifyRequest } from "fastify"
 import { ApiTags } from "@nestjs/swagger"
 import {
   updateWorkspaceProfileSchema,
@@ -31,5 +41,33 @@ export class WorkspaceProfileController {
   @ZodResponse({ status: 200, type: WorkspaceProfileDto })
   update(@Body() body: UpdateWorkspaceProfileDto) {
     return this.profile.update(body as Record<string, unknown>)
+  }
+
+  /** multipart/form-data with a single `file` field (PNG or JPEG, ≤ 1 MB). */
+  @Put("logo")
+  @RequirePermission("workspace.update")
+  @ZodResponse({ status: 200, type: WorkspaceProfileDto })
+  async uploadLogo(@Req() req: FastifyRequest) {
+    if (!req.isMultipart())
+      throw new BadRequestException("Send the image as multipart/form-data")
+    const file = await req.file()
+    if (!file) throw new BadRequestException("No file uploaded")
+    let body: Buffer
+    try {
+      body = await file.toBuffer()
+    } catch {
+      throw new BadRequestException({
+        message: "Images must be 1024 KB or smaller",
+        code: "file_too_large",
+      })
+    }
+    return this.profile.setLogo(file.filename, body)
+  }
+
+  @Delete("logo")
+  @RequirePermission("workspace.update")
+  @ZodResponse({ status: 200, type: WorkspaceProfileDto })
+  removeLogo() {
+    return this.profile.removeLogo()
   }
 }
