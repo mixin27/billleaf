@@ -35,6 +35,7 @@ Phases are scope buckets, not dates. Each phase ends with a production deploy. C
 - ✅ SaaS billing live with **manual payments**: pay by bank or wallet, upload proof, platform admin approves; reminders and a 7-day grace period ([ADR-0013](../adr/0013-manual-payments-for-subscriptions.md)).
 - ✅ Platform admin portal: workspaces, users (ban, impersonate), jobs, audit log, approvals, pricing.
 - ✅ Launch readiness: public home and pricing pages, Terms and Privacy, data export and workspace deletion.
+- ✅ Payment reminders for unpaid invoices; users can delete their own account.
 - Online subscription payments when a provider serves the operating country.
 
 ## Phase 3 — Teams & growth

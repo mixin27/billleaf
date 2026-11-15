@@ -27,6 +27,11 @@ export const workspaceProfiles = pgTable("workspace_profiles", {
   timezone: text().notNull().default("UTC"),
   locale: text().notNull().default("en-US"),
   paymentTermsDays: integer().notNull().default(14),
+  /**
+   * Automatic payment reminders: days relative to an invoice's due date
+   * (-3 = three days before, 0 = on the day, 7 = a week late). Empty = off.
+   */
+  invoiceReminderOffsets: integer().array().notNull().default([]),
   /** Basis points: 700 = 7.00% */
   defaultTaxRateBps: integer().notNull().default(0),
   documentFooter: text(),

@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm"
 import {
+  boolean,
   date,
   index,
   integer,
@@ -67,6 +68,8 @@ export const invoices = pgTable(
     voidReason: text(),
     lastSentAt: timestamp({ withTimezone: true }),
     lastSentTo: text(),
+    /** Skip automatic payment reminders for this invoice. */
+    remindersPaused: boolean().notNull().default(false),
     ...timestamps,
   },
   (t) => [
@@ -103,4 +106,25 @@ export const invoiceLines = pgTable(
     taxAmount: integer().notNull(),
   },
   (t) => [index().on(t.invoiceId, t.position)]
+)
+
+/**
+ * Payment reminders emailed to the client, one row per invoice and offset
+ * (days relative to the due date). The unique key makes each one go out once.
+ */
+export const invoiceReminders = pgTable(
+  "invoice_reminders",
+  {
+    id: id(),
+    workspaceId: uuid()
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    invoiceId: uuid()
+      .notNull()
+      .references(() => invoices.id, { onDelete: "cascade" }),
+    offsetDays: integer().notNull(),
+    sentTo: text().notNull(),
+    ...timestamps,
+  },
+  (t) => [unique().on(t.invoiceId, t.offsetDays), index().on(t.workspaceId)]
 )

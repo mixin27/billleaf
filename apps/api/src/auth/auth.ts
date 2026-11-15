@@ -31,6 +31,8 @@ export interface AuthDeps extends Omit<AuthPluginDeps, "webUrl"> {
     adminUserId: string,
     targetUserId: string
   ) => Promise<boolean>
+  /** Runs before a user deletes their account; throws to refuse. */
+  beforeDeleteUser: (user: { id: string; email: string }) => Promise<void>
 }
 
 /** Better Auth admin routes we don't expose (the admin portal replaces them). */
@@ -62,6 +64,7 @@ export function createAuth({
   env,
   db,
   allowImpersonation,
+  beforeDeleteUser,
   ...hooks
 }: AuthDeps) {
   const trustedOrigins = [env.WEB_URL, ...env.TRUSTED_ORIGINS]
@@ -96,6 +99,23 @@ export function createAuth({
       autoSignInAfterVerification: true,
       sendVerificationEmail: async ({ user, url }) =>
         hooks.sendEmail(verifyEmail({ to: user.email, name: user.name, url })),
+    },
+    // Users delete their own account from "Your account" (password, or a
+    // recent sign-in for passwordless accounts). Refused while they're the
+    // only owner of a workspace.
+    user: {
+      deleteUser: {
+        enabled: true,
+        beforeDelete: async (user) => {
+          try {
+            await beforeDeleteUser(user)
+          } catch (err) {
+            throw new APIError("BAD_REQUEST", {
+              message: (err as Error).message,
+            })
+          }
+        },
+      },
     },
     socialProviders:
       env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET

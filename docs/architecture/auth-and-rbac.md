@@ -69,6 +69,10 @@ Billleaf staff run the platform from `/admin` in the web app (API: `/v1/admin/*`
   4. Actions taken meanwhile are attributed to the user; the session row and the start entry tie them to the admin.
 - **Sections:** overview, workspaces (set a plan by hand, with a reason), users (ban, unban, sign out everywhere, resend verification, impersonate), background jobs (retry, remove), and the platform-wide audit log.
 
+## Deleting an account
+
+Users delete their own login from **Your account** (Better Auth `deleteUser`, with their password, or a sign-in from the last day for passwordless accounts). `AccountService.beforeDelete` refuses while they're the **only holder of the Owner role** in any workspace (`GET /v1/account/deletion-check` lists those, so the UI can say why). Otherwise it stops their running timers and records `account.deleted`. Their memberships, sessions and 2FA rows cascade. Their work in other workspaces stays: time entries lose the member link but keep the name, and audit entries keep the action with the actor set to null.
+
 ## Two-factor authentication
 
 Better Auth `twoFactor` (TOTP + backup codes). Users turn it on under **Your account**; sign-in then asks for an authenticator code or a backup code, with an option to trust the device. Required for platform admins.

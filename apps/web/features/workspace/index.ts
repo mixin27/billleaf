@@ -9,3 +9,4 @@ export {
 } from "./stores/workspace-store"
 export { WorkspaceProfileForm } from "./components/workspace-profile-form"
 export { WorkspaceDataSettings } from "./components/workspace-data-settings"
+export { InvoiceReminderSettings } from "./components/invoice-reminder-settings"

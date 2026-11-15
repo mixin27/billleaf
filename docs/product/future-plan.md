@@ -11,6 +11,8 @@ Work we've agreed to do later, with enough detail to pick up without re-research
 - **SaaS billing:** plans and limits; manual subscription payments approved by platform admins, with reminders and a 7-day grace period ([ADR-0013](../adr/0013-manual-payments-for-subscriptions.md)).
 - **Platform admin portal:** workspaces, users (ban, impersonate), jobs, audit log, approvals, pricing. Two-factor authentication for everyone, required for admins.
 - **Launch readiness:** public home and pricing pages, Terms and Privacy pages, data export (ZIP of CSVs) and workspace deletion.
+- **Payment reminders:** clients are emailed about unpaid invoices on the days the workspace picks (before, on and after the due date), each once; paused per invoice.
+- **Account deletion:** users delete their own login once they aren't the only owner of a workspace.
 - **Deploy readiness:** production compose stack, pinned images, approval gate, smoke test, [Dokploy runbook](../infrastructure/dokploy-runbook.md).
 
 ## Next, in order
@@ -19,9 +21,7 @@ Work we've agreed to do later, with enough detail to pick up without re-research
    - set prices and Billleaf's payment methods in `/admin/pricing`;
    - set `SUPPORT_EMAIL`;
    - have the Terms and Privacy pages reviewed for the operating country.
-2. **Account deletion.** A user deletes their own login (Better Auth `deleteUser`) once they own no workspace, or after deleting or handing over the ones they own. **Size:** S–M.
-3. **Invoice reminders.** Optional emails to clients before and after the due date, per workspace, with the portal link. **Size:** M.
-4. **Small follow-ups** (table below).
+2. **Small follow-ups** (table below).
 
 ## Later
 

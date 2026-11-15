@@ -51,5 +51,5 @@ Review before first production launch and quarterly after.
 ## Privacy & compliance
 
 - [ ] Terms (`/terms`) and Privacy Policy (`/privacy`) reviewed for the operating country, `SUPPORT_EMAIL` set; DPA template; no cookie banner needed while only essential cookies are used.
-- [ ] Data export and workspace deletion (Settings → Data) tested on production; account deletion (pending).
+- [ ] Data export and workspace deletion (Settings → Data) and account deletion (Your account) tested on production.
 - [ ] Billing via manual payments (ADR-0013): no card data touches our servers; payment screenshots stay private (presigned URLs).

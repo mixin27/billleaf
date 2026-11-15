@@ -3,6 +3,7 @@ import type { InvoiceDisplayStatus } from "@workspace/contracts"
 import {
   clients,
   invoiceLines,
+  invoiceReminders,
   invoices,
   quotes,
   timeEntries,
@@ -199,6 +200,24 @@ export class InvoicesRepository {
       .where(and(this.scope(), eq(invoices.quoteId, quoteId)))
       .limit(1)
     return row ?? null
+  }
+
+  /** Payment reminders already emailed for an invoice, oldest first. */
+  reminders(invoiceId: string) {
+    return this.db
+      .select({
+        offsetDays: invoiceReminders.offsetDays,
+        sentTo: invoiceReminders.sentTo,
+        sentAt: invoiceReminders.createdAt,
+      })
+      .from(invoiceReminders)
+      .where(
+        and(
+          eq(invoiceReminders.workspaceId, this.ctx.workspaceId),
+          eq(invoiceReminders.invoiceId, invoiceId)
+        )
+      )
+      .orderBy(asc(invoiceReminders.createdAt))
   }
 
   async lines(

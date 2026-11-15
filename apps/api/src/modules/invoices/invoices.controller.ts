@@ -9,6 +9,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Put,
   Query,
   Res,
 } from "@nestjs/common"
@@ -16,6 +17,7 @@ import { ApiTags } from "@nestjs/swagger"
 import {
   createInvoiceSchema,
   invoiceListSchema,
+  invoiceRemindersSchema,
   invoiceSchema,
   listInvoicesQuerySchema,
   sendDocumentSchema,
@@ -35,6 +37,7 @@ class UpdateInvoiceDto extends createZodDto(updateInvoiceSchema) {}
 class ListInvoicesQueryDto extends createZodDto(listInvoicesQuerySchema) {}
 class VoidInvoiceDto extends createZodDto(voidInvoiceSchema) {}
 class SendDocumentDto extends createZodDto(sendDocumentSchema) {}
+class InvoiceRemindersDto extends createZodDto(invoiceRemindersSchema) {}
 
 const uuid = new ParseUUIDPipe()
 
@@ -103,6 +106,17 @@ export class InvoicesController {
   @ZodResponse({ status: 200, type: InvoiceDto })
   send(@Param("id", uuid) id: string, @Body() body: SendDocumentDto) {
     return this.invoices.send(id, body as never)
+  }
+
+  /** Pause or resume automatic payment reminders for this invoice. */
+  @Put(":id/reminders")
+  @RequirePermission("invoice.send")
+  @ZodResponse({ status: 200, type: InvoiceDto })
+  setReminders(
+    @Param("id", uuid) id: string,
+    @Body() body: InvoiceRemindersDto
+  ) {
+    return this.invoices.setRemindersPaused(id, body.paused)
   }
 
   @Post(":id/void")

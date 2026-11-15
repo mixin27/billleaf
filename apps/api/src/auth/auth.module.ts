@@ -5,6 +5,7 @@ import { AdminAccessModule } from "../admin/admin-access.module.js"
 import { AdminAccessService } from "../admin/admin-access.service.js"
 import { ENV, type Env } from "../core/config/env.js"
 import { DB, type Database } from "../core/database/database.module.js"
+import { AccountService } from "../iam/account/account.service.js"
 import { IamModule } from "../iam/iam.module.js"
 import { WorkspaceBootstrapService } from "../iam/workspaces/workspace-bootstrap.service.js"
 import { MailModule } from "../mail/mail.module.js"
@@ -26,6 +27,7 @@ import { createAuth } from "./auth.js"
         MailService,
         WorkspaceBootstrapService,
         AdminAccessService,
+        AccountService,
       ],
       disableGlobalAuthGuard: true,
       useFactory: (
@@ -33,7 +35,8 @@ import { createAuth } from "./auth.js"
         db: Database,
         mail: MailService,
         bootstrap: WorkspaceBootstrapService,
-        adminAccess: AdminAccessService
+        adminAccess: AdminAccessService,
+        account: AccountService
       ) => ({
         // Keep req.rawBody for webhook signature verification (billing).
         bodyParser: { rawBody: true },
@@ -49,6 +52,7 @@ import { createAuth } from "./auth.js"
             bootstrap.onInvitationAccepted(ws, member, invitationId),
           allowImpersonation: (adminUserId, targetUserId) =>
             adminAccess.consumeImpersonation(adminUserId, targetUserId),
+          beforeDeleteUser: (user) => account.beforeDelete(user),
         }),
       }),
     }),

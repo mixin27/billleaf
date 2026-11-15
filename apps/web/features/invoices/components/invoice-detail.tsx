@@ -55,6 +55,7 @@ import {
   useVoidInvoice,
 } from "../api/mutations"
 import { useInvoice } from "../api/queries"
+import { InvoiceReminders } from "./invoice-reminders"
 import { InvoiceStatusBadge } from "./invoice-status-badge"
 import { PageHeader } from "@/components/page-header"
 
@@ -275,6 +276,8 @@ function InvoiceDetailView({ invoice }: { invoice: Invoice }) {
         footer={profile.data?.documentFooter}
         logoUrl={profile.data?.logoUrl}
       />
+
+      <InvoiceReminders invoice={invoice} locale={locale} />
 
       {invoice.status !== "draft" ? (
         <InvoicePayments

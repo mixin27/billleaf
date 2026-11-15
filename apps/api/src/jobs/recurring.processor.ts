@@ -6,13 +6,17 @@ import { ClsService } from "nestjs-cls"
 import type { RequestContextStore } from "../common/context/request-context.js"
 import { QUEUES } from "../core/queue/queue.module.js"
 import { addDays } from "../modules/documents/party-snapshot.js"
+import { InvoiceRemindersService } from "../modules/invoices/invoice-reminders.service.js"
 import { RecurringRepository } from "../modules/recurring/recurring.repository.js"
 import { RecurringService } from "../modules/recurring/recurring.service.js"
 
 /**
- * Hourly sweep that generates due recurring invoices. Each schedule runs in
- * its own workspace context so all tenant scoping applies unchanged; the
- * generator itself is idempotent, so overlapping or retried sweeps are safe.
+ * Hourly sweeps on the recurring queue:
+ * - generate due recurring invoices. Each schedule runs in its own workspace
+ *   context so tenant scoping applies; generation is idempotent, so
+ *   overlapping or retried sweeps are safe;
+ * - send payment reminders for unpaid invoices (`invoice-reminders` job,
+ *   see InvoiceRemindersService).
  */
 @Processor(QUEUES.recurring, { concurrency: 1 })
 export class RecurringProcessor
@@ -25,7 +29,8 @@ export class RecurringProcessor
     @InjectQueue(QUEUES.recurring) private readonly queue: Queue,
     private readonly cls: ClsService<RequestContextStore>,
     private readonly repo: RecurringRepository,
-    private readonly recurring: RecurringService
+    private readonly recurring: RecurringService,
+    private readonly reminders: InvoiceRemindersService
   ) {
     super()
   }
@@ -36,9 +41,19 @@ export class RecurringProcessor
       { pattern: "5 * * * *" },
       { name: "sweep", opts: { attempts: 1 } }
     )
+    // Payment reminders for unpaid invoices (idempotent, hourly).
+    await this.queue.upsertJobScheduler(
+      "invoice-reminders",
+      { pattern: "35 * * * *" },
+      { name: "invoice-reminders", opts: { attempts: 1 } }
+    )
   }
 
-  async process(_job: Job) {
+  async process(job: Job) {
+    if (job.name === "invoice-reminders") {
+      await this.reminders.run()
+      return
+    }
     // UTC tomorrow covers every timezone; the service re-checks per workspace.
     const latest = addDays(new Date().toISOString().slice(0, 10), 1)
     const due = await this.repo.dueAcrossWorkspaces(latest)

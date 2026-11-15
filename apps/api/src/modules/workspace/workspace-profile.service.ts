@@ -37,6 +37,7 @@ export function toProfileDto(
     timezone: r.timezone,
     locale: r.locale,
     paymentTermsDays: r.paymentTermsDays,
+    invoiceReminderOffsets: r.invoiceReminderOffsets,
     defaultTaxRateBps: r.defaultTaxRateBps,
     documentFooter: r.documentFooter,
     brandColor: r.brandColor,

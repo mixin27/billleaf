@@ -77,3 +77,14 @@ export const meSchema = z.object({
   }),
 })
 export type Me = z.infer<typeof meSchema>
+
+/**
+ * Before deleting your account: workspaces where you're the only owner. They
+ * must be deleted, or get another owner, first.
+ */
+export const accountDeletionCheckSchema = z.object({
+  soleOwnerOf: z.array(
+    z.object({ id: z.string(), name: z.string(), slug: z.string() })
+  ),
+})
+export type AccountDeletionCheck = z.infer<typeof accountDeletionCheckSchema>
