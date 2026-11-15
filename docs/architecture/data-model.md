@@ -114,12 +114,21 @@ Task moves send `afterTaskId` (null = top) and optionally a new `status`; the AP
 
 Rules: one running timer per member (partial unique index `WHERE ended_at IS NULL`; starting a timer stops the current one). Own entries need `time.track`, others' need `time.manage`, reading others' needs `time.read`. **Invoice from time** turns billable, finished, uninvoiced entries into a draft invoice (one line per task, hours = seconds rounded to 0.01 h, at the project's hourly rate); entries are claimed atomically and locked. Deleting that draft (FK set null) or voiding the invoice releases them. Projects with time can't be deleted. Removing a member stops their running timer and keeps all their entries (`member_id` → null, `member_name` retained); former members' entries are editable with `time.manage`.
 
-| Table             | Notes                                                                                          |
-| ----------------- | ---------------------------------------------------------------------------------------------- |
-| `tags`            | Workspace-wide labels: `name` (unique per workspace, case-insensitive), `color` (palette name) |
-| `time_entry_tags` | `entry_id` (cascade) + `tag_id` (cascade), primary key on both                                 |
+| Table                 | Notes                                                                                                            |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `tags`                | Workspace-wide labels: `name` (unique per workspace, case-insensitive), `color` (palette name)                   |
+| `time_entry_tags`     | `entry_id` (cascade) + `tag_id` (cascade), primary key on both                                                   |
+| `time_import_batches` | One import run: `source` (`clockify`), `filename`, imported / duplicate / invalid counts, `created_by_member_id` |
 
 Clockify-style tracking: entries may have **no project** (they can't be invoiced). Tags can be created by anyone with `time.track`; renaming or deleting one needs `time.manage` (deleting removes it from every entry). The running timer is edited in place (`PATCH /v1/time-entries/running`); **continue** starts a new timer with an entry's description, project, task, tags and billable; **duplicate** copies a finished entry. **Bulk** update/delete skip invoiced entries and entries the member may not change, and report `{updated, skipped}`. Description autocomplete returns the member's recent distinct description + project + task combinations.
+
+`time_entries.import_batch_id` (set null) and `external_hash` (unique per workspace when set) record where imported entries came from: the hash fingerprints the source row (person, start, end, description, project, client, task), so importing the same Clockify file again inserts nothing.
+
+**Timesheet grid** (`GET /v1/time/timesheet?week=`, `PUT /v1/time/timesheet/cell`): the member's own week as (project, task) × Mon–Sun. Raising a cell adds a duration-only entry for the difference; lowering it trims or deletes that cell's uninvoiced entries, newest first, and is refused (`time_entry_invoiced`) below the invoiced total.
+
+**Reports** (`/v1/time/reports/summary`, `/detailed`, `/detailed.csv`): filters are a date range (≤ 1 year), members, projects (or "no project"), clients, tags, billable and text. Summary groups by project, client, member, tag (an entry with several tags counts towards each), task or date, with per-day totals that also drive the weekly view. Amounts are billable hours × the project's hourly rate, per currency. Without `time.read` only your own time is reported. The CSV neutralises cells starting with `= + - @` (formula injection).
+
+**Clockify import** (`POST /v1/time/import/clockify`, multipart, `time.manage`): reads Clockify's Detailed report CSV (≤ 10 MB / 50,000 rows), dates in M/D/Y, D/M/Y or Y-M-D (detected or chosen), times in the workspace time zone. `?dryRun=true` previews; committing creates missing clients, projects (hourly, no rate), tasks (done) and tags through the normal services (plan limits and permissions apply), matches people by email (others are assigned to the importer), and inserts entries in one transaction.
 
 ### Contracts (`contracts.ts`) — Phase 2
 

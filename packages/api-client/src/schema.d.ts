@@ -1316,6 +1316,102 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  "/v1/time/timesheet": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["TimeReportsController_timesheet_v1"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/time/timesheet/cell": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put: operations["TimeReportsController_setCell_v1"]
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/time/reports/summary": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["TimeReportsController_summary_v1"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/time/reports/detailed": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["TimeReportsController_detailed_v1"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/time/reports/detailed.csv": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["TimeReportsController_detailedCsv_v1"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/time/import/clockify": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["TimeReportsController_importClockify_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   "/v1/dashboard": {
     parameters: {
       query?: never
@@ -3024,6 +3120,133 @@ export interface components {
       /** Format: uuid */
       projectId: string
       entryIds?: string[]
+    }
+    TimesheetDto_Output: {
+      /** Format: date */
+      weekStart: string
+      days: string[]
+      rows: {
+        projectId: string | null
+        projectName: string | null
+        clientName: string | null
+        taskId: string | null
+        taskTitle: string | null
+        seconds: number[]
+        lockedSeconds: number[]
+      }[]
+    }
+    SetTimesheetCellDto: {
+      /** Format: date */
+      date: string
+      /** Format: uuid */
+      projectId: string | null
+      /** Format: uuid */
+      taskId: string | null
+      seconds: number
+    }
+    SummaryReportDto_Output: {
+      /** Format: date */
+      from: string
+      /** Format: date */
+      to: string
+      days: string[]
+      totalSeconds: number
+      billableSeconds: number
+      amounts: {
+        currency: string
+        amount: number
+      }[]
+      byDay: {
+        /** Format: date */
+        date: string
+        seconds: number
+        billableSeconds: number
+      }[]
+      groups: {
+        key: string | null
+        label: string
+        detail: string | null
+        seconds: number
+        billableSeconds: number
+        amounts: {
+          currency: string
+          amount: number
+        }[]
+        byDay: number[]
+      }[]
+    }
+    DetailedReportDto_Output: {
+      items: {
+        id: string
+        projectId: string | null
+        projectName: string | null
+        clientName: string | null
+        taskId: string | null
+        taskTitle: string | null
+        memberId: string | null
+        memberName: string
+        description: string | null
+        /** Format: date */
+        entryDate: string
+        /** Format: date-time */
+        startedAt: string
+        /** Format: date-time */
+        endedAt: string | null
+        durationSeconds: number | null
+        billable: boolean
+        tags: {
+          id: string
+          name: string
+          /** @enum {string|null} */
+          color:
+            | "gray"
+            | "green"
+            | "teal"
+            | "blue"
+            | "violet"
+            | "pink"
+            | "red"
+            | "orange"
+            | "amber"
+            | null
+        }[]
+        invoiceId: string | null
+        invoiceNumber: string | null
+        isRunning: boolean
+        isMine: boolean
+      }[]
+      total: number
+      page: number
+      pageSize: number
+      totalSeconds: number
+      billableSeconds: number
+    }
+    ClockifyImportResultDto_Output: {
+      dryRun: boolean
+      batchId: string | null
+      rows: number
+      imported: number
+      duplicates: number
+      invalid: {
+        line: number
+        message: string
+      }[]
+      totalSeconds: number
+      /** @enum {string} */
+      dateFormat: "MDY" | "DMY" | "YMD"
+      newClients: string[]
+      newProjects: {
+        name: string
+        clientName: string | null
+      }[]
+      newTasks: number
+      newTags: string[]
+      members: {
+        name: string
+        email: string | null
+        matched: boolean
+        entries: number
+      }[]
     }
     DashboardDto_Output: {
       /** Format: date */
@@ -5809,6 +6032,161 @@ export interface operations {
         }
         content: {
           "application/json": components["schemas"]["InvoiceDto_Output"]
+        }
+      }
+    }
+  }
+  TimeReportsController_timesheet_v1: {
+    parameters: {
+      query: {
+        week: string
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["TimesheetDto_Output"]
+        }
+      }
+    }
+  }
+  TimeReportsController_setCell_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SetTimesheetCellDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["TimesheetDto_Output"]
+        }
+      }
+    }
+  }
+  TimeReportsController_summary_v1: {
+    parameters: {
+      query: {
+        from: string
+        to: string
+        memberId?: string | string[]
+        projectId?: string | string[]
+        clientId?: string | string[]
+        tagId?: string | string[]
+        withoutProject?: "true"
+        billable?: "true" | "false"
+        q?: string
+        groupBy?: "project" | "client" | "member" | "tag" | "task" | "date"
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["SummaryReportDto_Output"]
+        }
+      }
+    }
+  }
+  TimeReportsController_detailed_v1: {
+    parameters: {
+      query: {
+        from: string
+        to: string
+        memberId?: string | string[]
+        projectId?: string | string[]
+        clientId?: string | string[]
+        tagId?: string | string[]
+        withoutProject?: "true"
+        billable?: "true" | "false"
+        q?: string
+        page?: number
+        pageSize?: number
+        sort?: string
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["DetailedReportDto_Output"]
+        }
+      }
+    }
+  }
+  TimeReportsController_detailedCsv_v1: {
+    parameters: {
+      query: {
+        from: string
+        to: string
+        memberId?: string | string[]
+        projectId?: string | string[]
+        clientId?: string | string[]
+        tagId?: string | string[]
+        withoutProject?: "true"
+        billable?: "true" | "false"
+        q?: string
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  TimeReportsController_importClockify_v1: {
+    parameters: {
+      query?: {
+        dryRun?: "true" | "false"
+        dateFormat?: "auto" | "MDY" | "DMY" | "YMD"
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["ClockifyImportResultDto_Output"]
         }
       }
     }

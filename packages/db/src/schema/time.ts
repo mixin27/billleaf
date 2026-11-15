@@ -17,6 +17,24 @@ import { member, organization } from "./auth.js"
 import { invoices } from "./invoices.js"
 import { projects, tasks } from "./projects.js"
 
+/** One import run (file → entries), for the import history and undo later. */
+export const timeImportBatches = pgTable("time_import_batches", {
+  id: id(),
+  workspaceId: uuid()
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  source: text({ enum: ["clockify"] }).notNull(),
+  filename: text().notNull(),
+  /** Rows imported / skipped as already imported / skipped as invalid. */
+  importedCount: integer().notNull().default(0),
+  duplicateCount: integer().notNull().default(0),
+  invalidCount: integer().notNull().default(0),
+  createdByMemberId: uuid().references(() => member.id, {
+    onDelete: "set null",
+  }),
+  ...timestamps,
+})
+
 export const timeEntries = pgTable(
   "time_entries",
   {
@@ -41,9 +59,18 @@ export const timeEntries = pgTable(
     billable: boolean().notNull().default(true),
     /** Set when pulled into an invoice; released (null) if that draft is deleted. */
     invoiceId: uuid().references(() => invoices.id, { onDelete: "set null" }),
+    /** Set for entries brought in by an import (e.g. from Clockify). */
+    importBatchId: uuid().references(() => timeImportBatches.id, {
+      onDelete: "set null",
+    }),
+    /** Fingerprint of the source row, so re-importing a file adds nothing twice. */
+    externalHash: text(),
     ...timestamps,
   },
   (t) => [
+    uniqueIndex("time_entries_external_hash_unique")
+      .on(t.workspaceId, t.externalHash)
+      .where(sql`${t.externalHash} is not null`),
     index().on(t.workspaceId, t.entryDate),
     index().on(t.projectId),
     index().on(t.memberId, t.entryDate),
