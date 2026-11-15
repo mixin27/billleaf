@@ -28,7 +28,7 @@ Phases are scope buckets, not dates. Each phase ends with a production deploy.
 
 - ✅ Projects & tasks (task board, assignees, start a project from an accepted quote).
 - ✅ Time tracking (global timer, week timesheet, manual entries) → billable time to invoice lines.
-- Contracts (templates; e-sign later).
+- ✅ Contracts (templates with merge fields, from a quote, PDF + email, recorded signatures; e-sign later).
 - ✅ Recurring invoices (weekly → yearly, draft or auto-send, idempotent hourly generation, Pro/Team).
 - **SaaS billing live** (MoR provider, entitlements enforced).
 

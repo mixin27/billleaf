@@ -452,6 +452,166 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  "/v1/contract-templates": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["ContractTemplatesController_list_v1"]
+    put?: never
+    post: operations["ContractTemplatesController_create_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/contract-templates/{id}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["ContractTemplatesController_get_v1"]
+    put?: never
+    post?: never
+    delete: operations["ContractTemplatesController_remove_v1"]
+    options?: never
+    head?: never
+    patch: operations["ContractTemplatesController_update_v1"]
+    trace?: never
+  }
+  "/v1/contracts": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["ContractsController_list_v1"]
+    put?: never
+    post: operations["ContractsController_create_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/contracts/{id}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["ContractsController_get_v1"]
+    put?: never
+    post?: never
+    delete: operations["ContractsController_remove_v1"]
+    options?: never
+    head?: never
+    patch: operations["ContractsController_update_v1"]
+    trace?: never
+  }
+  "/v1/contracts/{id}/send": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["ContractsController_send_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/contracts/{id}/sign": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["ContractsController_sign_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/contracts/{id}/decline": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["ContractsController_decline_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/contracts/{id}/void": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["ContractsController_void_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/contracts/{id}/pdf": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["ContractsController_pdf_v1"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/contracts/{id}/email": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["ContractsController_email_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   "/v1/invoices": {
     parameters: {
       query?: never
@@ -992,6 +1152,7 @@ export interface components {
         | "contract.read"
         | "contract.create"
         | "contract.update"
+        | "contract.send"
         | "contract.delete"
         | "project.read"
         | "project.create"
@@ -1039,6 +1200,7 @@ export interface components {
         | "contract.read"
         | "contract.create"
         | "contract.update"
+        | "contract.send"
         | "contract.delete"
         | "project.read"
         | "project.create"
@@ -1094,6 +1256,7 @@ export interface components {
         | "contract.read"
         | "contract.create"
         | "contract.update"
+        | "contract.send"
         | "contract.delete"
         | "project.read"
         | "project.create"
@@ -1147,6 +1310,7 @@ export interface components {
         | "contract.read"
         | "contract.create"
         | "contract.update"
+        | "contract.send"
         | "contract.delete"
         | "project.read"
         | "project.create"
@@ -1195,6 +1359,7 @@ export interface components {
         | "contract.read"
         | "contract.create"
         | "contract.update"
+        | "contract.send"
         | "contract.delete"
         | "project.read"
         | "project.create"
@@ -1590,6 +1755,134 @@ export interface components {
       /** Format: email */
       to?: string
       message?: string | null
+    }
+    TemplateDto_Output: {
+      id: string
+      name: string
+      body: string
+      /** Format: date-time */
+      createdAt: string
+      /** Format: date-time */
+      updatedAt: string
+    }
+    CreateTemplateDto: {
+      name: string
+      body: string
+    }
+    UpdateTemplateDto: {
+      name?: string
+      body?: string
+    }
+    ContractListDto_Output: {
+      items: {
+        id: string
+        number: string | null
+        /** @enum {string} */
+        status: "draft" | "sent" | "signed" | "declined" | "void"
+        title: string
+        clientId: string
+        clientName: string
+        /** Format: date */
+        effectiveDate: string | null
+        /** Format: date */
+        endDate: string | null
+        /** Format: date-time */
+        sentAt: string | null
+        /** Format: date */
+        signedAt: string | null
+        /** Format: date-time */
+        createdAt: string
+        /** Format: date-time */
+        updatedAt: string
+      }[]
+      nextCursor: string | null
+    }
+    ContractDto_Output: {
+      id: string
+      number: string | null
+      /** @enum {string} */
+      status: "draft" | "sent" | "signed" | "declined" | "void"
+      title: string
+      clientId: string
+      clientName: string
+      /** Format: date */
+      effectiveDate: string | null
+      /** Format: date */
+      endDate: string | null
+      /** Format: date-time */
+      sentAt: string | null
+      /** Format: date */
+      signedAt: string | null
+      /** Format: date-time */
+      createdAt: string
+      /** Format: date-time */
+      updatedAt: string
+      body: string
+      renderedBody: string
+      unresolvedFields: string[]
+      templateId: string | null
+      quoteId: string | null
+      quoteNumber: string | null
+      projectId: string | null
+      projectName: string | null
+      signedByName: string | null
+      /** Format: date-time */
+      declinedAt: string | null
+      /** Format: date-time */
+      voidedAt: string | null
+      voidReason: string | null
+      clientSnapshot: {
+        name: string
+        legalName?: string | null
+        email?: string | null
+        phone?: string | null
+        taxId?: string | null
+        addressLines: string[]
+      } | null
+      issuerSnapshot: {
+        name: string
+        legalName?: string | null
+        email?: string | null
+        phone?: string | null
+        taxId?: string | null
+        addressLines: string[]
+      } | null
+    }
+    CreateContractDto: {
+      /** Format: uuid */
+      clientId?: string
+      title?: string
+      /** Format: uuid */
+      templateId?: string
+      body?: string
+      /** Format: uuid */
+      quoteId?: string | null
+      /** Format: uuid */
+      projectId?: string | null
+      /** Format: date */
+      effectiveDate?: string | null
+      /** Format: date */
+      endDate?: string | null
+    }
+    UpdateContractDto: {
+      title?: string
+      body?: string
+      /** Format: uuid */
+      quoteId?: string | null
+      /** Format: uuid */
+      projectId?: string | null
+      /** Format: date */
+      effectiveDate?: string | null
+      /** Format: date */
+      endDate?: string | null
+    }
+    SignContractDto: {
+      signedByName: string
+      /** Format: date */
+      signedAt?: string
+    }
+    VoidContractDto: {
+      reason?: string | null
     }
     InvoiceListDto_Output: {
       items: {
@@ -3309,6 +3602,362 @@ export interface operations {
         }
         content: {
           "application/json": components["schemas"]["QuoteDto_Output"]
+        }
+      }
+    }
+  }
+  ContractTemplatesController_list_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["TemplateDto_Output"][]
+        }
+      }
+    }
+  }
+  ContractTemplatesController_create_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateTemplateDto"]
+      }
+    }
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["TemplateDto_Output"]
+        }
+      }
+    }
+  }
+  ContractTemplatesController_get_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["TemplateDto_Output"]
+        }
+      }
+    }
+  }
+  ContractTemplatesController_remove_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  ContractTemplatesController_update_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateTemplateDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["TemplateDto_Output"]
+        }
+      }
+    }
+  }
+  ContractsController_list_v1: {
+    parameters: {
+      query?: {
+        cursor?: string
+        limit?: number
+        status?: "draft" | "sent" | "signed" | "declined" | "void"
+        clientId?: string
+        q?: string
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["ContractListDto_Output"]
+        }
+      }
+    }
+  }
+  ContractsController_create_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateContractDto"]
+      }
+    }
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["ContractDto_Output"]
+        }
+      }
+    }
+  }
+  ContractsController_get_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["ContractDto_Output"]
+        }
+      }
+    }
+  }
+  ContractsController_remove_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  ContractsController_update_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateContractDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["ContractDto_Output"]
+        }
+      }
+    }
+  }
+  ContractsController_send_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["ContractDto_Output"]
+        }
+      }
+    }
+  }
+  ContractsController_sign_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SignContractDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["ContractDto_Output"]
+        }
+      }
+    }
+  }
+  ContractsController_decline_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["ContractDto_Output"]
+        }
+      }
+    }
+  }
+  ContractsController_void_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["VoidContractDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["ContractDto_Output"]
+        }
+      }
+    }
+  }
+  ContractsController_pdf_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  ContractsController_email_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SendDocumentDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["ContractDto_Output"]
         }
       }
     }

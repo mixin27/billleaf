@@ -4,12 +4,13 @@ import { and, eq, sql } from "drizzle-orm"
 
 import { RequestContext } from "../../common/context/request-context.js"
 
-export type DocumentScope = "quote" | "invoice" | "receipt"
+export type DocumentScope = "quote" | "invoice" | "receipt" | "contract"
 
 const DEFAULT_PREFIX: Record<DocumentScope, string> = {
   quote: "QUO-",
   invoice: "INV-",
   receipt: "RCT-",
+  contract: "CON-",
 }
 
 /**

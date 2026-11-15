@@ -38,6 +38,6 @@ export function useQuote(id: string) {
     queryKey: quoteKeys.detail(workspaceId, id),
     queryFn: () =>
       unwrap(api.GET("/v1/quotes/{id}", { params: { path: { id } } })),
-    enabled: Boolean(workspaceId),
+    enabled: Boolean(workspaceId && id),
   })
 }

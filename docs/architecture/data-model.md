@@ -114,6 +114,15 @@ Task moves send `afterTaskId` (null = top) and optionally a new `status`; the AP
 
 Rules: one running timer per member (partial unique index `WHERE ended_at IS NULL`; starting a timer stops the current one). Own entries need `time.track`, others' need `time.manage`, reading others' needs `time.read`. **Invoice from time** turns billable, finished, uninvoiced entries into a draft invoice (one line per task, hours = seconds rounded to 0.01 h, at the project's hourly rate); entries are claimed atomically and locked. Deleting that draft (FK set null) or voiding the invoice releases them. Projects with time can't be deleted. Removing a member stops their running timer and keeps all their entries (`member_id` → null, `member_name` retained); former members' entries are editable with `time.manage`.
 
+### Contracts (`contracts.ts`) — Phase 2
+
+| Table                | Notes                                                                                                                                                                                                                                                                                                                                                                                                        |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `contract_templates` | `name`, `body` (text with `{{merge.fields}}`) — copied into each contract, so editing a template never changes existing contracts                                                                                                                                                                                                                                                                            |
+| `contracts`          | `client_id` (restrict), `template_id` / `quote_id` / `project_id` (set null), `number` (null while draft; unique per workspace), `status` (draft → sent → signed \| declined; sent/signed → void), `title`, `body` (source), `rendered_body` (frozen at send), `effective_date`, `end_date`, snapshots frozen at send, `sent_at`, `signed_at` + `signed_by_name`, `declined_at`, `voided_at` + `void_reason` |
+
+Text is a small Markdown subset (headings, lists, paragraphs, `**bold**`) parsed by `parseContractText` in `@workspace/contracts`, which both the PDF renderer and the web preview use. Merge fields (`MERGE_FIELDS`: client, business, contract, quote, project, today) resolve live while draft; sending is refused (`unresolved_fields`) until every field resolves, _before_ a `CON-` number is taken, then the resolved text and both parties are frozen. Signatures are recorded manually (`contract.send`: who signed and when, not in the future); e-sign comes with the client portal. Only drafts are editable or deletable.
+
 ### Recurring invoices (`recurring.ts`) — Phase 2
 
 | Table                | Notes                                                                                                                                                                                                                                                                                                                                                                                                 |
@@ -124,7 +133,7 @@ Each period creates one invoice dated that period (`invoices.recurring_period`);
 
 ## Planned business tables (Phase 1+)
 
-`tax_rates`, `notifications`, then `contracts`, `contract_templates`.
+`tax_rates`, `notifications`.
 
 ```mermaid
 erDiagram

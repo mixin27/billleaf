@@ -6,7 +6,8 @@ import { permissions } from "./schema/index.js"
 
 /**
  * Upsert the code-defined permission catalog into the `permissions` table
- * and delete keys that no longer exist. Idempotent; run on deploy/boot.
+ * and delete keys that no longer exist, then grant every key to locked
+ * (Owner) roles. Idempotent; run on deploy/boot.
  */
 export async function syncPermissions(db: Database) {
   const keys = PERMISSIONS.map((p) => p.key)
@@ -23,6 +24,12 @@ export async function syncPermissions(db: Database) {
         },
       })
     await tx.delete(permissions).where(notInArray(permissions.key, keys))
+    // Locked roles (Owner) hold every permission, including keys added later.
+    await tx.execute(sql`
+      INSERT INTO role_permissions (role_id, permission_key)
+      SELECT r.id, p.key FROM roles r CROSS JOIN permissions p
+      WHERE r.is_locked
+      ON CONFLICT DO NOTHING`)
   })
   return { synced: keys.length }
 }

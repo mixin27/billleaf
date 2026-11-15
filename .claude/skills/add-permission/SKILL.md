@@ -13,9 +13,11 @@ description: Add a new permission key to Billleaf's dynamic RBAC (catalog in pac
 2. `pnpm --filter @workspace/contracts build && pnpm --filter @workspace/contracts test`.
 3. The API syncs the catalog into the `permissions` table on boot (and the
    production `migrate` job). No migration needed.
-4. Existing workspaces do **not** automatically get new grants on their cloned roles
-   (roles are owned by the workspace). If existing roles must receive it, write a
-   one-off data migration (SQL in a new drizzle migration) inserting into
-   `role_permissions` for roles with the relevant `slug` and `is_system = true`, and
-   mention it in the PR.
+4. Owner roles (locked) in existing workspaces receive the new key automatically:
+   the boot-time sync grants every key to locked roles. Other existing roles do
+   **not** (roles are owned by the workspace). If they must receive it, append a
+   one-off data migration to the new drizzle migration: first upsert the row into
+   `permissions` (migrations run before the boot sync), then insert into
+   `role_permissions` for roles with the relevant `slug` and `is_system = true`
+   (`ON CONFLICT DO NOTHING`). See `0012_*.sql` (`contract.send`). Mention it in the PR.
 5. Use it: `@RequirePermission("resource.action")` in the API, `<Can permission="…">` in web.

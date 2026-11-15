@@ -202,6 +202,15 @@ function QuoteDetailView({ quote }: { quote: Quote }) {
                   Start project
                 </DropdownMenuItem>
               ) : null}
+              {!draft && can("contract.create") ? (
+                <DropdownMenuItem
+                  onClick={() =>
+                    router.push(`/${slug}/contracts/new?quoteId=${quote.id}`)
+                  }
+                >
+                  Create contract
+                </DropdownMenuItem>
+              ) : null}
               <DropdownMenuItem
                 onClick={() =>
                   openPdf(`/v1/quotes/${quote.id}/pdf`).catch((e) =>
