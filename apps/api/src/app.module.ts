@@ -16,6 +16,7 @@ import { ClientsModule } from "./modules/clients/clients.module.js"
 import { DashboardModule } from "./modules/dashboard/dashboard.module.js"
 import { InvoicesModule } from "./modules/invoices/invoices.module.js"
 import { PaymentsModule } from "./modules/payments/payments.module.js"
+import { ProjectsModule } from "./modules/projects/projects.module.js"
 import { QuotesModule } from "./modules/quotes/quotes.module.js"
 import { WorkspaceProfileModule } from "./modules/workspace/workspace-profile.module.js"
 
@@ -34,6 +35,7 @@ import { WorkspaceProfileModule } from "./modules/workspace/workspace-profile.mo
     QuotesModule,
     InvoicesModule,
     PaymentsModule,
+    ProjectsModule,
     DashboardModule,
   ],
   providers: [

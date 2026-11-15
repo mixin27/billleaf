@@ -97,9 +97,18 @@ Recording a payment locks the invoice row (`SELECT … FOR UPDATE`), rejects ove
 
 `workspace_profiles.logo_file_id` → `files.id` (set null). Logo uploads are PNG/JPEG ≤ 1 MB, validated by **magic bytes** (the client's content-type is ignored). Replacing or removing a logo deletes the old object.
 
+### Projects & tasks (`projects.ts`) — Phase 2
+
+| Table      | Notes                                                                                                                                                                                                                                                                                                                |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `projects` | `workspace_id`, `client_id` (nullable = internal; restrict), `quote_id` (set null), `name`, `description`, `status` (active / on_hold / completed / archived), `billing` (hourly / fixed / non_billable), `currency`, `budget_amount` (fixed) **or** `hourly_rate` (hourly) in minor units, `start_date`, `due_date` |
+| `tasks`    | `project_id` (cascade), `title`, `notes`, `status` (todo / in_progress / done), `position` (double — fractional ordering within a status column), `due_date`, `assignee_member_id` (set null), `completed_at`                                                                                                        |
+
+Task moves send `afterTaskId` (null = top) and optionally a new `status`; the API places the task at the midpoint of its new neighbours and renumbers the column only when the gap gets too small. An accepted quote can start a fixed-price project budgeted at the quote total (one project per quote). Clients with projects can't be deleted.
+
 ## Planned business tables (Phase 1+)
 
-`tax_rates`, `notifications`, then `projects`, `tasks`, `time_entries`, `contracts`, `contract_templates`.
+`tax_rates`, `notifications`, then `time_entries`, `contracts`, `contract_templates`.
 
 ```mermaid
 erDiagram

@@ -676,6 +676,86 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  "/v1/projects": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["ProjectsController_list_v1"]
+    put?: never
+    post: operations["ProjectsController_create_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/projects/{id}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["ProjectsController_get_v1"]
+    put?: never
+    post?: never
+    delete: operations["ProjectsController_remove_v1"]
+    options?: never
+    head?: never
+    patch: operations["ProjectsController_update_v1"]
+    trace?: never
+  }
+  "/v1/projects/from-quote/{quoteId}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["ProjectsController_fromQuote_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/projects/{id}/tasks": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["ProjectsController_tasks_v1"]
+    put?: never
+    post: operations["ProjectsController_createTask_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/projects/{id}/tasks/{taskId}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    delete: operations["ProjectsController_deleteTask_v1"]
+    options?: never
+    head?: never
+    patch: operations["ProjectsController_updateTask_v1"]
+    trace?: never
+  }
   "/v1/dashboard": {
     parameters: {
       query?: never
@@ -1552,6 +1632,146 @@ export interface components {
       /** Format: email */
       to?: string
       message?: string | null
+    }
+    ProjectListDto_Output: {
+      items: {
+        id: string
+        name: string
+        description: string | null
+        /** @enum {string} */
+        status: "active" | "on_hold" | "completed" | "archived"
+        clientId: string | null
+        clientName: string | null
+        quoteId: string | null
+        quoteNumber: string | null
+        /** @enum {string} */
+        billing: "fixed" | "hourly" | "non_billable"
+        currency: string
+        budgetAmount: number | null
+        hourlyRate: number | null
+        /** Format: date */
+        startDate: string | null
+        /** Format: date */
+        dueDate: string | null
+        isOverdue: boolean
+        taskCounts: {
+          todo: number
+          in_progress: number
+          done: number
+        }
+        /** Format: date-time */
+        createdAt: string
+        /** Format: date-time */
+        updatedAt: string
+      }[]
+      nextCursor: string | null
+    }
+    ProjectDto_Output: {
+      id: string
+      name: string
+      description: string | null
+      /** @enum {string} */
+      status: "active" | "on_hold" | "completed" | "archived"
+      clientId: string | null
+      clientName: string | null
+      quoteId: string | null
+      quoteNumber: string | null
+      /** @enum {string} */
+      billing: "fixed" | "hourly" | "non_billable"
+      currency: string
+      budgetAmount: number | null
+      hourlyRate: number | null
+      /** Format: date */
+      startDate: string | null
+      /** Format: date */
+      dueDate: string | null
+      isOverdue: boolean
+      taskCounts: {
+        todo: number
+        in_progress: number
+        done: number
+      }
+      /** Format: date-time */
+      createdAt: string
+      /** Format: date-time */
+      updatedAt: string
+    }
+    CreateProjectDto: {
+      name: string
+      description?: string | null
+      /** Format: uuid */
+      clientId?: string | null
+      /**
+       * @default hourly
+       * @enum {string}
+       */
+      billing: "fixed" | "hourly" | "non_billable"
+      currency?: string
+      budgetAmount?: number | null
+      hourlyRate?: number | null
+      /** Format: date */
+      startDate?: string | null
+      /** Format: date */
+      dueDate?: string | null
+    }
+    UpdateProjectDto: {
+      name?: string
+      description?: string | null
+      /** Format: uuid */
+      clientId?: string | null
+      /** @enum {string} */
+      billing?: "fixed" | "hourly" | "non_billable"
+      currency?: string
+      budgetAmount?: number | null
+      hourlyRate?: number | null
+      /** Format: date */
+      startDate?: string | null
+      /** Format: date */
+      dueDate?: string | null
+      /** @enum {string} */
+      status?: "active" | "on_hold" | "completed" | "archived"
+    }
+    TaskDto_Output: {
+      id: string
+      projectId: string
+      title: string
+      notes: string | null
+      /** @enum {string} */
+      status: "todo" | "in_progress" | "done"
+      position: number
+      /** Format: date */
+      dueDate: string | null
+      assigneeMemberId: string | null
+      assigneeName: string | null
+      /** Format: date-time */
+      completedAt: string | null
+      /** Format: date-time */
+      createdAt: string
+    }
+    CreateTaskDto: {
+      title: string
+      notes?: string | null
+      /**
+       * @default todo
+       * @enum {string}
+       */
+      status: "todo" | "in_progress" | "done"
+      /** Format: date */
+      dueDate?: string | null
+      /** Format: uuid */
+      assigneeMemberId?: string | null
+    }
+    UpdateTaskDto: {
+      title?: string
+      notes?: string | null
+      /** @enum {string} */
+      status?: "todo" | "in_progress" | "done"
+      /** Format: date */
+      dueDate?: string | null
+      /** Format: uuid */
+      assigneeMemberId?: string | null
+      /** Format: uuid */
+      afterTaskId?: string | null
     }
     DashboardDto_Output: {
       /** Format: date */
@@ -3026,6 +3246,232 @@ export interface operations {
         }
         content: {
           "application/json": components["schemas"]["PaymentDto_Output"]
+        }
+      }
+    }
+  }
+  ProjectsController_list_v1: {
+    parameters: {
+      query?: {
+        cursor?: string
+        limit?: number
+        status?: "active" | "on_hold" | "completed" | "archived"
+        clientId?: string
+        q?: string
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["ProjectListDto_Output"]
+        }
+      }
+    }
+  }
+  ProjectsController_create_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateProjectDto"]
+      }
+    }
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["ProjectDto_Output"]
+        }
+      }
+    }
+  }
+  ProjectsController_get_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["ProjectDto_Output"]
+        }
+      }
+    }
+  }
+  ProjectsController_remove_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  ProjectsController_update_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateProjectDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["ProjectDto_Output"]
+        }
+      }
+    }
+  }
+  ProjectsController_fromQuote_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        quoteId: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["ProjectDto_Output"]
+        }
+      }
+    }
+  }
+  ProjectsController_tasks_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["TaskDto_Output"][]
+        }
+      }
+    }
+  }
+  ProjectsController_createTask_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateTaskDto"]
+      }
+    }
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["TaskDto_Output"]
+        }
+      }
+    }
+  }
+  ProjectsController_deleteTask_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+        taskId: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  ProjectsController_updateTask_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+        taskId: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateTaskDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["TaskDto_Output"]
         }
       }
     }
