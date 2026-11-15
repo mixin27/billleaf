@@ -2,7 +2,7 @@
 
 Work we've agreed to do later, with enough detail to pick up without re-research. The [roadmap](roadmap.md) lists phases; this page holds the next concrete items and their order.
 
-**In progress now:** Clockify-style time tracking. The tracker (timer bar, tags, entries without a project, continue/duplicate, bulk edit) is done; the weekly timesheet grid, reports with CSV export and Clockify CSV import are next.
+**Done:** Clockify-style time tracking: tracker (timer bar, tags, entries without a project, continue/duplicate, bulk edit), weekly timesheet grid, Summary/Detailed/Weekly reports with CSV export, and Clockify CSV import. Next: the client portal (below).
 
 **Suggested order afterwards:** Client portal → Production deploy readiness → Online invoice payments → small follow-ups as capacity allows. The billing provider adapter goes in whenever the company's jurisdiction is settled.
 
@@ -96,3 +96,4 @@ After core Clockify parity (tracker, timesheet grid, tags, reports, CSV export, 
 - Rounding rules for reports and invoicing (e.g. up to 15 minutes).
 - Timesheet approvals (submit week → approve/reject) and locked periods.
 - Imports from Toggl and Harvest CSVs, reusing the Clockify importer.
+- Import history with "undo this import" (entries already carry `import_batch_id`), and a background job for files beyond today's 10 MB / 50,000-row limit.

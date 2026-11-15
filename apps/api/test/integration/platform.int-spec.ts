@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs"
 import zlib from "node:zlib"
 
 import {
@@ -1883,5 +1884,322 @@ describe("Clockify-style tracker", () => {
     expect(
       (await owner.get("/v1/tags")).body.items.map((x: any) => x.name)
     ).toEqual(["Admin", "Deep work"])
+  })
+})
+
+describe("timesheet, reports and Clockify import", () => {
+  const upload = async (
+    c: Client,
+    csv: string,
+    query = ""
+  ): Promise<{ status: number; body: any }> => {
+    const boundary = "----billleaf-import"
+    const res = await t.app.inject({
+      method: "POST",
+      url: `/v1/time/import/clockify${query}`,
+      headers: {
+        ...c.headers(),
+        "content-type": `multipart/form-data; boundary=${boundary}`,
+      },
+      payload: Buffer.concat([
+        Buffer.from(
+          `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="clockify.csv"\r\nContent-Type: text/csv\r\n\r\n`
+        ),
+        Buffer.from(csv),
+        Buffer.from(`\r\n--${boundary}--\r\n`),
+      ]),
+    })
+    return { status: res.statusCode, body: JSON.parse(res.body) }
+  }
+
+  it("edits the weekly grid by cell, never below invoiced time", async () => {
+    const owner = new Client(t)
+    await owner.signUp("Grid Owner")
+    await owner.createWorkspace("Grid")
+    await owner.patch("/v1/workspace", { timezone: "UTC" })
+    const client = (await owner.post("/v1/clients", { name: "Grid Co" })).body
+    const project = (
+      await owner.post("/v1/projects", {
+        name: "Grid project",
+        clientId: client.id,
+        hourlyRate: 6_000,
+      })
+    ).body
+    const monday = "2026-11-09"
+    const cell = (date: string, seconds: number, projectId = project.id) =>
+      owner.put("/v1/time/timesheet/cell", {
+        date,
+        projectId,
+        taskId: null,
+        seconds,
+      })
+
+    let sheet = (await cell("2026-11-11", 5_400)).body
+    expect(sheet.weekStart).toBe(monday)
+    expect(sheet.rows).toHaveLength(1)
+    expect(sheet.rows[0].seconds).toEqual([0, 0, 5_400, 0, 0, 0, 0])
+    // Add more, then trim back below the first entry (newest goes first).
+    await cell("2026-11-11", 9_000)
+    sheet = (await cell("2026-11-11", 3_600)).body
+    expect(sheet.rows[0].seconds[2]).toBe(3_600)
+    const entries = (
+      await owner.get("/v1/time-entries?from=2026-11-11&to=2026-11-11")
+    ).body.items
+    expect(entries).toHaveLength(1)
+    expect(entries[0].durationSeconds).toBe(3_600)
+    // Any day of the week returns the same grid; no-project rows work too.
+    sheet = (await cell("2026-11-15", 1_800, null as never)).body
+    expect(sheet.rows.map((r: any) => r.projectName)).toEqual([
+      "Grid project",
+      null,
+    ])
+    expect(
+      (await owner.get("/v1/time/timesheet?week=2026-11-13")).body.weekStart
+    ).toBe(monday)
+
+    // Invoiced time can't be removed from the grid.
+    await owner.post("/v1/invoices/from-time", { projectId: project.id })
+    const locked = await cell("2026-11-11", 1_800)
+    expect(locked.status).toBe(409)
+    expect(locked.body.code).toBe("time_entry_invoiced")
+    sheet = (await cell("2026-11-11", 5_400)).body // adding is fine
+    expect(sheet.rows[0]).toMatchObject({
+      seconds: [0, 0, 5_400, 0, 0, 0, 0],
+      lockedSeconds: [0, 0, 3_600, 0, 0, 0, 0],
+    })
+    sheet = (await cell("2026-11-15", 0, null as never)).body
+    expect(sheet.rows).toHaveLength(1)
+  })
+
+  it("reports by project, tag and day with amounts and CSV, own time only without time.read", async () => {
+    const owner = new Client(t)
+    await owner.signUp("Report Owner")
+    const ws = await owner.createWorkspace("Reports")
+    await t.db
+      .update(workspaceSubscriptions)
+      .set({ planKey: "team" })
+      .where(eq(workspaceSubscriptions.workspaceId, ws.id))
+    await owner.patch("/v1/workspace", { timezone: "UTC" })
+    const client = (await owner.post("/v1/clients", { name: "Acme" })).body
+    const site = (
+      await owner.post("/v1/projects", {
+        name: "Site",
+        clientId: client.id,
+        hourlyRate: 10_000,
+      })
+    ).body
+    const design = (await owner.post("/v1/tags", { name: "Design" })).body
+    const meet = (await owner.post("/v1/tags", { name: "Meeting" })).body
+    const log = (body: Record<string, unknown>) =>
+      owner.post("/v1/time-entries", body)
+    await log({
+      projectId: site.id,
+      description: "=SUM(A1)",
+      startedAt: "2026-11-02T09:00:00.000Z",
+      endedAt: "2026-11-02T11:00:00.000Z",
+      tagIds: [design.id, meet.id],
+    })
+    await log({
+      projectId: site.id,
+      startedAt: "2026-11-03T09:00:00.000Z",
+      endedAt: "2026-11-03T09:30:00.000Z",
+      billable: false,
+    })
+    await log({
+      description: "Admin",
+      startedAt: "2026-11-03T13:00:00.000Z",
+      endedAt: "2026-11-03T14:00:00.000Z",
+    })
+
+    const range = "from=2026-11-02&to=2026-11-08"
+    const byProject = (
+      await owner.get(`/v1/time/reports/summary?${range}&groupBy=project`)
+    ).body
+    expect(byProject).toMatchObject({
+      totalSeconds: 3.5 * 3600,
+      billableSeconds: 3 * 3600,
+      amounts: [{ currency: "USD", amount: 20_000 }],
+    })
+    expect(byProject.days).toHaveLength(7)
+    expect(byProject.byDay[1]).toMatchObject({
+      date: "2026-11-03",
+      seconds: 1.5 * 3600,
+    })
+    expect(
+      byProject.groups.map((g: any) => [g.label, g.detail, g.seconds])
+    ).toEqual([
+      ["Site", "Acme", 2.5 * 3600],
+      ["No project", null, 3600],
+    ])
+    const byTag = (
+      await owner.get(`/v1/time/reports/summary?${range}&groupBy=tag`)
+    ).body.groups
+    expect(byTag.map((g: any) => [g.label, g.seconds])).toEqual([
+      ["Design", 7200],
+      ["Meeting", 7200],
+      ["No tag", 1.5 * 3600],
+    ])
+    // Filters: a tag, and entries without a project.
+    expect(
+      (await owner.get(`/v1/time/reports/summary?${range}&tagId=${meet.id}`))
+        .body.totalSeconds
+    ).toBe(7200)
+    expect(
+      (await owner.get(`/v1/time/reports/summary?${range}&withoutProject=true`))
+        .body.totalSeconds
+    ).toBe(3600)
+
+    const detailed = (
+      await owner.get(
+        `/v1/time/reports/detailed?${range}&pageSize=2&sort=duration:asc`
+      )
+    ).body
+    expect(detailed).toMatchObject({
+      total: 3,
+      totalSeconds: 3.5 * 3600,
+      page: 1,
+    })
+    expect(detailed.items.map((e: any) => e.durationSeconds)).toEqual([
+      1800, 3600,
+    ])
+    expect(
+      (await owner.get(`/v1/time/reports/detailed?${range}&sort=secret:asc`))
+        .status
+    ).toBe(422)
+
+    const csv = await t.app.inject({
+      method: "GET",
+      url: `/v1/time/reports/detailed.csv?${range}`,
+      headers: owner.headers(),
+    })
+    expect(csv.headers["content-type"]).toContain("text/csv")
+    const lines = csv.body.replace(/^\uFEFF/, "").split("\r\n")
+    expect(lines[0]).toMatch(/^Date,Start Time,End Date,End Time,/)
+    expect(lines).toHaveLength(4)
+    // Formula-looking text is neutralised; amounts use the hourly rate.
+    expect(lines.find((l) => l.includes("SUM"))).toContain(
+      '\'=SUM(A1),"Design, Meeting",Yes,100.00,200.00,USD'
+    )
+
+    // A member without time.read only ever sees their own time.
+    const member = new Client(t)
+    const { email } = await member.signUp("Report Member")
+    const role = (
+      await owner.post("/v1/roles", {
+        name: "Tracker only",
+        permissions: ["project.read", "time.track"],
+      })
+    ).body
+    const inv = (
+      await owner.post("/v1/invitations", { email, roleId: role.id })
+    ).body
+    await member.post("/api/auth/organization/accept-invitation", {
+      invitationId: inv.id,
+    })
+    member.workspaceId = ws.id
+    await member.post("/v1/time-entries", {
+      startedAt: "2026-11-04T09:00:00.000Z",
+      endedAt: "2026-11-04T10:00:00.000Z",
+    })
+    expect(
+      (await member.get(`/v1/time/reports/summary?${range}`)).body.totalSeconds
+    ).toBe(3600)
+    const ownerMemberId = detailed.items[0].memberId
+    expect(
+      (
+        await member.get(
+          `/v1/time/reports/summary?${range}&memberId=${ownerMemberId}`
+        )
+      ).status
+    ).toBe(403)
+    expect(
+      (
+        await owner.get(`/v1/time/reports/summary?${range}&groupBy=member`)
+      ).body.groups.map((g: any) => g.label)
+    ).toEqual(["Report Owner", "Report Member"])
+  })
+
+  it("previews, imports and re-imports a Clockify CSV without duplicates", async () => {
+    const owner = new Client(t)
+    const { email } = await owner.signUp("Importer")
+    await owner.createWorkspace("Import")
+    await owner.patch("/v1/workspace", { timezone: "Asia/Yangon" })
+    await owner.post("/v1/clients", { name: "northwind" }) // matched case-insensitively
+    const csv = readFileSync(
+      new URL("../fixtures/clockify-detailed.csv", import.meta.url),
+      "utf8"
+    ).replaceAll("IMPORTER_EMAIL", email.toUpperCase())
+
+    const preview = await upload(owner, csv, "?dryRun=true")
+    expect(preview.status).toBe(201)
+    expect(preview.body).toMatchObject({
+      dryRun: true,
+      batchId: null,
+      rows: 5,
+      imported: 4,
+      duplicates: 0,
+      invalid: [{ line: 6, message: 'Unreadable date "11/31/2026"' }],
+      totalSeconds: (2.5 + 0.75 + 0.5 + 2) * 3600,
+      dateFormat: "MDY",
+      newClients: [],
+      newProjects: [{ name: "Brand refresh", clientName: "Northwind" }],
+      newTasks: 1,
+      newTags: ["Deep work", "Design", "Meeting"],
+    })
+    expect(preview.body.members).toEqual([
+      { name: "Importer", email, matched: true, entries: 3 },
+      {
+        name: "Sam Stranger",
+        email: "sam@elsewhere.test",
+        matched: false,
+        entries: 1,
+      },
+    ])
+    // Nothing was written.
+    expect((await owner.get("/v1/tags")).body.items).toEqual([])
+
+    const done = await upload(owner, csv)
+    expect(done.body).toMatchObject({
+      dryRun: false,
+      imported: 4,
+      duplicates: 0,
+      batchId: expect.any(String),
+    })
+    const items = (
+      await owner.get("/v1/time-entries?from=2026-11-01&to=2026-11-30")
+    ).body.items
+    expect(items).toHaveLength(4)
+    const logo = items.find((e: any) => e.description === "Logo concepts")
+    expect(logo).toMatchObject({
+      projectName: "Brand refresh",
+      clientName: "northwind",
+      taskTitle: "Sketching",
+      entryDate: "2026-11-03",
+      // 09:00 in Yangon (UTC+6:30)
+      startedAt: "2026-11-03T02:30:00.000Z",
+      durationSeconds: 9_000,
+      billable: true,
+    })
+    expect(logo.tags.map((x: any) => x.name)).toEqual(["Deep work", "Design"])
+    // Unknown people's time is assigned to the importer; midnight-crossing works.
+    const late = items.find((e: any) => e.description === "Late fixes")
+    expect(late).toMatchObject({
+      memberName: "Importer",
+      durationSeconds: 7200,
+    })
+    expect(
+      items.find((e: any) => e.description === 'Admin, "inbox" and invoices')
+    ).toMatchObject({ projectId: null, billable: false })
+
+    const again = await upload(owner, csv)
+    expect(again.body).toMatchObject({ imported: 0, duplicates: 4 })
+    expect(
+      (await owner.get("/v1/time-entries?from=2026-11-01&to=2026-11-30")).body
+        .items
+    ).toHaveLength(4)
+
+    expect((await upload(owner, "Name,Amount\nA,1\n")).body.code).toBe(
+      "invalid_csv"
+    )
   })
 })

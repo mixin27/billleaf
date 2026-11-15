@@ -47,6 +47,7 @@ export function ProjectPopover({
   disabled,
   compact,
   className,
+  trigger,
 }: {
   value: ProjectTarget
   label: ProjectLabel
@@ -55,6 +56,8 @@ export function ProjectPopover({
   /** Icon-only trigger when no project is set. */
   compact?: boolean
   className?: string
+  /** Custom trigger content (e.g. "Add row"). */
+  trigger?: React.ReactNode
 }) {
   const [open, setOpen] = React.useState(false)
   const [step, setStep] = React.useState<{
@@ -93,9 +96,11 @@ export function ProjectPopover({
       <PopoverTrigger
         disabled={disabled}
         aria-label={
-          label.projectName
-            ? `Project: ${label.projectName}${label.taskTitle ? `, task: ${label.taskTitle}` : ""}`
-            : "Choose project"
+          trigger
+            ? undefined
+            : label.projectName
+              ? `Project: ${label.projectName}${label.taskTitle ? `, task: ${label.taskTitle}` : ""}`
+              : "Choose project"
         }
         className={cn(
           "inline-flex h-8 max-w-full min-w-8 items-center justify-center gap-1.5 rounded-md px-1.5 text-sm outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-60",
@@ -103,7 +108,9 @@ export function ProjectPopover({
           className
         )}
       >
-        {label.projectName ? (
+        {trigger ? (
+          trigger
+        ) : label.projectName ? (
           <span className="flex min-w-0 items-center gap-1.5">
             <span
               className="size-2 shrink-0 rounded-full bg-primary"

@@ -12,6 +12,9 @@ import {
   type CreateTimeEntryInput,
   type Invoice,
   type ProjectTimeSummary,
+  type SetTimesheetCellInput,
+  type Timesheet,
+  type TimesheetRow,
   secondsToHours,
   type StartTimerInput,
   type Tag,
@@ -25,7 +28,7 @@ import {
 
 import { RequestContext } from "../../common/context/request-context.js"
 import { AuditService } from "../../iam/audit/audit.service.js"
-import { todayIn } from "../documents/party-snapshot.js"
+import { addDays, todayIn } from "../documents/party-snapshot.js"
 import { InvoicesService } from "../invoices/invoices.service.js"
 import { ProjectsService } from "../projects/projects.service.js"
 import { WorkspaceProfileService } from "../workspace/workspace-profile.service.js"
@@ -398,6 +401,132 @@ export class TimeService {
     return { projectId, taskId }
   }
 
+  // ── Timesheet grid ───────────────────────────────────
+
+  /** The member's own week as (project, task) rows × Mon–Sun. */
+  async timesheet(anyDate: string): Promise<Timesheet> {
+    if (!this.can("time.track") && !this.can("time.manage"))
+      throw new ForbiddenException("You can't track time")
+    const start = mondayOf(anyDate)
+    const days = Array.from({ length: 7 }, (_, i) => addDays(start, i))
+    const entries = await this.repo.list({
+      from: days[0]!,
+      to: days[6]!,
+      memberId: this.ctx.memberId,
+    })
+    const rows = new Map<string, TimesheetRow>()
+    for (const e of entries) {
+      if (e.durationSeconds === null) continue // running
+      const key = `${e.projectId}|${e.taskId}`
+      const row = rows.get(key) ?? {
+        projectId: e.projectId,
+        projectName: e.projectName,
+        clientName: e.clientName,
+        taskId: e.taskId,
+        taskTitle: e.taskTitle,
+        seconds: [0, 0, 0, 0, 0, 0, 0],
+        lockedSeconds: [0, 0, 0, 0, 0, 0, 0],
+      }
+      const i = days.indexOf(e.entryDate)
+      row.seconds[i]! += e.durationSeconds
+      if (e.invoiceId) row.lockedSeconds[i]! += e.durationSeconds
+      rows.set(key, row)
+    }
+    return {
+      weekStart: start,
+      days,
+      rows: [...rows.values()].sort(
+        (a, b) =>
+          (a.projectName ?? "\uffff").localeCompare(
+            b.projectName ?? "\uffff"
+          ) || (a.taskTitle ?? "").localeCompare(b.taskTitle ?? "")
+      ),
+    }
+  }
+
+  /**
+   * Set one cell to a total. More time adds an entry for the difference;
+   * less trims or deletes the cell's uninvoiced entries, newest first.
+   */
+  async setTimesheetCell(input: SetTimesheetCellInput): Promise<Timesheet> {
+    this.assertCanWrite(this.ctx.memberId)
+    const projectId = input.projectId ?? null
+    const taskId = input.taskId ?? null
+    const memberName = (await this.repo.memberName(this.ctx.memberId)) ?? ""
+    const db = this.repo.database
+    let project: Awaited<ReturnType<TimeService["validateTarget"]>> = null
+    // Validate up front (outside the transaction) only when adding time.
+    const current0 = (
+      await this.repo.cellEntries(
+        db,
+        this.ctx.memberId,
+        input.date,
+        projectId,
+        taskId
+      )
+    ).reduce((s, e) => s + (e.durationSeconds ?? 0), 0)
+    if (input.seconds > current0)
+      project = await this.validateTarget(projectId, taskId)
+
+    await db.transaction(async (tx) => {
+      const entries = await this.repo.cellEntries(
+        tx,
+        this.ctx.memberId,
+        input.date,
+        projectId,
+        taskId
+      )
+      const current = entries.reduce((s, e) => s + (e.durationSeconds ?? 0), 0)
+      if (input.seconds === current) return
+      if (input.seconds > current) {
+        if (!project) project = await this.validateTarget(projectId, taskId)
+        const diff = input.seconds - current
+        // Duration-only time is anchored at noon UTC of its date.
+        const startedAt = new Date(`${input.date}T12:00:00Z`)
+        await this.repo.insert(tx, {
+          projectId,
+          taskId,
+          memberId: this.ctx.memberId,
+          memberName,
+          description: null,
+          entryDate: input.date,
+          startedAt,
+          endedAt: new Date(startedAt.getTime() + diff * 1000),
+          durationSeconds: diff,
+          billable: defaultBillable(project),
+        })
+        return
+      }
+      const locked = entries
+        .filter((e) => e.invoiceId)
+        .reduce((s, e) => s + (e.durationSeconds ?? 0), 0)
+      if (input.seconds < locked)
+        throw new ConflictException({
+          message: `${formatHm(locked)} of this is already invoiced, so it can't go below that`,
+          code: "time_entry_invoiced",
+        })
+      let need = current - input.seconds
+      const remove: string[] = []
+      for (const e of entries) {
+        if (need <= 0) break
+        if (e.invoiceId) continue
+        const d = e.durationSeconds ?? 0
+        if (d <= need) {
+          remove.push(e.id)
+          need -= d
+        } else {
+          await this.repo.update(tx, e.id, {
+            endedAt: new Date(e.endedAt!.getTime() - need * 1000),
+            durationSeconds: d - need,
+          })
+          need = 0
+        }
+      }
+      await this.repo.deleteIn(tx, remove)
+    })
+    return this.timesheet(input.date)
+  }
+
   async stop(): Promise<TimeEntry> {
     const running = await this.repo.findRunning(this.ctx.memberId)
     if (!running)
@@ -678,6 +807,15 @@ const tagExists = () =>
     message: "A tag with that name already exists",
     code: "tag_exists",
   })
+
+/** Monday of the week containing `iso`. */
+export function mondayOf(iso: string): string {
+  const day = (new Date(`${iso}T00:00:00Z`).getUTCDay() + 6) % 7
+  return addDays(iso, -day)
+}
+
+const formatHm = (seconds: number) =>
+  `${Math.floor(seconds / 3600)}:${String(Math.round((seconds % 3600) / 60)).padStart(2, "0")}`
 
 /** Time on a non-billable project isn't billable; everything else is. */
 const defaultBillable = (project: { billing: string } | null) =>
