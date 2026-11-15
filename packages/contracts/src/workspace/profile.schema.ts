@@ -68,3 +68,9 @@ export const updateWorkspaceProfileSchema = z
 export type UpdateWorkspaceProfileInput = z.input<
   typeof updateWorkspaceProfileSchema
 >
+
+/** Delete the workspace: type its URL name (slug) back to confirm. */
+export const deleteWorkspaceSchema = z.object({
+  confirmSlug: z.string().trim().min(1, "Type the workspace's URL name"),
+})
+export type DeleteWorkspaceInput = z.input<typeof deleteWorkspaceSchema>

@@ -43,7 +43,7 @@ const LIMITS: LimitKey[] = [
 ]
 
 /** "1 member", "5 active clients", "5 GB of file storage", "Unlimited …". */
-function limitText(key: LimitKey, max: number | null) {
+export function limitText(key: LimitKey, max: number | null) {
   if (max === null)
     return key === "storageMb"
       ? "Unlimited file storage"

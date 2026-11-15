@@ -113,6 +113,7 @@ jobs:
             NEXT_PUBLIC_APP_URL=${{ vars[format('{0}_WEB_URL', needs.prepare.outputs.prefix)] }}
             NEXT_PUBLIC_SENTRY_DSN=${{ vars[format('{0}_WEB_SENTRY_DSN', needs.prepare.outputs.prefix)] }}
             NEXT_PUBLIC_SENTRY_ENVIRONMENT=${{ needs.prepare.outputs.env }}
+            NEXT_PUBLIC_SUPPORT_EMAIL=${{ vars.SUPPORT_EMAIL }}
           cache-from: type=gha,scope=${{ matrix.app }}-${{ needs.prepare.outputs.env }}
           cache-to: type=gha,mode=max,scope=${{ matrix.app }}-${{ needs.prepare.outputs.env }}
 

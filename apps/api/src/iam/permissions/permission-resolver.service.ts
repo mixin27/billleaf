@@ -1,5 +1,11 @@
+import { createHash } from "node:crypto"
+
 import { Injectable } from "@nestjs/common"
-import { isPermission, type Permission } from "@workspace/contracts"
+import {
+  ALL_PERMISSION_KEYS,
+  isPermission,
+  type Permission,
+} from "@workspace/contracts"
 import { memberRoles, rolePermissions } from "@workspace/db"
 import { and, eq } from "drizzle-orm"
 import type { Redis } from "ioredis"
@@ -8,6 +14,16 @@ import { InjectRedis } from "../../core/cache/redis.module.js"
 import { InjectDb, type Database } from "../../core/database/database.module.js"
 
 const TTL_SECONDS = 300
+
+/**
+ * Fingerprint of the permission catalog. Part of the cache key, so a release
+ * that adds permissions (granted to Owner roles by the boot-time sync) never
+ * serves sets cached by the previous release.
+ */
+const CATALOG = createHash("sha1")
+  .update([...ALL_PERMISSION_KEYS].sort().join(","))
+  .digest("hex")
+  .slice(0, 8)
 
 /**
  * Resolves a member's effective permission set (union of all their roles).
@@ -29,7 +45,7 @@ export class PermissionResolver {
     const version = await this.safe(() =>
       this.redis.get(this.versionKey(workspaceId))
     )
-    const cacheKey = `rbac:${workspaceId}:${version ?? 0}:${memberId}`
+    const cacheKey = `rbac:${workspaceId}:${version ?? 0}:${CATALOG}:${memberId}`
 
     const cached = await this.safe(() => this.redis.smembers(cacheKey))
     if (cached && cached.length > 0) {

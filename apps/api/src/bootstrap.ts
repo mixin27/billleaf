@@ -36,6 +36,8 @@ export async function createApp() {
       "x-request-id",
       "authorization",
     ],
+    // Lets the web read download filenames (e.g. the data export ZIP).
+    exposedHeaders: ["content-disposition"],
     maxAge: 600,
   })
   await app.register(helmet, { contentSecurityPolicy: false })

@@ -1,3 +1,5 @@
+import Link from "next/link"
+
 export default function AuthLayout({
   children,
 }: {
@@ -5,7 +7,9 @@ export default function AuthLayout({
 }) {
   return (
     <div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-muted/30 p-6">
-      <p className="text-xl font-semibold tracking-tight">billleaf</p>
+      <Link href="/" className="text-xl font-semibold tracking-tight">
+        billleaf
+      </Link>
       {children}
     </div>
   )

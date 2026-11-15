@@ -15,6 +15,7 @@ export const PERMISSION_CATALOG = {
     read: "View workspace profile and settings",
     update: "Edit workspace profile, branding and preferences",
     delete: "Delete the workspace",
+    export: "Download all workspace data",
   },
   member: {
     read: "View workspace members",
@@ -128,9 +129,13 @@ export const SYSTEM_ROLES = {
   },
   admin: {
     name: "Admin",
-    description: "Manage everything except billing and workspace deletion.",
+    description:
+      "Manage everything except billing, data export and workspace deletion.",
     permissions: ALL_PERMISSION_KEYS.filter(
-      (k) => k !== "workspace.delete" && k !== "billing.manage"
+      (k) =>
+        k !== "workspace.delete" &&
+        k !== "workspace.export" &&
+        k !== "billing.manage"
     ),
     locked: false,
   },

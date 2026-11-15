@@ -150,3 +150,11 @@ export const rejectSubscriptionPaymentSchema = z.object({
 export type RejectSubscriptionPaymentInput = z.input<
   typeof rejectSubscriptionPaymentSchema
 >
+
+/** Public pricing page: which billing mode is live, and admin-set prices. */
+export const publicPricingSchema = z.object({
+  /** "manual" = the admin-set prices below apply; otherwise `PLANS` prices. */
+  provider: z.string(),
+  prices: z.array(platformPriceSchema),
+})
+export type PublicPricing = z.infer<typeof publicPricingSchema>

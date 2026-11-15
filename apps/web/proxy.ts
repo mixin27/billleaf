@@ -10,6 +10,10 @@ const PUBLIC_PATHS = [
   "/portal",
   // Health check for containers and the post-deploy smoke test.
   "/healthz",
+  // Public site.
+  "/pricing",
+  "/terms",
+  "/privacy",
 ]
 
 /**
@@ -18,7 +22,9 @@ const PUBLIC_PATHS = [
  */
 export function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl
-  const isPublic = PUBLIC_PATHS.some((p) => pathname.startsWith(p))
+  // "/" is the public home page; signed-in visitors are sent on from there.
+  const isPublic =
+    pathname === "/" || PUBLIC_PATHS.some((p) => pathname.startsWith(p))
   const hasSession = Boolean(
     getSessionCookie(request, { cookiePrefix: "billleaf" })
   )

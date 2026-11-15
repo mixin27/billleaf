@@ -14,6 +14,7 @@ import {
   billingOverviewSchema,
   billingRedirectSchema,
   checkoutInputSchema,
+  publicPricingSchema,
   testCheckoutCompleteSchema,
   testPortalActionSchema,
   testSessionSchema,
@@ -23,6 +24,7 @@ import { createZodDto, ZodResponse } from "nestjs-zod"
 
 import { RequirePermission } from "../common/decorators/require-permission.decorator.js"
 import { BillingService } from "./billing.service.js"
+import { PlatformBillingService } from "./manual/platform-billing.service.js"
 
 class BillingOverviewDto extends createZodDto(billingOverviewSchema) {}
 class BillingRedirectDto extends createZodDto(billingRedirectSchema) {}
@@ -30,11 +32,26 @@ class CheckoutDto extends createZodDto(checkoutInputSchema) {}
 class TestCheckoutDto extends createZodDto(testCheckoutCompleteSchema) {}
 class TestPortalDto extends createZodDto(testPortalActionSchema) {}
 class TestSessionDto extends createZodDto(testSessionSchema) {}
+class PublicPricingDto extends createZodDto(publicPricingSchema) {}
 
 @ApiTags("billing")
 @Controller({ path: "billing", version: "1" })
 export class BillingController {
-  constructor(private readonly billing: BillingService) {}
+  constructor(
+    private readonly billing: BillingService,
+    private readonly platform: PlatformBillingService
+  ) {}
+
+  /** Public pricing page (no session): billing mode and admin-set prices. */
+  @Get("pricing")
+  @AllowAnonymous()
+  @ZodResponse({ status: 200, type: PublicPricingDto })
+  async pricing() {
+    return {
+      provider: this.billing.providerKey,
+      prices: await this.platform.prices(true),
+    }
+  }
 
   @Get()
   @RequirePermission("billing.read")

@@ -1,8 +1,10 @@
 import {
   CreateBucketCommand,
   DeleteObjectCommand,
+  DeleteObjectsCommand,
   GetObjectCommand,
   HeadBucketCommand,
+  ListObjectsV2Command,
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3"
@@ -73,6 +75,36 @@ export class StorageService implements OnModuleInit {
     await this.client.send(
       new DeleteObjectCommand({ Bucket: this.bucket, Key: key })
     )
+  }
+
+  /** Delete every object under `prefix` (in pages of 1,000). Returns the count. */
+  async deletePrefix(prefix: string): Promise<number> {
+    if (!prefix.endsWith("/")) throw new Error("Prefix must end with /")
+    let deleted = 0
+    let token: string | undefined
+    do {
+      const page = await this.client.send(
+        new ListObjectsV2Command({
+          Bucket: this.bucket,
+          Prefix: prefix,
+          ContinuationToken: token,
+        })
+      )
+      const keys = (page.Contents ?? []).flatMap((o) =>
+        o.Key ? [{ Key: o.Key }] : []
+      )
+      if (keys.length) {
+        await this.client.send(
+          new DeleteObjectsCommand({
+            Bucket: this.bucket,
+            Delete: { Objects: keys, Quiet: true },
+          })
+        )
+        deleted += keys.length
+      }
+      token = page.IsTruncated ? page.NextContinuationToken : undefined
+    } while (token)
+    return deleted
   }
 
   presignGet(key: string, expiresInSeconds = 900): Promise<string> {

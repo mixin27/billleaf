@@ -98,6 +98,17 @@ export function SignUpForm() {
         <Button type="submit" disabled={form.formState.isSubmitting}>
           {form.formState.isSubmitting ? "Creating account…" : "Create account"}
         </Button>
+        <p className="text-center text-xs text-muted-foreground">
+          By creating an account, you agree to the{" "}
+          <Link href="/terms" className="underline" target="_blank">
+            Terms of Service
+          </Link>{" "}
+          and{" "}
+          <Link href="/privacy" className="underline" target="_blank">
+            Privacy Policy
+          </Link>
+          .
+        </p>
       </form>
     </AuthCard>
   )
