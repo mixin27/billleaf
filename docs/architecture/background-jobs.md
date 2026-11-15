@@ -23,7 +23,7 @@
 | `pdf`               | render quote/invoice/receipt PDFs → R2                                                                    |
 | `billing`           | process provider webhooks, sync subscriptions                                                             |
 | `maintenance`       | workspace hard-delete, exports, cleanup of expired invitations/sessions                                   |
-| `recurring`         | generate recurring invoices (Phase 2)                                                                     |
+| `recurring`         | hourly job scheduler sweep: generate due recurring invoices per workspace (idempotent)                    |
 | `outbound-webhooks` | customer integrations (Phase 3)                                                                           |
 
 ## Job rules

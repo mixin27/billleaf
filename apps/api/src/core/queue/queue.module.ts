@@ -6,6 +6,7 @@ import { ENV, type Env } from "../config/env.js"
 
 export const QUEUES = {
   email: "email",
+  recurring: "recurring",
 } as const
 
 /**
@@ -28,7 +29,10 @@ export const QUEUES = {
         },
       }),
     }),
-    BullModule.registerQueue({ name: QUEUES.email }),
+    BullModule.registerQueue(
+      { name: QUEUES.email },
+      { name: QUEUES.recurring }
+    ),
   ],
   exports: [BullModule],
 })

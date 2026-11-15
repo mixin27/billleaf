@@ -83,14 +83,23 @@ export function InvoicesList() {
             className="w-64"
           />
         </div>
-        <Can permission="invoice.create">
+        <div className="flex gap-2">
           <Button
+            variant="outline"
             nativeButton={false}
-            render={<Link href={`/${slug}/invoices/new`} />}
+            render={<Link href={`/${slug}/invoices/recurring`} />}
           >
-            New invoice
+            Recurring
           </Button>
-        </Can>
+          <Can permission="invoice.create">
+            <Button
+              nativeButton={false}
+              render={<Link href={`/${slug}/invoices/new`} />}
+            >
+              New invoice
+            </Button>
+          </Can>
+        </div>
       </div>
 
       {invoices.isPending ? (

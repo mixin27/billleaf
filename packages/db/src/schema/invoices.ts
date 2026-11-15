@@ -16,6 +16,7 @@ import { id, timestamps } from "./_shared.js"
 import { organization } from "./auth.js"
 import { clients } from "./clients.js"
 import { quotes } from "./quotes.js"
+import { recurringInvoices } from "./recurring.js"
 
 type PartySnapshot = {
   name: string
@@ -38,6 +39,11 @@ export const invoices = pgTable(
       .references(() => clients.id, { onDelete: "restrict" }),
     /** Source quote, when converted. One invoice per quote. */
     quoteId: uuid().references(() => quotes.id, { onDelete: "restrict" }),
+    /** Schedule that generated this invoice, and the period it covers. */
+    recurringId: uuid().references(() => recurringInvoices.id, {
+      onDelete: "set null",
+    }),
+    recurringPeriod: date({ mode: "string" }),
     /** Assigned on issue (gap-free per workspace); null while draft. */
     number: text(),
     status: text({ enum: ["draft", "issued", "void"] })
@@ -66,6 +72,8 @@ export const invoices = pgTable(
   (t) => [
     unique().on(t.workspaceId, t.number),
     unique().on(t.quoteId),
+    // Idempotency: one invoice per schedule period, however often the job retries.
+    unique().on(t.recurringId, t.recurringPeriod),
     index().on(t.workspaceId, t.id),
     index().on(t.workspaceId, t.status, t.dueDate),
     index().on(t.clientId),
