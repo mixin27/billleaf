@@ -6,13 +6,20 @@ import {
   NotFoundException,
 } from "@nestjs/common"
 import {
+  type BulkResult,
+  type BulkUpdateTimeEntriesInput,
+  type CreateTagInput,
   type CreateTimeEntryInput,
   type Invoice,
   type ProjectTimeSummary,
   secondsToHours,
   type StartTimerInput,
+  type Tag,
   type TimeEntry,
   type TimeEntryList,
+  type TimeSuggestion,
+  type UpdateRunningInput,
+  type UpdateTagInput,
   type UpdateTimeEntryInput,
 } from "@workspace/contracts"
 
@@ -22,7 +29,11 @@ import { todayIn } from "../documents/party-snapshot.js"
 import { InvoicesService } from "../invoices/invoices.service.js"
 import { ProjectsService } from "../projects/projects.service.js"
 import { WorkspaceProfileService } from "../workspace/workspace-profile.service.js"
-import { TimeRepository, type TimeEntryWithRefs } from "./time.repository.js"
+import {
+  type TagRow,
+  TimeRepository,
+  type TimeEntryWithRefs,
+} from "./time.repository.js"
 
 const isUniqueViolation = (e: unknown) =>
   (e as { cause?: { code?: string } }).cause?.code === "23505" ||
@@ -65,6 +76,7 @@ export class TimeService {
     endedAt: e.endedAt?.toISOString() ?? null,
     durationSeconds: e.durationSeconds,
     billable: e.billable,
+    tags: e.tags.map(toTag),
     invoiceId: e.invoiceId,
     invoiceNumber: e.invoiceNumber,
     isRunning: e.endedAt === null,
@@ -88,6 +100,7 @@ export class TimeService {
     from: string
     to: string
     projectId?: string
+    tagId?: string
     memberId?: string
     billable?: "true" | "false"
     uninvoiced?: "true"
@@ -104,6 +117,7 @@ export class TimeService {
       from: q.from,
       to: q.to,
       projectId: q.projectId,
+      tagId: q.tagId,
       memberId,
       billable: q.billable === undefined ? undefined : q.billable === "true",
       uninvoiced: q.uninvoiced === "true",
@@ -127,9 +141,10 @@ export class TimeService {
   async start(input: StartTimerInput): Promise<TimeEntry> {
     this.assertCanWrite(this.ctx.memberId)
     const project = await this.validateTarget(
-      input.projectId,
+      input.projectId ?? null,
       input.taskId ?? null
     )
+    const tagIds = await this.validateTags(input.tagIds)
     const now = new Date()
     const entryDate = await this.localDate(now)
     const memberName = (await this.repo.memberName(this.ctx.memberId)) ?? ""
@@ -137,8 +152,8 @@ export class TimeService {
       const id = await this.repo.database.transaction(async (tx) => {
         const running = await this.repo.findRunning(this.ctx.memberId, tx)
         if (running) await this.stopEntry(tx, running, now)
-        return this.repo.insert(tx, {
-          projectId: input.projectId,
+        const id = await this.repo.insert(tx, {
+          projectId: input.projectId ?? null,
           taskId: input.taskId ?? null,
           memberId: this.ctx.memberId,
           memberName,
@@ -147,8 +162,10 @@ export class TimeService {
           startedAt: now,
           endedAt: null,
           durationSeconds: null,
-          billable: project.billing !== "non_billable",
+          billable: input.billable ?? defaultBillable(project),
         })
+        await this.repo.setTags(tx, [id], tagIds)
+        return id
       })
       return this.toDto((await this.repo.findById(id))!)
     } catch (e) {
@@ -159,6 +176,226 @@ export class TimeService {
         })
       throw e
     }
+  }
+
+  /** Edit the running timer (description, project, tags, billable, start). */
+  async updateRunning(input: UpdateRunningInput): Promise<TimeEntry> {
+    const running = await this.repo.findRunning(this.ctx.memberId)
+    if (!running)
+      throw new ConflictException({
+        message: "No timer is running",
+        code: "no_timer",
+      })
+    this.assertCanWrite(running.memberId)
+    const { projectId, taskId } = this.nextTarget(running, input)
+    await this.validateTarget(projectId, taskId)
+    const tagIds =
+      input.tagIds === undefined
+        ? undefined
+        : await this.validateTags(input.tagIds)
+    const values: Record<string, unknown> = { projectId, taskId }
+    if (input.description !== undefined) values.description = input.description
+    if (input.billable !== undefined) values.billable = input.billable
+    if (input.startedAt) {
+      const startedAt = new Date(input.startedAt)
+      const now = Date.now()
+      if (startedAt.getTime() > now)
+        throw new BadRequestException("The start can't be in the future")
+      if (now - startedAt.getTime() > 24 * 3600_000)
+        throw new BadRequestException("Timers can't run longer than 24 hours")
+      values.startedAt = startedAt
+      values.entryDate = await this.localDate(startedAt)
+    }
+    await this.repo.database.transaction(async (tx) => {
+      await this.repo.update(tx, running.id, values)
+      if (tagIds) await this.repo.setTags(tx, [running.id], tagIds)
+    })
+    return this.toDto((await this.repo.findById(running.id))!)
+  }
+
+  /** Start a new timer with the same description, project, task, tags and billable. */
+  async continue(id: string): Promise<TimeEntry> {
+    const e = await this.require(id)
+    return this.start({
+      projectId: e.projectId,
+      taskId: e.taskId,
+      description: e.description ?? undefined,
+      billable: e.billable,
+      tagIds: e.tags.map((t) => t.id),
+    })
+  }
+
+  /** Copy a finished entry (same owner and times, never invoiced). */
+  async duplicate(id: string): Promise<TimeEntry> {
+    const e = await this.require(id)
+    this.assertCanWrite(e.memberId)
+    if (e.endedAt === null)
+      throw new BadRequestException("Stop the timer before duplicating it")
+    const newId = await this.repo.database.transaction(async (tx) => {
+      const newId = await this.repo.insert(tx, {
+        projectId: e.projectId,
+        taskId: e.taskId,
+        memberId: e.memberId,
+        memberName: e.memberName,
+        description: e.description,
+        entryDate: e.entryDate,
+        startedAt: e.startedAt,
+        endedAt: e.endedAt,
+        durationSeconds: e.durationSeconds,
+        billable: e.billable,
+      })
+      await this.repo.setTags(
+        tx,
+        [newId],
+        e.tags.map((t) => t.id)
+      )
+      return newId
+    })
+    return this.toDto((await this.repo.findById(newId))!)
+  }
+
+  /** Entries of `ids` this member may change; the rest count as skipped. */
+  private async writable(ids: string[]) {
+    const unique = [...new Set(ids)]
+    const found = await this.repo.findMany(unique)
+    const ok = found.filter((e) => {
+      if (e.invoiceId) return false
+      if (e.memberId !== this.ctx.memberId && !this.can("time.read"))
+        return false
+      try {
+        this.assertCanWrite(e.memberId)
+        return true
+      } catch {
+        return false
+      }
+    })
+    return { ok, skipped: unique.length - ok.length }
+  }
+
+  async bulkUpdate(input: BulkUpdateTimeEntriesInput): Promise<BulkResult> {
+    if (input.projectId !== undefined || input.taskId !== undefined)
+      await this.validateTarget(input.projectId ?? null, input.taskId ?? null)
+    const tagIds =
+      input.tagIds === undefined
+        ? undefined
+        : await this.validateTags(input.tagIds)
+    const { ok, skipped } = await this.writable(input.ids)
+    const values: Record<string, unknown> = {}
+    if (input.projectId !== undefined) {
+      values.projectId = input.projectId
+      values.taskId = input.taskId ?? null
+    }
+    if (input.billable !== undefined) values.billable = input.billable
+    const ids = ok.map((e) => e.id)
+    await this.repo.database.transaction(async (tx) => {
+      await this.repo.updateMany(tx, ids, values)
+      if (tagIds) await this.repo.setTags(tx, ids, tagIds, input.tagMode)
+    })
+    return { updated: ids.length, skipped }
+  }
+
+  async bulkDelete(ids: string[]): Promise<BulkResult> {
+    const { ok, skipped } = await this.writable(ids)
+    await this.repo.deleteMany(ok.map((e) => e.id))
+    return { updated: ok.length, skipped }
+  }
+
+  /** Recent distinct description/project/task combos of the member's own time. */
+  async suggestions(q?: string): Promise<TimeSuggestion[]> {
+    const rows = await this.repo.recentWithDescription(
+      this.ctx.memberId,
+      q?.trim() || undefined
+    )
+    const seen = new Set<string>()
+    const out: TimeSuggestion[] = []
+    for (const e of rows) {
+      const key = `${e.description!.toLowerCase()}|${e.projectId}|${e.taskId}`
+      if (seen.has(key)) continue
+      seen.add(key)
+      out.push({
+        description: e.description!,
+        projectId: e.projectId,
+        projectName: e.projectName,
+        clientName: e.clientName,
+        taskId: e.taskId,
+        taskTitle: e.taskTitle,
+        billable: e.billable,
+        tags: e.tags.map(toTag),
+      })
+      if (out.length === 8) break
+    }
+    return out
+  }
+
+  // ── Tags ─────────────────────────────────────────────
+  // Anyone who tracks time can see and create tags; renaming or deleting a
+  // workspace-wide tag needs time.manage.
+
+  async listTags(): Promise<Tag[]> {
+    return (await this.repo.listTags()).map(toTag)
+  }
+
+  async createTag(input: CreateTagInput): Promise<Tag> {
+    if (!this.can("time.track") && !this.can("time.manage"))
+      throw new ForbiddenException("You can't create tags")
+    try {
+      return toTag(
+        await this.repo.insertTag({
+          name: input.name.trim(),
+          color: input.color ?? null,
+        })
+      )
+    } catch (e) {
+      if (isUniqueViolation(e)) throw tagExists()
+      throw e
+    }
+  }
+
+  async updateTag(id: string, input: UpdateTagInput): Promise<Tag> {
+    if (!this.can("time.manage"))
+      throw new ForbiddenException("Changing tags needs time.manage")
+    try {
+      const row = await this.repo.updateTag(id, {
+        ...(input.name !== undefined ? { name: input.name.trim() } : {}),
+        ...(input.color !== undefined ? { color: input.color ?? null } : {}),
+      })
+      if (!row) throw new NotFoundException("Tag not found")
+      return toTag(row)
+    } catch (e) {
+      if (isUniqueViolation(e)) throw tagExists()
+      throw e
+    }
+  }
+
+  async deleteTag(id: string) {
+    if (!this.can("time.manage"))
+      throw new ForbiddenException("Deleting tags needs time.manage")
+    if (!(await this.repo.findTag(id)))
+      throw new NotFoundException("Tag not found")
+    await this.repo.deleteTag(id)
+  }
+
+  private async validateTags(ids: string[] | undefined): Promise<string[]> {
+    const unique = [...new Set(ids ?? [])]
+    if ((await this.repo.countTags(unique)) !== unique.length)
+      throw new BadRequestException("Unknown tag")
+    return unique
+  }
+
+  /** Project/task after an edit: changing the project clears the task. */
+  private nextTarget(
+    entry: { projectId: string | null; taskId: string | null },
+    input: { projectId?: string | null; taskId?: string | null }
+  ) {
+    const projectId =
+      input.projectId === undefined ? entry.projectId : input.projectId
+    const taskId =
+      input.taskId === undefined
+        ? input.projectId === undefined
+          ? entry.taskId
+          : null
+        : input.taskId
+    return { projectId, taskId }
   }
 
   async stop(): Promise<TimeEntry> {
@@ -194,23 +431,28 @@ export class TimeService {
       )
     }
     const project = await this.validateTarget(
-      input.projectId,
+      input.projectId ?? null,
       input.taskId ?? null
     )
+    const tagIds = await this.validateTags(input.tagIds)
     const { startedAt, endedAt, entryDate } = await this.resolveSpan(input)
-    const id = await this.repo.insert(this.repo.database, {
-      projectId: input.projectId,
-      taskId: input.taskId ?? null,
-      memberId,
-      memberName,
-      description: input.description ?? null,
-      entryDate,
-      startedAt,
-      endedAt,
-      durationSeconds: Math.round(
-        (endedAt.getTime() - startedAt.getTime()) / 1000
-      ),
-      billable: input.billable ?? project.billing !== "non_billable",
+    const id = await this.repo.database.transaction(async (tx) => {
+      const id = await this.repo.insert(tx, {
+        projectId: input.projectId ?? null,
+        taskId: input.taskId ?? null,
+        memberId,
+        memberName,
+        description: input.description ?? null,
+        entryDate,
+        startedAt,
+        endedAt,
+        durationSeconds: Math.round(
+          (endedAt.getTime() - startedAt.getTime()) / 1000
+        ),
+        billable: input.billable ?? defaultBillable(project),
+      })
+      await this.repo.setTags(tx, [id], tagIds)
+      return id
     })
     return this.toDto((await this.repo.findById(id))!)
   }
@@ -224,14 +466,12 @@ export class TimeService {
         code: "time_entry_invoiced",
       })
     }
-    const projectId = input.projectId ?? entry.projectId
-    const taskId =
-      input.taskId === undefined
-        ? input.projectId
-          ? null
-          : entry.taskId
-        : input.taskId
+    const { projectId, taskId } = this.nextTarget(entry, input)
     await this.validateTarget(projectId, taskId)
+    const tagIds =
+      input.tagIds === undefined
+        ? undefined
+        : await this.validateTags(input.tagIds)
     const values: Record<string, unknown> = {
       projectId,
       taskId,
@@ -273,7 +513,10 @@ export class TimeService {
         ),
       })
     }
-    await this.repo.update(this.repo.database, id, values)
+    await this.repo.database.transaction(async (tx) => {
+      await this.repo.update(tx, id, values)
+      if (tagIds) await this.repo.setTags(tx, [id], tagIds)
+    })
     return this.toDto((await this.repo.findById(id))!)
   }
 
@@ -397,7 +640,15 @@ export class TimeService {
     )
   }
 
-  private async validateTarget(projectId: string, taskId: string | null) {
+  /** Check the project (if any) is open and the task belongs to it. */
+  private async validateTarget(
+    projectId: string | null,
+    taskId: string | null
+  ) {
+    if (!projectId) {
+      if (taskId) throw new BadRequestException("Pick a project for the task")
+      return null
+    }
     const project = await this.projects.get(projectId)
     if (project.status === "archived")
       throw new BadRequestException("Restore the project to track time on it")
@@ -415,6 +666,22 @@ export class TimeService {
     return entry
   }
 }
+
+const toTag = (t: TagRow): Tag => ({
+  id: t.id,
+  name: t.name,
+  color: (t.color as Tag["color"]) ?? null,
+})
+
+const tagExists = () =>
+  new ConflictException({
+    message: "A tag with that name already exists",
+    code: "tag_exists",
+  })
+
+/** Time on a non-billable project isn't billable; everything else is. */
+const defaultBillable = (project: { billing: string } | null) =>
+  project ? project.billing !== "non_billable" : true
 
 /** Amount for unbilled seconds at an hourly rate (matches invoice line math). */
 export function unbilledAmountFor(seconds: number, hourlyRate: number) {

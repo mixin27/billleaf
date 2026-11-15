@@ -1121,7 +1121,7 @@ export interface paths {
     delete?: never
     options?: never
     head?: never
-    patch?: never
+    patch: operations["TimeController_updateRunning_v1"]
     trace?: never
   }
   "/v1/time-entries/start": {
@@ -1134,6 +1134,86 @@ export interface paths {
     get?: never
     put?: never
     post: operations["TimeController_start_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/time-entries/suggestions": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["TimeController_suggestions_v1"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/time-entries/bulk": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch: operations["TimeController_bulkUpdate_v1"]
+    trace?: never
+  }
+  "/v1/time-entries/bulk-delete": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["TimeController_bulkDelete_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/time-entries/{id}/continue": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["TimeController_continue_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/time-entries/{id}/duplicate": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["TimeController_duplicate_v1"]
     delete?: never
     options?: never
     head?: never
@@ -1170,6 +1250,38 @@ export interface paths {
     options?: never
     head?: never
     patch: operations["TimeController_update_v1"]
+    trace?: never
+  }
+  "/v1/tags": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["TimeController_tags_v1"]
+    put?: never
+    post: operations["TimeController_createTag_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/tags/{id}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    delete: operations["TimeController_deleteTag_v1"]
+    options?: never
+    head?: never
+    patch: operations["TimeController_updateTag_v1"]
     trace?: never
   }
   "/v1/projects/{id}/time-summary": {
@@ -2618,8 +2730,8 @@ export interface components {
     TimeEntryListDto_Output: {
       items: {
         id: string
-        projectId: string
-        projectName: string
+        projectId: string | null
+        projectName: string | null
         clientName: string | null
         taskId: string | null
         taskTitle: string | null
@@ -2634,6 +2746,22 @@ export interface components {
         endedAt: string | null
         durationSeconds: number | null
         billable: boolean
+        tags: {
+          id: string
+          name: string
+          /** @enum {string|null} */
+          color:
+            | "gray"
+            | "green"
+            | "teal"
+            | "blue"
+            | "violet"
+            | "pink"
+            | "red"
+            | "orange"
+            | "amber"
+            | null
+        }[]
         invoiceId: string | null
         invoiceNumber: string | null
         isRunning: boolean
@@ -2645,8 +2773,8 @@ export interface components {
     RunningDto_Output: {
       entry: {
         id: string
-        projectId: string
-        projectName: string
+        projectId: string | null
+        projectName: string | null
         clientName: string | null
         taskId: string | null
         taskTitle: string | null
@@ -2661,6 +2789,22 @@ export interface components {
         endedAt: string | null
         durationSeconds: number | null
         billable: boolean
+        tags: {
+          id: string
+          name: string
+          /** @enum {string|null} */
+          color:
+            | "gray"
+            | "green"
+            | "teal"
+            | "blue"
+            | "violet"
+            | "pink"
+            | "red"
+            | "orange"
+            | "amber"
+            | null
+        }[]
         invoiceId: string | null
         invoiceNumber: string | null
         isRunning: boolean
@@ -2669,15 +2813,17 @@ export interface components {
     }
     StartDto: {
       /** Format: uuid */
-      projectId: string
+      projectId?: string | null
       /** Format: uuid */
       taskId?: string | null
       description?: string | null
+      billable?: boolean
+      tagIds?: string[]
     }
     TimeEntryDto_Output: {
       id: string
-      projectId: string
-      projectName: string
+      projectId: string | null
+      projectName: string | null
       clientName: string | null
       taskId: string | null
       taskTitle: string | null
@@ -2692,17 +2838,90 @@ export interface components {
       endedAt: string | null
       durationSeconds: number | null
       billable: boolean
+      tags: {
+        id: string
+        name: string
+        /** @enum {string|null} */
+        color:
+          | "gray"
+          | "green"
+          | "teal"
+          | "blue"
+          | "violet"
+          | "pink"
+          | "red"
+          | "orange"
+          | "amber"
+          | null
+      }[]
       invoiceId: string | null
       invoiceNumber: string | null
       isRunning: boolean
       isMine: boolean
     }
-    CreateDto: {
+    UpdateRunningDto: {
       /** Format: uuid */
-      projectId: string
+      projectId?: string | null
       /** Format: uuid */
       taskId?: string | null
       description?: string | null
+      billable?: boolean
+      tagIds?: string[]
+      /** Format: date-time */
+      startedAt?: string
+    }
+    SuggestionListDto_Output: {
+      items: {
+        description: string
+        projectId: string | null
+        projectName: string | null
+        clientName: string | null
+        taskId: string | null
+        taskTitle: string | null
+        billable: boolean
+        tags: {
+          id: string
+          name: string
+          /** @enum {string|null} */
+          color:
+            | "gray"
+            | "green"
+            | "teal"
+            | "blue"
+            | "violet"
+            | "pink"
+            | "red"
+            | "orange"
+            | "amber"
+            | null
+        }[]
+      }[]
+    }
+    BulkUpdateDto: {
+      ids: string[]
+      /** Format: uuid */
+      projectId?: string | null
+      /** Format: uuid */
+      taskId?: string | null
+      billable?: boolean
+      tagIds?: string[]
+      /** @enum {string} */
+      tagMode?: "replace" | "add"
+    }
+    BulkResultDto_Output: {
+      updated: number
+      skipped: number
+    }
+    BulkDeleteDto: {
+      ids: string[]
+    }
+    CreateDto: {
+      /** Format: uuid */
+      projectId?: string | null
+      /** Format: uuid */
+      taskId?: string | null
+      description?: string | null
+      tagIds?: string[]
       /** Format: date-time */
       startedAt?: string
       /** Format: date-time */
@@ -2716,10 +2935,11 @@ export interface components {
     }
     UpdateDto: {
       /** Format: uuid */
-      projectId?: string
+      projectId?: string | null
       /** Format: uuid */
       taskId?: string | null
       description?: string | null
+      tagIds?: string[]
       /** Format: date-time */
       startedAt?: string
       /** Format: date-time */
@@ -2728,6 +2948,70 @@ export interface components {
       entryDate?: string
       durationMinutes?: number
       billable?: boolean
+    }
+    TagListDto_Output: {
+      items: {
+        id: string
+        name: string
+        /** @enum {string|null} */
+        color:
+          | "gray"
+          | "green"
+          | "teal"
+          | "blue"
+          | "violet"
+          | "pink"
+          | "red"
+          | "orange"
+          | "amber"
+          | null
+      }[]
+    }
+    CreateTagDto: {
+      name: string
+      /** @enum {string|null} */
+      color?:
+        | "gray"
+        | "green"
+        | "teal"
+        | "blue"
+        | "violet"
+        | "pink"
+        | "red"
+        | "orange"
+        | "amber"
+        | null
+    }
+    TagDto_Output: {
+      id: string
+      name: string
+      /** @enum {string|null} */
+      color:
+        | "gray"
+        | "green"
+        | "teal"
+        | "blue"
+        | "violet"
+        | "pink"
+        | "red"
+        | "orange"
+        | "amber"
+        | null
+    }
+    UpdateTagDto: {
+      name?: string
+      /** @enum {string|null} */
+      color?:
+        | "gray"
+        | "green"
+        | "teal"
+        | "blue"
+        | "violet"
+        | "pink"
+        | "red"
+        | "orange"
+        | "amber"
+        | null
     }
     SummaryDto_Output: {
       totalSeconds: number
@@ -5118,6 +5402,7 @@ export interface operations {
         from: string
         to: string
         projectId?: string
+        tagId?: string
         memberId?: "me" | string
         billable?: "true" | "false"
         uninvoiced?: "true"
@@ -5180,6 +5465,29 @@ export interface operations {
       }
     }
   }
+  TimeController_updateRunning_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateRunningDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["TimeEntryDto_Output"]
+        }
+      }
+    }
+  }
   TimeController_start_v1: {
     parameters: {
       query?: never
@@ -5192,6 +5500,115 @@ export interface operations {
         "application/json": components["schemas"]["StartDto"]
       }
     }
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["TimeEntryDto_Output"]
+        }
+      }
+    }
+  }
+  TimeController_suggestions_v1: {
+    parameters: {
+      query?: {
+        q?: string
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["SuggestionListDto_Output"]
+        }
+      }
+    }
+  }
+  TimeController_bulkUpdate_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["BulkUpdateDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["BulkResultDto_Output"]
+        }
+      }
+    }
+  }
+  TimeController_bulkDelete_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["BulkDeleteDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["BulkResultDto_Output"]
+        }
+      }
+    }
+  }
+  TimeController_continue_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["TimeEntryDto_Output"]
+        }
+      }
+    }
+  }
+  TimeController_duplicate_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
     responses: {
       201: {
         headers: {
@@ -5262,6 +5679,92 @@ export interface operations {
         }
         content: {
           "application/json": components["schemas"]["TimeEntryDto_Output"]
+        }
+      }
+    }
+  }
+  TimeController_tags_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["TagListDto_Output"]
+        }
+      }
+    }
+  }
+  TimeController_createTag_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateTagDto"]
+      }
+    }
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["TagDto_Output"]
+        }
+      }
+    }
+  }
+  TimeController_deleteTag_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  TimeController_updateTag_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateTagDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["TagDto_Output"]
         }
       }
     }

@@ -1,6 +1,6 @@
 "use client"
 
-import { formatDuration } from "@workspace/contracts"
+import { formatDuration, type Tag } from "@workspace/contracts"
 import { Button } from "@workspace/ui/components/button"
 import {
   Dialog,
@@ -30,9 +30,15 @@ import { errorMessage } from "@/lib/api"
 
 import { useStartTimer, useStopTimer } from "../api/mutations"
 import { useRunningTimer } from "../api/queries"
-import { ProjectTaskPicker } from "./project-task-picker"
+import {
+  ProjectPopover,
+  type ProjectLabel,
+  type ProjectTarget,
+} from "./project-popover"
+import { TagPicker } from "./tag-picker"
 
-function useElapsed(startedAt: string | undefined) {
+/** Seconds since `startedAt`, ticking every second. */
+export function useElapsed(startedAt: string | undefined) {
   const [now, setNow] = React.useState(() => Date.now())
   React.useEffect(() => {
     if (!startedAt) return
@@ -160,14 +166,22 @@ function StartTimerDialog({
   onOpenChange: (o: boolean) => void
 }) {
   const start = useStartTimer()
-  const [target, setTarget] = React.useState<{
-    projectId: string | null
-    taskId: string | null
-  }>({ projectId: null, taskId: null })
+  const [target, setTarget] = React.useState<ProjectTarget>({
+    projectId: null,
+    taskId: null,
+  })
+  const [label, setLabel] = React.useState<ProjectLabel>({
+    projectName: null,
+    clientName: null,
+    taskTitle: null,
+  })
+  const [tags, setTags] = React.useState<Tag[]>([])
   const [description, setDescription] = React.useState("")
   React.useEffect(() => {
     if (open) {
       setTarget({ projectId: null, taskId: null })
+      setLabel({ projectName: null, clientName: null, taskTitle: null })
+      setTags([])
       setDescription("")
     }
   }, [open])
@@ -183,12 +197,12 @@ function StartTimerDialog({
           className="grid gap-4"
           onSubmit={(e) => {
             e.preventDefault()
-            if (!target.projectId) return
             start.mutate(
               {
                 projectId: target.projectId,
                 taskId: target.taskId,
                 description,
+                tagIds: tags.map((t) => t.id),
               },
               {
                 onSuccess: () => onOpenChange(false),
@@ -197,22 +211,26 @@ function StartTimerDialog({
             )
           }}
         >
-          <ProjectTaskPicker
-            projectId={target.projectId}
-            taskId={target.taskId}
-            onChange={setTarget}
-          />
-          <Field
-            label="What are you working on?"
-            htmlFor="timer-desc"
-            hint="Optional"
-          >
+          <Field label="What are you working on?" htmlFor="timer-desc">
             <Input
               id="timer-desc"
               value={description}
+              autoFocus
               onChange={(e) => setDescription(e.target.value)}
             />
           </Field>
+          <div className="flex flex-wrap items-center gap-2">
+            <ProjectPopover
+              value={target}
+              label={label}
+              className="border"
+              onChange={(t, l) => {
+                setTarget(t)
+                setLabel(l)
+              }}
+            />
+            <TagPicker value={tags} className="border" onChange={setTags} />
+          </div>
         </form>
         <DialogFooter>
           <Button
@@ -222,11 +240,7 @@ function StartTimerDialog({
           >
             Cancel
           </Button>
-          <Button
-            type="submit"
-            form="start-timer"
-            disabled={!target.projectId || start.isPending}
-          >
+          <Button type="submit" form="start-timer" disabled={start.isPending}>
             Start
           </Button>
         </DialogFooter>

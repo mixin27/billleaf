@@ -2,16 +2,55 @@ import { z } from "zod"
 
 import { optionalText } from "../common/locale.js"
 
+/** Colour names a tag can use (rendered by the web app's tag palette). */
+export const TAG_COLORS = [
+  "gray",
+  "green",
+  "teal",
+  "blue",
+  "violet",
+  "pink",
+  "red",
+  "orange",
+  "amber",
+] as const
+export type TagColor = (typeof TAG_COLORS)[number]
+
+export const tagSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  color: z.enum(TAG_COLORS).nullable(),
+})
+export type Tag = z.infer<typeof tagSchema>
+
+export const tagListSchema = z.object({ items: z.array(tagSchema) })
+export type TagList = z.infer<typeof tagListSchema>
+
+export const createTagSchema = z.object({
+  name: z.string().trim().min(1).max(60),
+  color: z.enum(TAG_COLORS).nullish(),
+})
+export type CreateTagInput = z.input<typeof createTagSchema>
+export const updateTagSchema = createTagSchema.partial()
+export type UpdateTagInput = z.input<typeof updateTagSchema>
+
+const tagIds = z.array(z.uuid()).max(20)
+const nullableUuid = z
+  .uuid()
+  .nullish()
+  .transform((v) => v ?? null)
+
 /**
- * Time entries belong to a project (and optionally a task) and a member.
+ * Time entries belong to a member and optionally a project (+ task) and tags.
+ * Entries without a project are fine for tracking but can't be invoiced.
  * A running timer has `endedAt = null`; each member can run one at a time.
  * Entries pulled into an invoice are locked (`invoiceId` set) until that
  * draft invoice is deleted.
  */
 export const timeEntrySchema = z.object({
   id: z.string(),
-  projectId: z.string(),
-  projectName: z.string(),
+  projectId: z.string().nullable(),
+  projectName: z.string().nullable(),
   clientName: z.string().nullable(),
   taskId: z.string().nullable(),
   taskTitle: z.string().nullable(),
@@ -26,6 +65,7 @@ export const timeEntrySchema = z.object({
   /** Null while running. */
   durationSeconds: z.number().int().nullable(),
   billable: z.boolean(),
+  tags: z.array(tagSchema),
   invoiceId: z.string().nullable(),
   invoiceNumber: z.string().nullable(),
   isRunning: z.boolean(),
@@ -34,24 +74,36 @@ export const timeEntrySchema = z.object({
 export type TimeEntry = z.infer<typeof timeEntrySchema>
 
 export const startTimerSchema = z.object({
-  projectId: z.uuid(),
-  taskId: z
-    .uuid()
-    .nullish()
-    .transform((v) => v ?? null),
+  projectId: nullableUuid,
+  taskId: nullableUuid,
   description: optionalText(500),
+  /** Defaults to the project's billing (billable unless non-billable). */
+  billable: z.boolean().optional(),
+  tagIds: tagIds.optional(),
 })
 export type StartTimerInput = z.input<typeof startTimerSchema>
+
+/** Edit the running timer in place (Clockify's timer bar). */
+export const updateRunningSchema = z
+  .object({
+    projectId: z.uuid().nullable(),
+    taskId: z.uuid().nullable(),
+    description: optionalText(500),
+    billable: z.boolean(),
+    tagIds,
+    /** Move the start (e.g. "I started 20 minutes ago"). */
+    startedAt: z.iso.datetime(),
+  })
+  .partial()
+export type UpdateRunningInput = z.input<typeof updateRunningSchema>
 
 /** Manual entry: either start+end, or a date + duration. */
 export const createTimeEntrySchema = z
   .object({
-    projectId: z.uuid(),
-    taskId: z
-      .uuid()
-      .nullish()
-      .transform((v) => v ?? null),
+    projectId: nullableUuid,
+    taskId: nullableUuid,
     description: optionalText(500),
+    tagIds: tagIds.optional(),
     startedAt: z.iso.datetime().optional(),
     endedAt: z.iso.datetime().optional(),
     entryDate: z.iso.date().optional(),
@@ -80,9 +132,10 @@ export type CreateTimeEntryInput = z.input<typeof createTimeEntrySchema>
 
 export const updateTimeEntrySchema = z
   .object({
-    projectId: z.uuid(),
+    projectId: z.uuid().nullable(),
     taskId: z.uuid().nullable(),
     description: optionalText(500),
+    tagIds,
     startedAt: z.iso.datetime(),
     endedAt: z.iso.datetime(),
     entryDate: z.iso.date(),
@@ -96,10 +149,64 @@ export const updateTimeEntrySchema = z
   .partial()
 export type UpdateTimeEntryInput = z.input<typeof updateTimeEntrySchema>
 
+/** Set the same fields on many entries; invoiced or not-yours entries are skipped. */
+export const bulkUpdateTimeEntriesSchema = z
+  .object({
+    ids: z.array(z.uuid()).min(1).max(500),
+    projectId: z.uuid().nullable().optional(),
+    taskId: z.uuid().nullable().optional(),
+    billable: z.boolean().optional(),
+    tagIds: tagIds.optional(),
+    /** "replace" (default) sets exactly `tagIds`; "add" keeps existing tags. */
+    tagMode: z.enum(["replace", "add"]).optional(),
+  })
+  .refine((v) => v.taskId == null || v.projectId != null, {
+    message: "Pick the project together with the task",
+    path: ["taskId"],
+  })
+export type BulkUpdateTimeEntriesInput = z.input<
+  typeof bulkUpdateTimeEntriesSchema
+>
+
+export const bulkDeleteTimeEntriesSchema = z.object({
+  ids: z.array(z.uuid()).min(1).max(500),
+})
+export type BulkDeleteTimeEntriesInput = z.input<
+  typeof bulkDeleteTimeEntriesSchema
+>
+
+export const bulkResultSchema = z.object({
+  updated: z.number().int(),
+  /** Invoiced, missing, or not yours to change. */
+  skipped: z.number().int(),
+})
+export type BulkResult = z.infer<typeof bulkResultSchema>
+
+/** Recent distinct description + project + task combos, for autocomplete. */
+export const timeSuggestionSchema = z.object({
+  description: z.string(),
+  projectId: z.string().nullable(),
+  projectName: z.string().nullable(),
+  clientName: z.string().nullable(),
+  taskId: z.string().nullable(),
+  taskTitle: z.string().nullable(),
+  billable: z.boolean(),
+  tags: z.array(tagSchema),
+})
+export type TimeSuggestion = z.infer<typeof timeSuggestionSchema>
+export const timeSuggestionListSchema = z.object({
+  items: z.array(timeSuggestionSchema),
+})
+export const timeSuggestionsQuerySchema = z.object({
+  q: z.string().trim().max(200).optional(),
+})
+export type TimeSuggestionsQuery = z.input<typeof timeSuggestionsQuerySchema>
+
 export const listTimeEntriesQuerySchema = z.object({
   from: z.iso.date(),
   to: z.iso.date(),
   projectId: z.uuid().optional(),
+  tagId: z.uuid().optional(),
   /** "me" (default for members without time.read) or a member id. */
   memberId: z.union([z.literal("me"), z.uuid()]).optional(),
   billable: z.enum(["true", "false"]).optional(),

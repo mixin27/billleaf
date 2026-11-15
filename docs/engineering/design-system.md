@@ -18,6 +18,7 @@ How Billleaf looks and how pages are put together. The brand is **calm, trustwor
 
 Defined as CSS variables in `packages/ui/src/styles/globals.css` (Tailwind v4 `@theme inline`), in light and `.dark` variants. Always use the semantic classes (`bg-background`, `text-muted-foreground`, `border`, `bg-primary`…), never raw colours.
 
+- **Tag colours** (`features/time/components/tag-chip.tsx`) are the one exception to "no raw colours": they're user-chosen identity labels from a fixed palette, always shown with their name.
 - **Colour:** neutral greys + one **leaf green** primary (`--primary`, used for primary actions, active state and focus). Charts use the green ramp `chart-1…5`. Red (`destructive`) is only for errors, overdue and irreversible actions.
 - **Sidebar:** `--sidebar*` tokens. A faintly green-tinted grey that sits _behind_ the content panel (lighter panel in light mode, darker sidebar in dark mode).
 - **Radius:** `--radius: 0.45rem` (the `rounded-*` scale derives from it).
