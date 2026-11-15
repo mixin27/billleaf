@@ -8,6 +8,8 @@ export const QUEUES = {
   email: "email",
   recurring: "recurring",
   billing: "billing",
+  /** Long-running data exports (ZIP with PDFs), emailed when ready. */
+  exports: "exports",
 } as const
 
 /**
@@ -33,7 +35,8 @@ export const QUEUES = {
     BullModule.registerQueue(
       { name: QUEUES.email },
       { name: QUEUES.recurring },
-      { name: QUEUES.billing }
+      { name: QUEUES.billing },
+      { name: QUEUES.exports }
     ),
   ],
   exports: [BullModule],

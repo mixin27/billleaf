@@ -42,6 +42,20 @@ export function WorkspaceDataSettings() {
 function ExportCard() {
   const ws = useWorkspaceStore((s) => s.workspace)
   const [pending, setPending] = React.useState(false)
+  const [queueing, setQueueing] = React.useState(false)
+  const full = async () => {
+    setQueueing(true)
+    try {
+      await unwrap(api.POST("/v1/workspace/export/full"))
+      toast.success(
+        "We're preparing it. You'll get an email with a download link."
+      )
+    } catch (err) {
+      toast.error(errorMessage(err))
+    } finally {
+      setQueueing(false)
+    }
+  }
   const download = async () => {
     setPending(true)
     try {
@@ -77,16 +91,25 @@ function ExportCard() {
         <p className="text-sm text-muted-foreground">
           A ZIP with one spreadsheet (CSV) per kind of record: clients, quotes,
           invoices and their lines, payments, receipts, contracts, projects,
-          time entries, members and the audit log. PDFs and uploaded images
-          aren&apos;t included.
+          time entries, members and the audit log.
         </p>
-        <Button
-          className="self-start"
-          disabled={pending}
-          onClick={() => void download()}
-        >
-          {pending ? "Preparing…" : "Download ZIP"}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button disabled={pending} onClick={() => void download()}>
+            {pending ? "Preparing…" : "Download ZIP"}
+          </Button>
+          <Button
+            variant="outline"
+            disabled={queueing}
+            onClick={() => void full()}
+          >
+            Email me a ZIP with PDFs
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          With PDFs adds every issued invoice, quote, receipt and contract.
+          It&apos;s built in the background and emailed to you as a download
+          link that works for 3 days.
+        </p>
       </CardContent>
     </Card>
   )

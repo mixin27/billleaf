@@ -19,6 +19,7 @@ import {
 } from "@workspace/contracts"
 import {
   billingEvents,
+  subscriptionPayments,
   clients,
   files,
   invoices,
@@ -93,9 +94,10 @@ export class AdminService {
     private readonly auth: AuthService,
     @InjectQueue(QUEUES.email) email: Queue,
     @InjectQueue(QUEUES.recurring) recurring: Queue,
-    @InjectQueue(QUEUES.billing) billingQueue: Queue
+    @InjectQueue(QUEUES.billing) billingQueue: Queue,
+    @InjectQueue(QUEUES.exports) exports: Queue
   ) {
-    this.queues = { email, recurring, billing: billingQueue }
+    this.queues = { email, recurring, billing: billingQueue, exports }
   }
 
   // ── Overview ────────────────────────────────────────
@@ -289,6 +291,7 @@ export class AdminService {
       [issued],
       [storage],
       events,
+      payments,
     ] = await Promise.all([
       this.db
         .select({
@@ -336,6 +339,12 @@ export class AdminService {
         .where(eq(billingEvents.workspaceId, id))
         .orderBy(desc(billingEvents.occurredAt))
         .limit(20),
+      this.db
+        .select()
+        .from(subscriptionPayments)
+        .where(eq(subscriptionPayments.workspaceId, id))
+        .orderBy(desc(subscriptionPayments.createdAt))
+        .limit(20),
     ])
     const owner = members.find((m) => m.role === "owner")
     return {
@@ -381,6 +390,19 @@ export class AdminService {
         occurredAt: e.occurredAt.toISOString(),
         processedAt: iso(e.processedAt),
         error: e.error,
+      })),
+      subscriptionPayments: payments.map((p) => ({
+        id: p.id,
+        planKey: p.planKey,
+        interval: p.interval,
+        periods: p.periods,
+        amount: p.amount,
+        currency: p.currency,
+        status: p.status,
+        paidOn: p.paidOn,
+        reference: p.reference,
+        createdAt: p.createdAt.toISOString(),
+        periodEnd: iso(p.periodEnd),
       })),
     }
   }
@@ -667,7 +689,9 @@ export class AdminService {
         ? `${String(data.subject ?? "Email")} → ${String(data.to ?? "?")}`
         : queue === "billing"
           ? `Billing event ${String(data.eventRowId ?? "")}`.trim()
-          : j.name
+          : queue === "exports"
+            ? `Data export for workspace ${String(data.workspaceId ?? "?")}`
+            : j.name
     return {
       id: String(j.id),
       queue,

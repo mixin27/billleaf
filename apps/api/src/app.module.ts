@@ -24,6 +24,7 @@ import { TimeModule } from "./modules/time/time.module.js"
 import { ContractsModule } from "./modules/contracts/contracts.module.js"
 import { QuotesModule } from "./modules/quotes/quotes.module.js"
 import { RecurringModule } from "./modules/recurring/recurring.module.js"
+import { DataExportModule } from "./modules/data-export/data-export.module.js"
 import { WorkspaceProfileModule } from "./modules/workspace/workspace-profile.module.js"
 
 @Module({
@@ -37,6 +38,7 @@ import { WorkspaceProfileModule } from "./modules/workspace/workspace-profile.mo
     HealthModule,
     // Business modules
     WorkspaceProfileModule,
+    DataExportModule,
     ClientsModule,
     QuotesModule,
     ContractsModule,

@@ -16,6 +16,6 @@ import { WorkspaceProfileService } from "./workspace-profile.service.js"
     WorkspaceProfileService,
     WorkspaceDataService,
   ],
-  exports: [WorkspaceProfileService],
+  exports: [WorkspaceProfileService, WorkspaceDataService],
 })
 export class WorkspaceProfileModule {}

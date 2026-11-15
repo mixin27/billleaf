@@ -104,6 +104,22 @@ export const adminWorkspaceSchema = adminWorkspaceSummarySchema.extend({
       error: z.string().nullable(),
     })
   ),
+  /** Manual subscription payments, newest first (last 20). */
+  subscriptionPayments: z.array(
+    z.object({
+      id: z.string(),
+      planKey: planKeySchema,
+      interval: billingIntervalSchema,
+      periods: z.number().int(),
+      amount: z.number().int(),
+      currency: z.string(),
+      status: z.enum(["pending", "approved", "rejected"]),
+      paidOn: z.iso.date(),
+      reference: z.string().nullable(),
+      createdAt: z.iso.datetime(),
+      periodEnd: z.iso.datetime().nullable(),
+    })
+  ),
 })
 export type AdminWorkspace = z.infer<typeof adminWorkspaceSchema>
 
@@ -174,7 +190,12 @@ export type AdminBanInput = z.input<typeof adminBanSchema>
 export const adminReasonSchema = z.object({ reason })
 export type AdminReasonInput = z.input<typeof adminReasonSchema>
 
-export const ADMIN_QUEUES = ["email", "recurring", "billing"] as const
+export const ADMIN_QUEUES = [
+  "email",
+  "recurring",
+  "billing",
+  "exports",
+] as const
 export const ADMIN_JOB_STATES = [
   "failed",
   "delayed",

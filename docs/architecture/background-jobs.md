@@ -17,14 +17,15 @@
 
 ## Queues (planned)
 
-| Queue               | Jobs                                                                                                                         |
-| ------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `email`             | verification, invitations, invoice/quote/receipt delivery (react-email from `@workspace/emails` → Resend)                    |
-| `pdf`               | render quote/invoice/receipt PDFs → R2                                                                                       |
-| `billing`           | retry provider webhook events that failed to apply on receipt (normally applied inline)                                      |
-| `maintenance`       | workspace hard-delete, exports, cleanup of expired invitations/sessions                                                      |
-| `recurring`         | hourly sweeps: generate due recurring invoices per workspace; `invoice-reminders` emails payment reminders (both idempotent) |
-| `outbound-webhooks` | customer integrations (Phase 3)                                                                                              |
+| Queue               | Jobs                                                                                                                                                                                                  |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `email`             | verification, invitations, invoice/quote/receipt delivery (react-email from `@workspace/emails` → Resend)                                                                                             |
+| `pdf`               | render quote/invoice/receipt PDFs → R2                                                                                                                                                                |
+| `billing`           | retry provider webhook events that failed to apply on receipt (normally applied inline)                                                                                                               |
+| `maintenance`       | workspace hard-delete, exports, cleanup of expired invitations/sessions                                                                                                                               |
+| `recurring`         | hourly sweeps: generate due recurring invoices per workspace; `invoice-reminders` emails payment reminders (both idempotent)                                                                          |
+| `exports`           | full data export: CSVs + every non-draft document PDF, zipped to `<workspace>/exports/` (only the latest kept) and emailed as a 3-day link; one per workspace at a time (deduplicated), concurrency 1 |
+| `outbound-webhooks` | customer integrations (Phase 3)                                                                                                                                                                       |
 
 ## Job rules
 

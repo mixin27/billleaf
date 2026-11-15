@@ -112,6 +112,22 @@ export class WorkspaceDataService {
 
   /** A ZIP of CSVs with every record the workspace owns. */
   async export(): Promise<{ filename: string; body: Buffer }> {
+    const { name, files } = await this.csvFiles()
+    await this.audit.record("workspace.exported")
+    return {
+      filename: `${name}.zip`,
+      body: Buffer.from(zipSync(files, { level: 6 })),
+    }
+  }
+
+  /**
+   * The export's files (README + one CSV per kind of record) and its base
+   * name, e.g. `billleaf-acme-2026-11-15`. Also used by the export with PDFs.
+   */
+  async csvFiles(): Promise<{
+    name: string
+    files: Record<string, Uint8Array>
+  }> {
     const ws = this.ctx.workspaceId
     const [org] = await this.db
       .select({ slug: organization.slug })
@@ -180,12 +196,8 @@ export class WorkspaceDataService {
       )
     )
 
-    await this.audit.record("workspace.exported")
     const date = new Date().toISOString().slice(0, 10)
-    return {
-      filename: `billleaf-${org.slug ?? ws}-${date}.zip`,
-      body: Buffer.from(zipSync(out, { level: 6 })),
-    }
+    return { name: `billleaf-${org.slug ?? ws}-${date}`, files: out }
   }
 
   /**
