@@ -35,6 +35,8 @@ export const adminOverviewSchema = z.object({
     z.object({ week: z.iso.date(), count: z.number().int() })
   ),
   failedJobs: z.array(z.object({ queue: z.string(), count: z.number().int() })),
+  /** Manual subscription payments waiting for review. */
+  pendingPayments: z.number().int(),
 })
 export type AdminOverview = z.infer<typeof adminOverviewSchema>
 

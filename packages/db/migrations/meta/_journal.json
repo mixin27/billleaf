@@ -141,6 +141,13 @@
       "when": 1794751594421,
       "tag": "0019_third_talon",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1794753184132,
+      "tag": "0020_lyrical_vin_gonzales",
+      "breakpoints": true
     }
   ]
 }

@@ -53,6 +53,7 @@ import { offsetOf, orderBy } from "../common/pagination.js"
 import { InjectDb, type Database } from "../core/database/database.module.js"
 import { QUEUES } from "../core/queue/queue.module.js"
 import { AuditService } from "../iam/audit/audit.service.js"
+import { SubscriptionPaymentsService } from "../billing/manual/subscription-payments.service.js"
 import { AdminAccessService } from "./admin-access.service.js"
 
 const escapeLike = (v: string) => v.replace(/[\\%_]/g, (c) => `\\${c}`)
@@ -68,6 +69,7 @@ function planOf(sub: SubRow | null | undefined): PlanKey {
           status: sub.status,
           currentPeriodEnd: sub.currentPeriodEnd,
           cancelAtPeriodEnd: sub.cancelAtPeriodEnd,
+          provider: sub.provider,
         }
       : null
   )
@@ -86,6 +88,7 @@ export class AdminService {
     private readonly ctx: RequestContext,
     private readonly audit: AuditService,
     private readonly billing: BillingService,
+    private readonly payments: SubscriptionPaymentsService,
     private readonly access: AdminAccessService,
     private readonly auth: AuthService,
     @InjectQueue(QUEUES.email) email: Queue,
@@ -169,6 +172,7 @@ export class AdminService {
       })),
       signupsByWeek,
       failedJobs: failed,
+      pendingPayments: await this.payments.pendingCount(),
     }
   }
 

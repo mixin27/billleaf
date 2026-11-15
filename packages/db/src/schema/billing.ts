@@ -31,6 +31,11 @@ export const workspaceSubscriptions = pgTable("workspace_subscriptions", {
   providerCustomerId: text(),
   providerSubscriptionId: text(),
   currentPeriodEnd: timestamp({ withTimezone: true }),
+  /**
+   * Last renewal reminder sent, as "<stage>@<period end ISO>" (stage: 7d,
+   * 1d, ended), so each reminder goes out once per period.
+   */
+  lastReminder: text(),
   /** Provider time of the last applied event; older events are ignored. */
   lastEventAt: timestamp({ withTimezone: true }),
   ...timestamps,

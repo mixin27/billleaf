@@ -114,9 +114,27 @@ export type SubscriptionStatus = z.infer<typeof subscriptionStatusSchema>
 export const PAST_DUE_GRACE_DAYS = 14
 
 /**
+ * Days a manually paid plan (provider "manual") keeps working after its
+ * period ends, so there's time to pay and get approved.
+ */
+export const MANUAL_GRACE_DAYS = 7
+
+const DAY = 86_400_000
+
+/** When a manual plan that ended stops applying (null if not manual / no end). */
+export function manualGraceEndsAt(sub: {
+  provider?: string | null
+  currentPeriodEnd: Date | null
+}): Date | null {
+  if (sub.provider !== "manual" || !sub.currentPeriodEnd) return null
+  return new Date(sub.currentPeriodEnd.getTime() + MANUAL_GRACE_DAYS * DAY)
+}
+
+/**
  * The plan a workspace actually gets right now. Paid plans fall back to
  * Free when canceled, after a scheduled cancellation passes its period end,
- * or when payment stays failed beyond the grace period.
+ * or when payment stays failed beyond the grace period. Manual plans get
+ * `MANUAL_GRACE_DAYS` after their period end.
  */
 export function effectivePlan(
   sub: {
@@ -124,6 +142,7 @@ export function effectivePlan(
     status: string
     cancelAtPeriodEnd: boolean
     currentPeriodEnd: Date | null
+    provider?: string | null
   } | null,
   now: Date = new Date()
 ): PlanKey {
@@ -134,13 +153,14 @@ export function effectivePlan(
       return "free"
     case "past_due":
       return end !== undefined &&
-        now.getTime() > end + PAST_DUE_GRACE_DAYS * 86_400_000
+        now.getTime() > end + PAST_DUE_GRACE_DAYS * DAY
         ? "free"
         : sub.planKey
-    default:
-      return sub.cancelAtPeriodEnd && end !== undefined && now.getTime() > end
-        ? "free"
-        : sub.planKey
+    default: {
+      if (!sub.cancelAtPeriodEnd || end === undefined) return sub.planKey
+      const grace = sub.provider === "manual" ? MANUAL_GRACE_DAYS * DAY : 0
+      return now.getTime() > end + grace ? "free" : sub.planKey
+    }
   }
 }
 
@@ -166,8 +186,10 @@ export const billingOverviewSchema = z.object({
   checkoutAvailable: z.boolean(),
   /** Whether a provider portal exists for this workspace (has a paid subscription). */
   canManage: z.boolean(),
-  /** "test" when using the built-in test provider. */
+  /** "test" when using the built-in test provider; "manual" = pay and get approved. */
   provider: z.string(),
+  /** Manual plans: when the plan stops applying after its period ended. */
+  graceEndsAt: z.iso.datetime().nullable(),
   usage,
 })
 export type BillingOverview = z.infer<typeof billingOverviewSchema>

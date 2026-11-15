@@ -1,3 +1,4 @@
+export { AdminApprovals } from "./components/admin-approvals"
 export { AdminAudit } from "./components/admin-audit"
 export { AdminJobs } from "./components/admin-jobs"
 export { AdminOverview } from "./components/admin-overview"
@@ -8,3 +9,4 @@ export {
   AdminWorkspaces,
 } from "./components/admin-workspaces"
 export { ImpersonationBanner } from "./components/impersonation-banner"
+export { AdminPricing } from "./components/admin-pricing"

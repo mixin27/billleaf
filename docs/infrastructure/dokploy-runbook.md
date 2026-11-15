@@ -129,7 +129,7 @@ All of these are in the repo's **Settings**.
    - Generate secrets with `openssl rand -base64 48`.
    - Set `IMAGE_TAG=production` and `STACK_NAME=production`.
    - Use the same `HEALTH_CHECK_TOKEN` as in GitHub.
-   - Put your own email in `PLATFORM_ADMIN_EMAILS`. After the first deploy, sign up with it, turn on two-factor under **Your account**, then open `/admin`.
+   - Put your own email in `PLATFORM_ADMIN_EMAILS`. After the first deploy, sign up with it, turn on two-factor under **Your account**, then open `/admin`. Under **Pricing**, add the plan prices and Billleaf's payment methods (`BILLING_PROVIDER=manual`), otherwise workspaces can't upgrade.
    - Save.
 5. **Domains → Add domain**, twice:
    - `app.example.com` → service **web**, port **3000**, HTTPS on, certificate **Let's Encrypt**;

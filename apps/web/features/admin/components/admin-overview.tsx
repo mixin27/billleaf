@@ -45,7 +45,13 @@ export function AdminOverview() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title="Overview" description="How the platform is doing." />
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+        <Tile
+          label="To approve"
+          value={o.pendingPayments}
+          hint={o.pendingPayments ? "Subscription payments" : "All clear"}
+          href="/admin/approvals"
+        />
         <Tile
           label="Users"
           value={o.users.total}

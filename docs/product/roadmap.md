@@ -31,14 +31,17 @@ Phases are scope buckets, not dates. Each phase ends with a production deploy. C
 - ✅ Contracts (templates with merge fields, from a quote, PDF + email, recorded signatures; e-sign later).
 - ✅ Recurring invoices (weekly → yearly, draft or auto-send, idempotent hourly generation, Pro/Team).
 - ✅ SaaS billing core: plans, enforced limits, subscription lifecycle, signed webhooks, Settings → Billing, test provider ([ADR-0011](../adr/0011-billing-core-with-test-provider.md)).
-- **SaaS billing live**: Paddle or Lemon Squeezy adapter once the company's jurisdiction is settled.
+- ✅ Payment instructions on invoices (bank / wallet / QR) and proof of payment from the client portal.
+- ✅ SaaS billing live with **manual payments**: pay by bank or wallet, upload proof, platform admin approves; reminders and a 7-day grace period ([ADR-0013](../adr/0013-manual-payments-for-subscriptions.md)).
+- ✅ Platform admin portal: workspaces, users (ban, impersonate), jobs, audit log, approvals, pricing.
+- Online subscription payments when a provider serves the operating country.
 
 ## Phase 3 — Teams & growth
 
 - Teams/agencies: per-seat plans, custom roles exposed.
-- Client portal (view/accept quotes, pay invoices).
-- Online payments (Stripe/PayPal payment links).
-- Audit log UI.
+- ✅ Client portal (view/accept quotes, sign contracts, upload payment proof).
+- Online invoice payments (payment links) where a gateway is available.
+- ✅ Audit log UI (workspace and platform).
 - Integrations & outgoing webhooks.
 - i18n.
 

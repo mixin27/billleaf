@@ -64,8 +64,9 @@ export const envSchema = z.object({
     .transform((v) => v === "true"),
 
   // SaaS billing. "test" is a built-in provider for local development and
-  // CI; it is refused in production until a real provider adapter exists.
-  BILLING_PROVIDER: z.enum(["test"]).default("test"),
+  // CI (refused in production). "manual": workspaces pay by bank transfer or
+  // mobile wallet and a platform admin approves the proof (ADR-0013).
+  BILLING_PROVIDER: z.enum(["test", "manual"]).default("test"),
   /** Shared secret for webhook signatures (min 32 chars outside development). */
   BILLING_WEBHOOK_SECRET: z
     .string()

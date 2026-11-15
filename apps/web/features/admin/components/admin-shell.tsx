@@ -21,8 +21,10 @@ import { Skeleton } from "@workspace/ui/components/skeleton"
 import {
   ArrowLeft01Icon,
   Building03Icon,
+  CheckmarkBadge01Icon,
   DashboardSquare01Icon,
   Shield01Icon,
+  Tag01Icon,
   Task01Icon,
   UserGroupIcon,
   WorkHistoryIcon,
@@ -38,8 +40,10 @@ import { useAdminOverview } from "../api/queries"
 
 const NAV: { title: string; href: string; icon: IconSvgElement }[] = [
   { title: "Overview", href: "/admin", icon: DashboardSquare01Icon },
+  { title: "Approvals", href: "/admin/approvals", icon: CheckmarkBadge01Icon },
   { title: "Workspaces", href: "/admin/workspaces", icon: Building03Icon },
   { title: "Users", href: "/admin/users", icon: UserGroupIcon },
+  { title: "Pricing", href: "/admin/pricing", icon: Tag01Icon },
   { title: "Jobs", href: "/admin/jobs", icon: Task01Icon },
   { title: "Audit log", href: "/admin/audit", icon: WorkHistoryIcon },
 ]
