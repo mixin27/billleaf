@@ -153,7 +153,8 @@ function setup(
     { documentLink: vi.fn().mockResolvedValue("http://portal.test") } as never,
     audit as never,
     { assertWithinLimit: vi.fn() } as never,
-    { invoicesPerMonth: vi.fn().mockResolvedValue(0) } as never
+    { invoicesPerMonth: vi.fn().mockResolvedValue(0) } as never,
+    { forCurrency: vi.fn().mockResolvedValue([]), qrImage: vi.fn() } as never
   )
   return { service, repo, numbering, mail, tx }
 }

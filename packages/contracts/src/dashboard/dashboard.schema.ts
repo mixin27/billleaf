@@ -94,6 +94,23 @@ export const dashboardSchema = z.object({
       expiringSoonCount: z.number().int(),
     })
     .nullable(),
+  /** Client "I've paid" submissions waiting for review (payment.read). */
+  pendingProofs: z
+    .object({
+      count: z.number().int(),
+      items: z.array(
+        z.object({
+          id: z.string(),
+          invoiceId: z.string(),
+          invoiceNumber: z.string().nullable(),
+          clientName: z.string(),
+          amount: z.number().int(),
+          currency: z.string(),
+          createdAt: z.iso.datetime(),
+        })
+      ),
+    })
+    .nullable(),
 })
 export type Dashboard = z.infer<typeof dashboardSchema>
 

@@ -17,6 +17,11 @@ const items: { title: string; href: string; permission: Permission }[] = [
     href: "/settings/roles",
     permission: "role.read",
   },
+  {
+    title: "Payment methods",
+    href: "/settings/payment-methods",
+    permission: "workspace.read",
+  },
   { title: "Billing", href: "/settings/billing", permission: "billing.read" },
 ]
 

@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -31,11 +32,13 @@ import {
   portalSessionSchema,
   portalSignContractSchema,
   portalSignInSchema,
+  submitPaymentProofSchema,
   portalWorkspaceSchema,
 } from "@workspace/contracts"
 import type { FastifyReply, FastifyRequest } from "fastify"
 import { createZodDto, ZodResponse } from "nestjs-zod"
 
+import { readMultipart } from "../../common/http/multipart.js"
 import { ENV, type Env } from "../../core/config/env.js"
 import { PortalGuard } from "./portal.guard.js"
 import { PortalService } from "./portal.service.js"
@@ -210,6 +213,37 @@ export class PortalController {
   @ZodResponse({ status: 200, type: PortalInvoiceDto })
   invoice(@Param("id", uuid) id: string) {
     return this.portal.invoice(id)
+  }
+
+  /**
+   * multipart/form-data: `file` (PNG/JPEG screenshot, ≤ 2 MB) plus `amount`
+   * (minor units), `paidOn`, `paymentAccountId?`, `reference?`, `note?`.
+   */
+  @Post(":slug/invoices/:id/payment-proofs")
+  @UseGuards(PortalGuard)
+  @ApiParam({ name: "slug", type: String })
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @ZodResponse({ status: 201, type: PortalInvoiceDto })
+  async submitPaymentProof(
+    @Param("id", uuid) id: string,
+    @Req() req: FastifyRequest
+  ) {
+    const { file, fields } = await readMultipart(req, {
+      maxBytes: 2 * 1024 * 1024,
+      requireFile: true,
+    })
+    const parsed = submitPaymentProofSchema.safeParse(fields)
+    if (!parsed.success)
+      throw new BadRequestException({
+        message: parsed.error.issues[0]?.message ?? "Check the payment details",
+        code: "invalid_payment_proof",
+      })
+    return this.portal.submitPaymentProof(
+      id,
+      parsed.data as never,
+      file!,
+      meta(req)
+    )
   }
 
   @Get(":slug/contracts")

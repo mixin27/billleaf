@@ -18,6 +18,7 @@ import {
   type PortalQuoteSummary,
   type PortalReceipt,
   type PortalWorkspace,
+  type SubmitPaymentProofInput,
 } from "@workspace/contracts"
 import {
   portalResponseEmail,
@@ -32,6 +33,8 @@ import { MailService } from "../../mail/mail.service.js"
 import { ContractsService } from "../contracts/contracts.service.js"
 import { todayIn } from "../documents/party-snapshot.js"
 import { InvoicesService } from "../invoices/invoices.service.js"
+import { PaymentAccountsService } from "../payment-accounts/payment-accounts.service.js"
+import { PaymentProofsService } from "../payments/payment-proofs.service.js"
 import { PaymentsService } from "../payments/payments.service.js"
 import { QuotesService } from "../quotes/quotes.service.js"
 import { WorkspaceProfileService } from "../workspace/workspace-profile.service.js"
@@ -69,7 +72,9 @@ export class PortalService {
     private readonly quotes: QuotesService,
     private readonly invoices: InvoicesService,
     private readonly contracts: ContractsService,
-    private readonly payments: PaymentsService
+    private readonly payments: PaymentsService,
+    private readonly paymentAccounts: PaymentAccountsService,
+    private readonly paymentProofs: PaymentProofsService
   ) {}
 
   // ── Public ───────────────────────────────────────────
@@ -289,10 +294,14 @@ export class PortalService {
 
   async invoice(id: string): Promise<PortalInvoice> {
     await this.own("invoice", id)
-    const [i, receipts] = await Promise.all([
+    const [i, receipts, proofs] = await Promise.all([
       this.invoices.get(id),
       this.listReceipts(id),
+      this.paymentProofs.forInvoice(id, this.ctx.portalClientId),
     ])
+    const due = i.status === "void" ? 0 : i.amountDue
+    const accounts =
+      due > 0 ? await this.paymentAccounts.forCurrencyDto(i.currency) : []
     return {
       id: i.id,
       number: i.number ?? "",
@@ -312,6 +321,16 @@ export class PortalService {
       issuer: i.issuerSnapshot,
       client: i.clientSnapshot,
       receipts,
+      paymentAccounts: accounts.map((a) => ({
+        id: a.id,
+        kind: a.kind,
+        label: a.label,
+        accountName: a.accountName,
+        accountNumber: a.accountNumber,
+        instructions: a.instructions,
+        qrUrl: a.qrUrl,
+      })),
+      paymentProofs: proofs,
     }
   }
 
@@ -554,5 +573,30 @@ export class PortalService {
     )
     await this.notify("Contract", c, "declined", null, reason)
     return this.contract(id)
+  }
+
+  /** "I've paid": the client uploads a screenshot and the payment details. */
+  async submitPaymentProof(
+    id: string,
+    input: SubmitPaymentProofInput & { amount: number },
+    file: { filename: string; body: Buffer },
+    meta: Meta
+  ) {
+    await this.own("invoice", id)
+    const i = await this.invoices.get(id)
+    await this.paymentProofs.submit(
+      {
+        id,
+        clientId: i.clientId,
+        number: i.number ?? "",
+        currency: i.currency,
+        amountDue: i.status === "void" ? 0 : i.amountDue,
+        status: i.status,
+      },
+      input,
+      file,
+      { email: this.ctx.portalEmail, ...meta }
+    )
+    return this.invoice(id)
   }
 }

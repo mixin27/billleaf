@@ -95,6 +95,36 @@ export function Dashboard() {
 
       {isEmpty ? <GettingStarted base={base} /> : null}
 
+      {d.pendingProofs && d.pendingProofs.count > 0 ? (
+        <Card className="border-primary/40">
+          <CardContent className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <div className="min-w-0 flex-1">
+              <p className="font-medium">
+                {d.pendingProofs.count === 1
+                  ? "1 payment to confirm"
+                  : `${d.pendingProofs.count} payments to confirm`}
+              </p>
+              <p className="truncate text-sm text-muted-foreground">
+                {d.pendingProofs.items
+                  .slice(0, 3)
+                  .map(
+                    (p) =>
+                      `${p.clientName} · ${money(p.amount, p.currency, locale)}`
+                  )
+                  .join("   ·   ")}
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              nativeButton={false}
+              render={<Link href={`${base}/payments`} />}
+            >
+              Review
+            </Button>
+          </CardContent>
+        </Card>
+      ) : null}
+
       <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         {d.receivables ? (
           <>

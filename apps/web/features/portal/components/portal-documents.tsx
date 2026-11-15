@@ -20,6 +20,7 @@ import {
   usePortalQuote,
 } from "../api/queries"
 import { PortalQuoteBadge } from "./portal-pages"
+import { HowToPay, PaymentProofForm } from "./portal-pay"
 import { ContractSigning, QuoteResponse } from "./portal-respond"
 
 function DocHeader({
@@ -166,6 +167,12 @@ export function PortalInvoiceView({ slug, id }: { slug: string; id: string }) {
           terms={d.terms}
         />
       </div>
+      {d.amountDue > 0 ? (
+        <>
+          <HowToPay accounts={d.paymentAccounts} />
+          <PaymentProofForm slug={slug} invoice={d} />
+        </>
+      ) : null}
       {d.receipts.length ? (
         <section className="flex flex-col gap-2">
           <h2 className="text-base font-semibold">Payments</h2>

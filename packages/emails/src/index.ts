@@ -118,6 +118,8 @@ export function documentEmail(p: {
   pdf: { filename: string; contentBase64: string }
   /** Signs the recipient into the client portal at this document. */
   portalUrl?: string | null
+  /** Invoices: how to pay (one line per account). */
+  paymentInstructions?: string[]
 }): EmailMessage {
   const intro =
     p.kind === "Invoice"
@@ -138,15 +140,25 @@ export function documentEmail(p: {
         : p.kind === "Receipt"
           ? "View your account"
           : "View invoice"
+  const howToPay = p.paymentInstructions?.length
+    ? `<p style="margin:16px 0 4px;font-weight:600">How to pay</p><ul style="margin:0;padding-left:18px">${p.paymentInstructions
+        .map((l) => `<li>${esc(l)}</li>`)
+        .join(
+          ""
+        )}</ul>${p.portalUrl ? `<p style="font-size:13px;color:#5b6b6b">Paid already? Upload your payment screenshot online so it's confirmed quickly.</p>` : ""}`
+    : ""
+  const howToPayText = p.paymentInstructions?.length
+    ? `\n\nHow to pay:\n${p.paymentInstructions.map((l) => `- ${l}`).join("\n")}`
+    : ""
   return {
     to: p.to,
     subject: `${p.kind} ${p.number} from ${p.workspaceName}`,
     html: layout(
       `${p.kind} ${p.number}`,
-      `${message}<p>${esc(intro)}</p><p>The PDF is attached${p.portalUrl ? `, and you can see all your documents from ${esc(p.workspaceName)} online` : ""}.</p>`,
+      `${message}<p>${esc(intro)}</p>${howToPay}<p>The PDF is attached${p.portalUrl ? `, and you can see all your documents from ${esc(p.workspaceName)} online` : ""}.</p>`,
       p.portalUrl ? { label: action, url: p.portalUrl } : undefined
     ),
-    text: `${p.message ? `${p.message}\n\n` : ""}${intro}\nThe PDF is attached.${p.portalUrl ? `\n\n${action} online: ${p.portalUrl}` : ""}`,
+    text: `${p.message ? `${p.message}\n\n` : ""}${intro}${howToPayText}\nThe PDF is attached.${p.portalUrl ? `\n\n${action} online: ${p.portalUrl}` : ""}`,
     replyTo: p.replyTo ?? undefined,
     attachments: [{ ...p.pdf, contentType: "application/pdf" }],
   }
@@ -225,5 +237,48 @@ export function signedContractEmail(p: {
     html: layout(`Contract ${p.number} signed`, `<p>${esc(line)}</p>`),
     text: line,
     attachments: [{ ...p.pdf, contentType: "application/pdf" }],
+  }
+}
+
+/** Tells the business a client says they've paid (with a screenshot). */
+export function paymentProofSubmittedEmail(p: {
+  to: string
+  clientName: string
+  invoiceNumber: string
+  amount: string
+  reference?: string | null
+  url: string
+}): EmailMessage {
+  const line = `${p.clientName} says they paid ${p.amount} for invoice ${p.invoiceNumber}${p.reference ? ` (reference ${p.reference})` : ""}. Check the screenshot and confirm it to record the payment and send a receipt.`
+  return {
+    to: p.to,
+    subject: `${p.clientName} paid invoice ${p.invoiceNumber}: please confirm`,
+    html: layout(`Payment to confirm`, `<p>${esc(line)}</p>`, {
+      label: "Review payment",
+      url: p.url,
+    }),
+    text: `${line}\n\n${p.url}`,
+  }
+}
+
+/** Tells the client their proof of payment wasn't accepted, and why. */
+export function paymentProofRejectedEmail(p: {
+  to: string
+  workspaceName: string
+  invoiceNumber: string
+  amount: string
+  reason: string
+  url: string
+}): EmailMessage {
+  const line = `${p.workspaceName} couldn't confirm your payment of ${p.amount} for invoice ${p.invoiceNumber}.`
+  return {
+    to: p.to,
+    subject: `Payment for invoice ${p.invoiceNumber} needs another look`,
+    html: layout(
+      `Payment not confirmed`,
+      `<p>${esc(line)}</p><p>Their note:</p><p style="white-space:pre-line;border-left:3px solid #d0d7d4;padding-left:12px">${esc(p.reason)}</p><p>You can upload a new screenshot from the invoice page.</p>`,
+      { label: "Open invoice", url: p.url }
+    ),
+    text: `${line}\n\nTheir note: ${p.reason}\n\nUpload a new screenshot: ${p.url}`,
   }
 }

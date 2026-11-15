@@ -17,6 +17,7 @@ import { DashboardModule } from "./modules/dashboard/dashboard.module.js"
 import { InvoicesModule } from "./modules/invoices/invoices.module.js"
 import { PaymentsModule } from "./modules/payments/payments.module.js"
 import { ProjectsModule } from "./modules/projects/projects.module.js"
+import { PaymentAccountsModule } from "./modules/payment-accounts/payment-accounts.module.js"
 import { PortalModule } from "./modules/portal/portal.module.js"
 import { TimeModule } from "./modules/time/time.module.js"
 import { ContractsModule } from "./modules/contracts/contracts.module.js"
@@ -44,6 +45,7 @@ import { WorkspaceProfileModule } from "./modules/workspace/workspace-profile.mo
     ProjectsModule,
     TimeModule,
     PortalModule,
+    PaymentAccountsModule,
     DashboardModule,
   ],
   providers: [

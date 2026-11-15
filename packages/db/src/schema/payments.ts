@@ -42,7 +42,15 @@ export const payments = pgTable(
     currency: text().notNull(),
     paidOn: date({ mode: "string" }).notNull(),
     method: text({
-      enum: ["bank_transfer", "card", "cash", "cheque", "online", "other"],
+      enum: [
+        "bank_transfer",
+        "mobile_wallet",
+        "card",
+        "cash",
+        "cheque",
+        "online",
+        "other",
+      ],
     }).notNull(),
     reference: text(),
     notes: text(),

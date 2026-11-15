@@ -27,6 +27,11 @@ export class RequestContext {
     return v
   }
 
+  /** The signed-in member's user id, or null (client portal, jobs). */
+  get optionalUserId(): string | null {
+    return this.cls.get("userId") ?? null
+  }
+
   get workspaceId(): string {
     const v = this.cls.get("workspaceId")
     if (!v) throw new UnauthorizedException("No active workspace")

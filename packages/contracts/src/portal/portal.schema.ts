@@ -4,6 +4,10 @@ import { contractStatusSchema } from "../contracts/contracts.schema.js"
 import { lineItemSchema, partySnapshotSchema } from "../documents/line-items.js"
 import { invoiceDisplayStatusSchema } from "../invoices/invoices.schema.js"
 import {
+  paymentAccountKindSchema,
+  paymentProofStatusSchema,
+} from "../payments/payment-proofs.schema.js"
+import {
   paymentMethodSchema,
   paymentStatusSchema,
 } from "../payments/payments.schema.js"
@@ -149,9 +153,37 @@ export const portalQuoteSchema = portalQuoteSummarySchema.extend({
 })
 export type PortalQuote = z.infer<typeof portalQuoteSchema>
 
+/** One way to pay this workspace (shown while an invoice has a balance). */
+export const portalPaymentAccountSchema = z.object({
+  id: z.string(),
+  kind: paymentAccountKindSchema,
+  label: z.string(),
+  accountName: z.string().nullable(),
+  accountNumber: z.string().nullable(),
+  instructions: z.string().nullable(),
+  qrUrl: z.string().nullable(),
+})
+export type PortalPaymentAccount = z.infer<typeof portalPaymentAccountSchema>
+
+/** A proof of payment this client submitted for the invoice. */
+export const portalPaymentProofSchema = z.object({
+  id: z.string(),
+  amount: z.number().int(),
+  currency: z.string(),
+  paidOn: z.iso.date(),
+  reference: z.string().nullable(),
+  status: paymentProofStatusSchema,
+  rejectionReason: z.string().nullable(),
+  createdAt: z.iso.datetime(),
+})
+export type PortalPaymentProof = z.infer<typeof portalPaymentProofSchema>
+
 export const portalInvoiceSchema = portalInvoiceSummarySchema.extend({
   ...documentBody,
   receipts: z.array(portalReceiptSchema),
+  /** Empty when nothing is due. */
+  paymentAccounts: z.array(portalPaymentAccountSchema),
+  paymentProofs: z.array(portalPaymentProofSchema),
 })
 export type PortalInvoice = z.infer<typeof portalInvoiceSchema>
 

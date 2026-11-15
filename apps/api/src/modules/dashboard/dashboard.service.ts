@@ -7,6 +7,7 @@ import {
 
 import { RequestContext } from "../../common/context/request-context.js"
 import { addDays, todayIn } from "../documents/party-snapshot.js"
+import { PaymentProofsService } from "../payments/payment-proofs.service.js"
 import { WorkspaceProfileService } from "../workspace/workspace-profile.service.js"
 import {
   lastDayOfMonth,
@@ -24,7 +25,8 @@ export class DashboardService {
   constructor(
     private readonly repo: DashboardRepository,
     private readonly profile: WorkspaceProfileService,
-    private readonly ctx: RequestContext
+    private readonly ctx: RequestContext,
+    private readonly proofs: PaymentProofsService
   ) {}
 
   async get(): Promise<Dashboard> {
@@ -42,15 +44,17 @@ export class DashboardService {
             : a.currency.localeCompare(b.currency)
       )
 
-    const [receivables, received, quotes] = await Promise.all([
+    const [receivables, received, quotes, pendingProofs] = await Promise.all([
       perms.has("invoice.read") ? this.receivables(today) : null,
       perms.has("payment.read") ? this.received(today) : null,
       perms.has("quote.read") ? this.quotes(today, profile.timezone) : null,
+      perms.has("payment.read") ? this.proofs.pendingSummary() : null,
     ])
 
     return {
       today,
       primaryCurrency: primary,
+      pendingProofs,
       receivables: receivables && {
         ...receivables,
         totals: sortCur(receivables.totals),

@@ -11,6 +11,7 @@ import { paged, pageQuerySchema, sortQuery } from "../common/pagination.js"
  */
 export const paymentMethodSchema = z.enum([
   "bank_transfer",
+  "mobile_wallet",
   "card",
   "cash",
   "cheque",
@@ -21,6 +22,7 @@ export type PaymentMethod = z.infer<typeof paymentMethodSchema>
 
 export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   bank_transfer: "Bank transfer",
+  mobile_wallet: "Mobile wallet",
   card: "Card",
   cash: "Cash",
   cheque: "Cheque",

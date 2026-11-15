@@ -91,7 +91,7 @@ export class FilesService {
         filename: filename.slice(0, 200) || `upload.${type.ext}`,
         contentType: type.contentType,
         size: body.length,
-        createdBy: this.ctx.userId,
+        createdBy: this.ctx.optionalUserId,
       })
       .returning()
     return row!
