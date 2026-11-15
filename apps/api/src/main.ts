@@ -1,3 +1,4 @@
+import "./instrument.js"
 import "reflect-metadata"
 
 import { apiReference } from "@scalar/nestjs-api-reference"

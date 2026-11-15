@@ -24,7 +24,7 @@ import {
 } from "drizzle-orm/pg-core"
 
 import { id, timestamps } from "./_shared.js"
-import { member, organization, user } from "./auth.js"
+import { invitation, member, organization, user } from "./auth.js"
 
 export const permissions = pgTable("permissions", {
   key: text().primaryKey(),
@@ -127,4 +127,24 @@ export const documentSequences = pgTable(
     ...timestamps,
   },
   (t) => [primaryKey({ columns: [t.workspaceId, t.scope] })]
+)
+
+/**
+ * The workspace role an invitee will receive. Better Auth's invitation row
+ * keeps its built-in "member" role; on acceptance the API swaps in this role.
+ */
+export const invitationRoles = pgTable(
+  "invitation_roles",
+  {
+    invitationId: uuid()
+      .primaryKey()
+      .references(() => invitation.id, { onDelete: "cascade" }),
+    workspaceId: uuid()
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    roleId: uuid()
+      .notNull()
+      .references(() => roles.id, { onDelete: "cascade" }),
+  },
+  (t) => [index().on(t.workspaceId)]
 )

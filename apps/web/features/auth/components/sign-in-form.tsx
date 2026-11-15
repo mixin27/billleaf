@@ -22,7 +22,10 @@ type Values = z.infer<typeof schema>
 
 export function SignInForm() {
   const router = useRouter()
-  const next = useSearchParams().get("next") ?? "/"
+  const rawNext = useSearchParams().get("next")
+  // Only same-origin relative paths, never protocol-relative URLs.
+  const next =
+    rawNext?.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/"
   const form = useForm<Values>({ resolver: zodResolver(schema) })
 
   const onSubmit = form.handleSubmit(async (values) => {
@@ -31,7 +34,7 @@ export function SignInForm() {
       toast.error(error.message ?? "Sign in failed")
       return
     }
-    router.push(next.startsWith("/") ? next : "/")
+    router.push(next)
   })
 
   return (
@@ -41,7 +44,14 @@ export function SignInForm() {
       footer={
         <>
           No account?{" "}
-          <Link href="/sign-up" className="underline">
+          <Link
+            href={
+              next !== "/"
+                ? `/sign-up?next=${encodeURIComponent(next)}`
+                : "/sign-up"
+            }
+            className="underline"
+          >
             Create one
           </Link>
         </>

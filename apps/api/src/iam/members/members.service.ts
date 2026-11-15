@@ -51,6 +51,8 @@ export class MembersService {
 
     return members.map((m) => ({
       ...m,
+      image: m.image ?? null,
+      isCurrentUser: m.userId === this.ctx.userId,
       joinedAt: m.joinedAt.toISOString(),
       roles: assignments
         .filter((a) => a.memberId === m.id)
@@ -119,5 +121,49 @@ export class MembersService {
       metadata: { roleIds },
     })
     return { memberId, roleIds }
+  }
+
+  /** Remove a member from the workspace (their account is untouched). */
+  async remove(memberId: string) {
+    const workspaceId = this.ctx.workspaceId
+    const [target] = await this.db
+      .select({ id: member.id })
+      .from(member)
+      .where(
+        and(eq(member.id, memberId), eq(member.organizationId, workspaceId))
+      )
+      .limit(1)
+    if (!target) throw new NotFoundException("Member not found")
+
+    const ownerRole = (await this.roles.list()).find((r) => r.isLocked)
+    if (ownerRole) {
+      const owners = await this.db
+        .select({ memberId: memberRoles.memberId })
+        .from(memberRoles)
+        .where(eq(memberRoles.roleId, ownerRole.id))
+      const targetIsOwner = owners.some((o) => o.memberId === memberId)
+      if (targetIsOwner && owners.length === 1) {
+        throw new BadRequestException(
+          "A workspace must keep at least one owner"
+        )
+      }
+      if (
+        targetIsOwner &&
+        !owners.some((o) => o.memberId === this.ctx.memberId)
+      ) {
+        throw new ForbiddenException("Only an owner can remove another owner")
+      }
+    }
+
+    await this.db
+      .delete(member)
+      .where(
+        and(eq(member.id, memberId), eq(member.organizationId, workspaceId))
+      )
+    await this.resolver.invalidateWorkspace(workspaceId)
+    await this.audit.record("member.removed", {
+      resourceType: "member",
+      resourceId: memberId,
+    })
   }
 }

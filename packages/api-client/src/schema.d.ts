@@ -100,6 +100,70 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  "/v1/members/{id}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    delete: operations["MembersController_remove_v1"]
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/invitations": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["InvitationsController_list_v1"]
+    put?: never
+    post: operations["InvitationsController_create_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/invitations/{id}/resend": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["InvitationsController_resend_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/invitations/{id}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    delete: operations["InvitationsController_cancel_v1"]
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   "/health/live": {
     parameters: {
       query?: never
@@ -605,8 +669,46 @@ export interface components {
         | "payment.refund"
       )[]
     }
+    MemberDto_Output: {
+      id: string
+      userId: string
+      name: string
+      email: string
+      image: string | null
+      /** Format: date-time */
+      joinedAt: string
+      roles: {
+        id: string
+        slug: string
+        name: string
+      }[]
+      isCurrentUser: boolean
+    }
     AssignMemberRolesDto: {
       roleIds: string[]
+    }
+    InvitationDto_Output: {
+      id: string
+      email: string
+      role: {
+        id: string
+        slug: string
+        name: string
+      } | null
+      /** @enum {string} */
+      status: "pending" | "accepted" | "rejected" | "canceled"
+      /** Format: date-time */
+      expiresAt: string
+      /** Format: date-time */
+      createdAt: string
+      isExpired: boolean
+      invitedBy: string | null
+    }
+    CreateInvitationDto: {
+      /** Format: email */
+      email: string
+      /** Format: uuid */
+      roleId: string
     }
     WorkspaceProfileDto_Output: {
       workspaceId: string
@@ -1104,7 +1206,9 @@ export interface operations {
         headers: {
           [name: string]: unknown
         }
-        content?: never
+        content: {
+          "application/json": components["schemas"]["MemberDto_Output"][]
+        }
       }
     }
   }
@@ -1124,6 +1228,107 @@ export interface operations {
     }
     responses: {
       200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  MembersController_remove_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  InvitationsController_list_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["InvitationDto_Output"][]
+        }
+      }
+    }
+  }
+  InvitationsController_create_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateInvitationDto"]
+      }
+    }
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["InvitationDto_Output"]
+        }
+      }
+    }
+  }
+  InvitationsController_resend_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["InvitationDto_Output"]
+        }
+      }
+    }
+  }
+  InvitationsController_cancel_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      204: {
         headers: {
           [name: string]: unknown
         }

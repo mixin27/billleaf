@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common"
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from "@nestjs/core"
 import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler"
+import { SentryModule } from "@sentry/nestjs/setup"
 import { AuthGuard } from "@thallesp/nestjs-better-auth"
 import { ZodSerializerInterceptor, ZodValidationPipe } from "nestjs-zod"
 
@@ -17,6 +18,7 @@ import { WorkspaceProfileModule } from "./modules/workspace/workspace-profile.mo
 
 @Module({
   imports: [
+    SentryModule.forRoot(),
     CoreModule,
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 300 }]),
     AuthModule,

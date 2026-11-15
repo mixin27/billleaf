@@ -28,3 +28,4 @@ export const booleanString = z
   .transform((v) => v === "true" || v === "1")
 
 export { z }
+export { SENTRY_DATA_COLLECTION } from "./sentry.js"

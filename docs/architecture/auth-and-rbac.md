@@ -52,6 +52,13 @@ Global guard order (`app.module.ts`): `ThrottlerGuard → AuthGuard → Workspac
 
 `GET /v1/me` returns the user, active workspace and **effective permission keys**. The web uses them to hide/disable UI. This is cosmetic; the API is always the authority.
 
+## Members & invitations
+
+- `GET/POST /v1/invitations`, `POST /v1/invitations/:id/resend`, `DELETE /v1/invitations/:id` (`member.invite`); `DELETE /v1/members/:id` (`member.remove`); `PUT /v1/members/:id/roles` (`member.update`).
+- Invitations are rows in Better Auth's `invitation` table (built-in role `member`) plus `invitation_roles` (the workspace role to grant). Better Auth's own invite/remove/cancel/update-role endpoints are **disabled**; its accept/reject/get-invitation endpoints are used by the web `/accept-invitation/:id` page. On acceptance, `WorkspaceBootstrapService.onInvitationAccepted` replaces the member's roles with the invited role.
+- Seats: members + live pending invitations count against `PLANS[plan].limits.members`.
+- Guardrails: only owners can invite or remove owners; the last owner cannot be removed or demoted.
+
 ## Adding a permission
 
 1. Add the key to `PERMISSION_CATALOG` (and to relevant `SYSTEM_ROLES`).

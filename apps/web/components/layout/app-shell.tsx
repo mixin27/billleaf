@@ -9,6 +9,7 @@ import { SignOutButton } from "@/features/auth"
 import { useMe, useWorkspaceStore } from "@/features/workspace"
 
 import { usePermissions } from "../permissions/can"
+import { WorkspaceSwitcher } from "./workspace-switcher"
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const workspace = useWorkspaceStore((s) => s.workspace)
@@ -31,9 +32,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <Link href={base} className="mb-6 text-lg font-semibold tracking-tight">
           billleaf
         </Link>
-        <p className="mb-2 text-xs text-muted-foreground uppercase">
-          {workspace?.name}
-        </p>
+        <WorkspaceSwitcher className="mb-2 -ml-2 w-full" />
         <nav className="flex flex-col gap-1">
           {items.map((item) => (
             <Link
@@ -58,12 +57,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <header className="flex flex-col gap-2 border-b px-4 pt-3 md:hidden">
           <div className="flex items-center justify-between">
             <Link href={base} className="font-semibold tracking-tight">
-              billleaf{" "}
-              <span className="font-normal text-muted-foreground">
-                · {workspace?.name}
-              </span>
+              billleaf
             </Link>
-            <SignOutButton />
+            <span className="flex items-center gap-1">
+              <WorkspaceSwitcher className="max-w-40" />
+              <SignOutButton />
+            </span>
           </div>
           <nav className="-mx-1 flex gap-1 overflow-x-auto pb-2">
             {items.map((item) => (

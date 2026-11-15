@@ -11,6 +11,7 @@ import { usePermissions } from "../permissions/can"
 
 const items: { title: string; href: string; permission: Permission }[] = [
   { title: "General", href: "/settings/general", permission: "workspace.read" },
+  { title: "Members", href: "/settings/members", permission: "member.read" },
   {
     title: "Roles & permissions",
     href: "/settings/roles",

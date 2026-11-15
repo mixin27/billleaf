@@ -38,6 +38,7 @@ pnpm db:migrate && pnpm db:seed
 pnpm dev                       # web :3000, api :4000 (+ package watchers)
 pnpm --filter api dev:worker   # background jobs (emails)
 pnpm lint && pnpm typecheck && pnpm test && pnpm build
+pnpm test:integration          # API against real Postgres/Valkey (needs infra:up)
 pnpm gen:api-client            # after changing API routes/DTOs
 pnpm db:generate               # after changing packages/db/src/schema
 ```
