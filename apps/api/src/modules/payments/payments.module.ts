@@ -7,6 +7,9 @@ import { ClientsModule } from "../clients/clients.module.js"
 import { DocumentsModule } from "../documents/documents.module.js"
 import { InvoicesModule } from "../invoices/invoices.module.js"
 import { WorkspaceProfileModule } from "../workspace/workspace-profile.module.js"
+import { FilesModule } from "../files/files.module.js"
+import { PaymentProofsController } from "./payment-proofs.controller.js"
+import { PaymentProofsService } from "./payment-proofs.service.js"
 import { PaymentsController } from "./payments.controller.js"
 import { PaymentsRepository } from "./payments.repository.js"
 import { PaymentsService } from "./payments.service.js"
@@ -20,9 +23,10 @@ import { PaymentsService } from "./payments.service.js"
     DocumentsModule,
     InvoicesModule,
     WorkspaceProfileModule,
+    FilesModule,
   ],
-  controllers: [PaymentsController],
-  providers: [PaymentsRepository, PaymentsService],
-  exports: [PaymentsService],
+  controllers: [PaymentsController, PaymentProofsController],
+  providers: [PaymentsRepository, PaymentsService, PaymentProofsService],
+  exports: [PaymentsService, PaymentProofsService],
 })
 export class PaymentsModule {}

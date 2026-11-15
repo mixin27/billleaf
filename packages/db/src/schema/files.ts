@@ -13,7 +13,9 @@ export const files = pgTable(
       .references(() => organization.id, { onDelete: "cascade" }),
     /** `<workspaceId>/<purpose>/<uuid>.<ext>` */
     key: text().notNull().unique(),
-    purpose: text({ enum: ["logo", "attachment"] }).notNull(),
+    purpose: text({
+      enum: ["logo", "attachment", "payment_qr", "payment_proof"],
+    }).notNull(),
     filename: text().notNull(),
     contentType: text().notNull(),
     size: integer().notNull(),

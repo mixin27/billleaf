@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common"
 
 import { IamModule } from "../../iam/iam.module.js"
 import { MailModule } from "../../mail/mail.module.js"
+import { PaymentAccountsModule } from "../payment-accounts/payment-accounts.module.js"
 import { PortalLinksModule } from "../portal/portal-links.module.js"
 import { ClientsModule } from "../clients/clients.module.js"
 import { DocumentsModule } from "../documents/documents.module.js"
@@ -15,6 +16,7 @@ import { InvoicesService } from "./invoices.service.js"
   imports: [
     IamModule,
     MailModule,
+    PaymentAccountsModule,
     PortalLinksModule,
     ClientsModule,
     DocumentsModule,

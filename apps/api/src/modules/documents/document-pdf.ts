@@ -32,6 +32,12 @@ export interface DocumentPdfData {
   amountDue?: number
   /** Replace the standard Subtotal/Tax/Total block (e.g. receipts). */
   totals?: { label: string; amount: number; bold?: boolean }[]
+  /** Invoices with a balance: how to pay (bank accounts, wallets, QR). */
+  paymentInstructions?: {
+    label: string
+    lines: string[]
+    qr?: Buffer | null
+  }[]
   notes?: string | null
   terms?: string | null
   footer?: string | null
@@ -363,6 +369,48 @@ export function renderDocumentPdf(d: DocumentPdfData): Promise<Buffer> {
     write(text, left, y + 11, { width }, { size: 9, color: INK })
     y = doc.y + 12
   }
+  // How to pay: one block per account, QR image on the right.
+  if (d.paymentInstructions?.length) {
+    const QR = 72
+    if (y > doc.page.height - 160) {
+      doc.addPage()
+      y = 50
+    }
+    write("HOW TO PAY", left, y, {}, { bold: true, size: 8, color: MUTED })
+    y += 14
+    for (const m of d.paymentInstructions) {
+      const textWidth = m.qr ? width - QR - 16 : width
+      const blockTop = y
+      if (blockTop > doc.page.height - (m.qr ? QR + 40 : 80)) {
+        doc.addPage()
+        y = 50
+      }
+      const top = y
+      write(
+        m.label,
+        left,
+        top,
+        { width: textWidth },
+        { bold: true, size: 9.5, color: INK }
+      )
+      let ty = doc.y + 2
+      for (const line of m.lines) {
+        write(line, left, ty, { width: textWidth }, { size: 9, color: INK })
+        ty = doc.y + 1
+      }
+      let bottom = ty
+      if (m.qr) {
+        try {
+          doc.image(m.qr, left + width - QR, top, { fit: [QR, QR] })
+          bottom = Math.max(bottom, top + QR)
+        } catch {
+          // Unsupported image: the text instructions still show.
+        }
+      }
+      y = bottom + 12
+    }
+  }
+
   if (d.footer) {
     write(
       d.footer,

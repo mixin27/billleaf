@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 
-import { PaymentsList } from "@/features/payments"
+import { PaymentProofsPanel, PaymentsList } from "@/features/payments"
 import { PageHeader } from "@/components/page-header"
 
 export const metadata: Metadata = { title: "Payments" }
@@ -12,6 +12,7 @@ export default function PaymentsPage() {
         title="Payments"
         description="Money received against your invoices, with receipts."
       />
+      <PaymentProofsPanel />
       <PaymentsList />
     </div>
   )

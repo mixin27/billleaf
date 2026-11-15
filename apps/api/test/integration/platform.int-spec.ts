@@ -2665,3 +2665,350 @@ describe("health checks", () => {
     await redis.del(WORKER_HEARTBEAT_KEY)
   })
 })
+
+describe("payment instructions and proofs", () => {
+  /** A tiny valid PNG (1x1). */
+  const png = (() => {
+    const chunk = (type: string, data: Buffer) => {
+      const td = Buffer.concat([Buffer.from(type), data])
+      const len = Buffer.alloc(4)
+      len.writeUInt32BE(data.length)
+      const crc = Buffer.alloc(4)
+      crc.writeUInt32BE(zlib.crc32(td) >>> 0)
+      return Buffer.concat([len, td, crc])
+    }
+    const ihdr = Buffer.alloc(13)
+    ihdr.writeUInt32BE(1, 0)
+    ihdr.writeUInt32BE(1, 4)
+    ihdr.set([8, 6, 0, 0, 0], 8)
+    return Buffer.concat([
+      Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+      chunk("IHDR", ihdr),
+      chunk("IDAT", zlib.deflateSync(Buffer.from([0, 0x40, 0x80, 0x40, 0xff]))),
+      chunk("IEND", Buffer.alloc(0)),
+    ])
+  })()
+
+  /** multipart body: text fields + optional file. */
+  const form = (
+    fields: Record<string, string>,
+    file?: { name: string; body: Buffer; type: string }
+  ) => {
+    const b = "----billleaf-proof"
+    const parts: Buffer[] = []
+    for (const [k, v] of Object.entries(fields))
+      parts.push(
+        Buffer.from(
+          `--${b}\r\nContent-Disposition: form-data; name="${k}"\r\n\r\n${v}\r\n`
+        )
+      )
+    if (file)
+      parts.push(
+        Buffer.from(
+          `--${b}\r\nContent-Disposition: form-data; name="file"; filename="${file.name}"\r\nContent-Type: ${file.type}\r\n\r\n`
+        ),
+        file.body,
+        Buffer.from("\r\n")
+      )
+    parts.push(Buffer.from(`--${b}--\r\n`))
+    return {
+      payload: Buffer.concat(parts),
+      contentType: `multipart/form-data; boundary=${b}`,
+    }
+  }
+
+  it("shows how to pay, takes the client's proof, and confirms or rejects it", async () => {
+    const mail = t.app.get(MailService)
+    const sent: any[] = []
+    const spy = vi
+      .spyOn(mail, "send")
+      .mockImplementation(async (m) => void sent.push(m))
+    try {
+      const owner = new Client(t)
+      const { email: ownerEmail } = await owner.signUp("Proof Owner")
+      const ws = await owner.createWorkspace("Proof Studio")
+      await owner.patch("/v1/workspace", { timezone: "UTC" })
+      const client = (
+        await owner.post("/v1/clients", {
+          name: "Payer Co",
+          email: "payer@payer.test",
+        })
+      ).body
+
+      // Payment accounts.
+      expect(
+        (
+          await owner.post("/v1/payment-accounts", {
+            kind: "bank",
+            label: "KBZ Bank",
+          })
+        ).status
+      ).toBe(422) // needs a number or instructions
+      const wallet = (
+        await owner.post("/v1/payment-accounts", {
+          kind: "mobile_wallet",
+          label: "KBZPay",
+          accountName: "Proof Owner",
+          accountNumber: "09 123 456 789",
+          currencies: ["USD"],
+        })
+      ).body
+      const mmkOnly = (
+        await owner.post("/v1/payment-accounts", {
+          kind: "bank",
+          label: "AYA Bank",
+          accountNumber: "0012 3456",
+          currencies: ["MMK"],
+        })
+      ).body
+      const upload = (
+        url: string,
+        f: ReturnType<typeof form>,
+        headers: Record<string, string>
+      ) =>
+        t.app
+          .inject({
+            method: url.includes("/payment-proofs") ? "POST" : "PUT",
+            url,
+            headers: { ...headers, "content-type": f.contentType },
+            payload: f.payload,
+          })
+          .then((r) => ({ status: r.statusCode, body: JSON.parse(r.body) }))
+      const withQr = await upload(
+        `/v1/payment-accounts/${wallet.id}/qr`,
+        form({}, { name: "qr.png", body: png, type: "image/png" }),
+        owner.headers()
+      )
+      expect(withQr.status).toBe(200)
+      expect(withQr.body.qrUrl).toMatch(/^http/)
+      expect(
+        (
+          await owner.put("/v1/payment-accounts/order", {
+            ids: [mmkOnly.id, wallet.id],
+          })
+        ).body.items.map((a: any) => a.label)
+      ).toEqual(["AYA Bank", "KBZPay"])
+
+      // An issued USD invoice: the email says how to pay (USD accounts only).
+      const line = { description: "Work", quantity: 1, unitPrice: 100_000 }
+      const invoice = (
+        await owner.post("/v1/invoices", { clientId: client.id, lines: [line] })
+      ).body
+      await owner.post(`/v1/invoices/${invoice.id}/issue`)
+      expect(
+        (
+          await t.app.inject({
+            method: "GET",
+            url: `/v1/invoices/${invoice.id}/pdf`,
+            headers: owner.headers(),
+          })
+        ).statusCode
+      ).toBe(200)
+      sent.length = 0
+      await owner.post(`/v1/invoices/${invoice.id}/send`, {})
+      expect(sent[0].text).toContain("How to pay:")
+      expect(sent[0].text).toContain(
+        "KBZPay · Name: Proof Owner · Number: 09 123 456 789"
+      )
+      expect(sent[0].text).not.toContain("AYA Bank")
+
+      // The client signs in to the portal and sees the USD account.
+      const base = `/v1/portal/${encodeURIComponent(ws.slug)}`
+      const portalCookie = async () => {
+        sent.length = 0
+        await owner.request("POST", `${base}/sign-in`, {
+          email: "payer@payer.test",
+        })
+        const link = /https?:\/\/\S+?token=[\w-]+/.exec(sent[0].text)![0]
+        const res = await t.app.inject({
+          method: "POST",
+          url: "/v1/portal/session",
+          headers: {
+            origin: "http://localhost:3000",
+            "content-type": "application/json",
+          },
+          payload: JSON.stringify({
+            token: new URL(link).searchParams.get("token"),
+          }),
+        })
+        return String(res.headers["set-cookie"]).split(";")[0]!
+      }
+      const cookie = await portalCookie()
+      const portal = { origin: "http://localhost:3000", cookie }
+      const view = await t.app.inject({
+        method: "GET",
+        url: `${base}/invoices/${invoice.id}`,
+        headers: portal,
+      })
+      const inv = JSON.parse(view.body)
+      expect(inv.paymentAccounts.map((a: any) => a.label)).toEqual(["KBZPay"])
+      expect(inv.paymentAccounts[0].qrUrl).toMatch(/^http/)
+      expect(inv.paymentProofs).toEqual([])
+
+      // Submitting a proof.
+      const proofUrl = `${base}/invoices/${invoice.id}/payment-proofs`
+      const fields = {
+        amount: "60000",
+        paidOn: "2026-11-15",
+        paymentAccountId: wallet.id,
+        reference: "TXN-123",
+      }
+      expect((await upload(proofUrl, form(fields), portal)).body.code).toBe(
+        "file_required"
+      )
+      expect(
+        (
+          await upload(
+            proofUrl,
+            form(
+              { ...fields, amount: "999999" },
+              { name: "shot.png", body: png, type: "image/png" }
+            ),
+            portal
+          )
+        ).body.code
+      ).toBe("overpayment")
+      sent.length = 0
+      const submitted = await upload(
+        proofUrl,
+        form(fields, { name: "shot.png", body: png, type: "image/png" }),
+        portal
+      )
+      expect(submitted.status).toBe(201)
+      expect(submitted.body.paymentProofs).toMatchObject([
+        { amount: 60_000, status: "pending", reference: "TXN-123" },
+      ])
+      expect(sent[0]).toMatchObject({ to: ownerEmail })
+      expect(sent[0].subject).toContain("Payer Co paid invoice")
+
+      // The business reviews it.
+      const pending = (await owner.get("/v1/payment-proofs?status=pending"))
+        .body
+      expect(pending.total).toBe(1)
+      const proof = pending.items[0]
+      expect(proof).toMatchObject({
+        invoiceId: invoice.id,
+        clientName: "Payer Co",
+        paymentAccountLabel: "KBZPay",
+        hasFile: true,
+      })
+      const shot = await t.app.inject({
+        method: "GET",
+        url: `/v1/payment-proofs/${proof.id}/file`,
+        headers: owner.headers(),
+      })
+      expect(shot.statusCode).toBe(200)
+      expect(shot.headers["content-type"]).toBe("image/png")
+      expect((await owner.get("/v1/dashboard")).body.pendingProofs.count).toBe(
+        1
+      )
+
+      sent.length = 0
+      const confirmed = await owner.post(
+        `/v1/payment-proofs/${proof.id}/confirm`,
+        {}
+      )
+      expect(confirmed.body).toMatchObject({
+        status: "confirmed",
+        paymentId: expect.any(String),
+      })
+      const afterConfirm = (await owner.get(`/v1/invoices/${invoice.id}`)).body
+      expect(afterConfirm).toMatchObject({
+        amountPaid: 60_000,
+        amountDue: 40_000,
+      })
+      const payment = (
+        await owner.get(`/v1/payments/${confirmed.body.paymentId}`)
+      ).body
+      expect(payment).toMatchObject({
+        method: "mobile_wallet",
+        reference: "TXN-123",
+        receiptNumber: expect.any(String),
+      })
+      expect(sent.find((m) => m.to === "payer@payer.test")?.subject).toContain(
+        "Receipt"
+      )
+      expect(
+        (await owner.post(`/v1/payment-proofs/${proof.id}/confirm`, {})).body
+          .code
+      ).toBe("proof_already_reviewed")
+
+      // A second proof is rejected with a reason the client sees.
+      const second = await upload(
+        proofUrl,
+        form(
+          { amount: "40000", paidOn: "2026-11-15" },
+          { name: "shot.png", body: png, type: "image/png" }
+        ),
+        portal
+      )
+      const secondId = second.body.paymentProofs.find(
+        (p: any) => p.status === "pending"
+      ).id
+      sent.length = 0
+      expect(
+        (
+          await owner.post(`/v1/payment-proofs/${secondId}/reject`, {
+            reason: "No transfer with that amount arrived",
+          })
+        ).body
+      ).toMatchObject({ status: "rejected" })
+      expect(sent[0]).toMatchObject({ to: "payer@payer.test" })
+      expect(sent[0].text).toContain("No transfer with that amount arrived")
+      const rejectedView = JSON.parse(
+        (
+          await t.app.inject({
+            method: "GET",
+            url: `${base}/invoices/${invoice.id}`,
+            headers: portal,
+          })
+        ).body
+      )
+      expect(
+        rejectedView.paymentProofs.find((p: any) => p.id === secondId)
+      ).toMatchObject({
+        status: "rejected",
+        rejectionReason: "No transfer with that amount arrived",
+      })
+
+      // Once paid in full there's nothing to prove.
+      await owner.post(`/v1/invoices/${invoice.id}/payments`, {
+        amount: 40_000,
+      })
+      expect(
+        (
+          await upload(
+            proofUrl,
+            form(
+              { amount: "100", paidOn: "2026-11-15" },
+              { name: "shot.png", body: png, type: "image/png" }
+            ),
+            portal
+          )
+        ).body.code
+      ).toBe("nothing_due")
+      expect(
+        JSON.parse(
+          (
+            await t.app.inject({
+              method: "GET",
+              url: `${base}/invoices/${invoice.id}`,
+              headers: portal,
+            })
+          ).body
+        ).paymentAccounts
+      ).toEqual([])
+
+      // Another workspace's member can't see or confirm these proofs.
+      const stranger = new Client(t)
+      await stranger.signUp("Stranger")
+      await stranger.createWorkspace("Elsewhere Two")
+      expect(
+        (await stranger.post(`/v1/payment-proofs/${secondId}/confirm`, {}))
+          .status
+      ).toBe(404)
+    } finally {
+      spy.mockRestore()
+    }
+  })
+})

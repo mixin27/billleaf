@@ -4,6 +4,7 @@ import { BillingModule } from "../../billing/billing.module.js"
 import { MailModule } from "../../mail/mail.module.js"
 import { ContractsModule } from "../contracts/contracts.module.js"
 import { InvoicesModule } from "../invoices/invoices.module.js"
+import { PaymentAccountsModule } from "../payment-accounts/payment-accounts.module.js"
 import { PaymentsModule } from "../payments/payments.module.js"
 import { QuotesModule } from "../quotes/quotes.module.js"
 import { WorkspaceProfileModule } from "../workspace/workspace-profile.module.js"
@@ -20,6 +21,7 @@ import { PortalService } from "./portal.service.js"
     InvoicesModule,
     ContractsModule,
     PaymentsModule,
+    PaymentAccountsModule,
     WorkspaceProfileModule,
   ],
   controllers: [PortalController],

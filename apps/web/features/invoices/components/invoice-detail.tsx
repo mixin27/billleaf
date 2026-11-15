@@ -37,7 +37,11 @@ import { DocumentSheet, toParty } from "@/components/documents/document-sheet"
 import { SendDialog } from "@/components/documents/send-dialog"
 import { usePermissions } from "@/components/permissions/can"
 import { useClient } from "@/features/clients"
-import { InvoicePayments, RecordPaymentDialog } from "@/features/payments"
+import {
+  InvoicePayments,
+  PaymentProofsPanel,
+  RecordPaymentDialog,
+} from "@/features/payments"
 import { useWorkspaceProfile, useWorkspaceStore } from "@/features/workspace"
 import { errorMessage } from "@/lib/api"
 import { openPdf } from "@/lib/download"
@@ -226,6 +230,10 @@ function InvoiceDetailView({ invoice }: { invoice: Invoice }) {
           </>
         }
       />
+
+      {invoice.status === "issued" ? (
+        <PaymentProofsPanel invoiceId={invoice.id} locale={locale} />
+      ) : null}
 
       <DocumentSheet
         issuer={invoice.issuerSnapshot ?? toParty(profile.data)}

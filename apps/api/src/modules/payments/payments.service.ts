@@ -15,6 +15,8 @@ import {
 import { documentEmail } from "@workspace/emails"
 
 import { type PageArgs } from "../../common/pagination.js"
+import type { Transaction } from "@workspace/db"
+
 import { RequestContext } from "../../common/context/request-context.js"
 import { AuditService } from "../../iam/audit/audit.service.js"
 import { MailService } from "../../mail/mail.service.js"
@@ -98,59 +100,72 @@ export class PaymentsService {
     return toPaymentDto(await this.require(id))
   }
 
-  async record(invoiceId: string, input: RecordPaymentInput): Promise<Payment> {
+  /**
+   * Record a payment inside the caller's transaction (locks the invoice,
+   * checks the balance, numbers the receipt). Returns the payment id.
+   * Used by `record` and by confirming a client's proof of payment.
+   */
+  async recordInTx(
+    tx: Transaction,
+    invoiceId: string,
+    input: RecordPaymentInput
+  ): Promise<string> {
     const profile = await this.profile.get()
-    const paymentId = await this.repo.database.transaction(async (tx) => {
-      const invoice = await this.invoices.findById(invoiceId, tx, {
-        forUpdate: true,
-      })
-      if (!invoice) throw new NotFoundException("Invoice not found")
-      if (invoice.status !== "issued") {
-        throw new ConflictException(
-          "Payments can only be recorded on issued invoices"
-        )
-      }
-      const due = invoice.total - invoice.amountPaid
-      if (due <= 0)
-        throw new ConflictException({
-          message: "This invoice is already paid",
-          code: "invoice_paid",
-        })
-      if (input.amount > due) {
-        throw new BadRequestException({
-          message: `Amount exceeds the balance due (${formatMoney({ amount: due, currency: invoice.currency }, profile.locale)})`,
-          code: "overpayment",
-        })
-      }
-      const client = await this.clients.findById(invoice.clientId)
-
-      const payment = await this.repo.insertPayment(tx, {
-        invoiceId,
-        clientId: invoice.clientId,
-        amount: input.amount,
-        currency: invoice.currency,
-        paidOn: input.paidOn ?? todayIn(profile.timezone),
-        method: input.method ?? "bank_transfer",
-        reference: input.reference ?? null,
-        notes: input.notes ?? null,
-        recordedBy: this.ctx.userId,
-      })
-      await this.invoices.update(tx, invoiceId, {
-        amountPaid: invoice.amountPaid + input.amount,
-      })
-      await this.repo.insertReceipt(tx, {
-        paymentId: payment.id,
-        number: await this.numbering.next(tx, "receipt"),
-        balanceAfter: due - input.amount,
-        clientSnapshot:
-          invoice.clientSnapshot ??
-          (client
-            ? partySnapshot(client)
-            : { name: invoice.clientName, addressLines: [] }),
-        issuerSnapshot: invoice.issuerSnapshot ?? partySnapshot(profile),
-      })
-      return payment.id
+    const invoice = await this.invoices.findById(invoiceId, tx, {
+      forUpdate: true,
     })
+    if (!invoice) throw new NotFoundException("Invoice not found")
+    if (invoice.status !== "issued") {
+      throw new ConflictException(
+        "Payments can only be recorded on issued invoices"
+      )
+    }
+    const due = invoice.total - invoice.amountPaid
+    if (due <= 0)
+      throw new ConflictException({
+        message: "This invoice is already paid",
+        code: "invoice_paid",
+      })
+    if (input.amount > due) {
+      throw new BadRequestException({
+        message: `Amount exceeds the balance due (${formatMoney({ amount: due, currency: invoice.currency }, profile.locale)})`,
+        code: "overpayment",
+      })
+    }
+    const client = await this.clients.findById(invoice.clientId)
+
+    const payment = await this.repo.insertPayment(tx, {
+      invoiceId,
+      clientId: invoice.clientId,
+      amount: input.amount,
+      currency: invoice.currency,
+      paidOn: input.paidOn ?? todayIn(profile.timezone),
+      method: input.method ?? "bank_transfer",
+      reference: input.reference ?? null,
+      notes: input.notes ?? null,
+      recordedBy: this.ctx.userId,
+    })
+    await this.invoices.update(tx, invoiceId, {
+      amountPaid: invoice.amountPaid + input.amount,
+    })
+    await this.repo.insertReceipt(tx, {
+      paymentId: payment.id,
+      number: await this.numbering.next(tx, "receipt"),
+      balanceAfter: due - input.amount,
+      clientSnapshot:
+        invoice.clientSnapshot ??
+        (client
+          ? partySnapshot(client)
+          : { name: invoice.clientName, addressLines: [] }),
+      issuerSnapshot: invoice.issuerSnapshot ?? partySnapshot(profile),
+    })
+    return payment.id
+  }
+
+  async record(invoiceId: string, input: RecordPaymentInput): Promise<Payment> {
+    const paymentId = await this.repo.database.transaction((tx) =>
+      this.recordInTx(tx, invoiceId, input)
+    )
     await this.audit.record("payment.recorded", {
       resourceType: "payment",
       resourceId: paymentId,

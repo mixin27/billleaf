@@ -23,6 +23,8 @@ import { EntitlementsService } from "../../billing/entitlements.service.js"
 import { UsageService } from "../../billing/usage.service.js"
 import { AuditService } from "../../iam/audit/audit.service.js"
 import { MailService } from "../../mail/mail.service.js"
+import { paymentAccountLines } from "../payment-accounts/payment-account-lines.js"
+import { PaymentAccountsService } from "../payment-accounts/payment-accounts.service.js"
 import { PortalLinksService } from "../portal/portal-links.service.js"
 import { ClientsRepository } from "../clients/clients.repository.js"
 import { DocumentNumberingService } from "../documents/document-numbering.service.js"
@@ -111,8 +113,25 @@ export class InvoicesService {
     private readonly portalLinks: PortalLinksService,
     private readonly audit: AuditService,
     private readonly entitlements: EntitlementsService,
-    private readonly usage: UsageService
+    private readonly usage: UsageService,
+    private readonly paymentAccounts: PaymentAccountsService
   ) {}
+
+  /**
+   * "How to pay" for an issued invoice with a balance: the workspace's
+   * active payment accounts for its currency (with QR images for the PDF).
+   */
+  private async howToPay(invoice: Invoice, withQr: boolean) {
+    if (invoice.status !== "issued" || invoice.amountDue <= 0) return []
+    const rows = await this.paymentAccounts.forCurrency(invoice.currency)
+    return Promise.all(
+      rows.map(async (r) => ({
+        label: r.label,
+        lines: paymentAccountLines(r),
+        qr: withQr ? await this.paymentAccounts.qrImage(r) : null,
+      }))
+    )
+  }
 
   private async today() {
     return todayIn((await this.profile.get()).timezone)
@@ -409,6 +428,7 @@ export class InvoicesService {
       amountDue: invoice.amountDue,
       notes: invoice.notes,
       terms: invoice.terms,
+      paymentInstructions: await this.howToPay(invoice, true),
       ...(await this.profile.documentBranding()),
     })
     return { filename: `${invoice.number ?? "invoice-draft"}.pdf`, content }
@@ -452,6 +472,9 @@ export class InvoicesService {
           : undefined,
         message: opts.message,
         replyTo: profile.email,
+        paymentInstructions: (await this.howToPay(invoice, false)).map((m) =>
+          [m.label, ...m.lines].join(" · ")
+        ),
         pdf: { filename, contentBase64: content.toString("base64") },
       })
     )

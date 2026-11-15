@@ -852,6 +852,70 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  "/v1/payment-accounts": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["PaymentAccountsController_list_v1"]
+    put?: never
+    post: operations["PaymentAccountsController_create_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/payment-accounts/order": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put: operations["PaymentAccountsController_reorder_v1"]
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/payment-accounts/{id}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    delete: operations["PaymentAccountsController_remove_v1"]
+    options?: never
+    head?: never
+    patch: operations["PaymentAccountsController_update_v1"]
+    trace?: never
+  }
+  "/v1/payment-accounts/{id}/qr": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put: operations["PaymentAccountsController_setQr_v1"]
+    post?: never
+    delete: operations["PaymentAccountsController_removeQr_v1"]
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   "/v1/recurring-invoices": {
     parameters: {
       query?: never
@@ -1006,6 +1070,86 @@ export interface paths {
     get?: never
     put?: never
     post: operations["PaymentsController_sendReceipt_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/payment-proofs": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["PaymentProofsController_list_v1"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/payment-proofs/{id}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["PaymentProofsController_get_v1"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/payment-proofs/{id}/file": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["PaymentProofsController_file_v1"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/payment-proofs/{id}/confirm": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["PaymentProofsController_confirm_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/payment-proofs/{id}/reject": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["PaymentProofsController_reject_v1"]
     delete?: never
     options?: never
     head?: never
@@ -1582,6 +1726,22 @@ export interface paths {
     get: operations["PortalController_invoice_v1"]
     put?: never
     post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/portal/{slug}/invoices/{id}/payment-proofs": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["PortalController_submitPaymentProof_v1"]
     delete?: never
     options?: never
     head?: never
@@ -2694,6 +2854,57 @@ export interface components {
     VoidInvoiceDto: {
       reason: string
     }
+    PaymentAccountListDto_Output: {
+      items: {
+        id: string
+        /** @enum {string} */
+        kind: "bank" | "mobile_wallet" | "other"
+        label: string
+        accountName: string | null
+        accountNumber: string | null
+        instructions: string | null
+        qrUrl: string | null
+        currencies: string[]
+        position: number
+        active: boolean
+      }[]
+    }
+    CreatePaymentAccountDto: {
+      /** @enum {string} */
+      kind: "bank" | "mobile_wallet" | "other"
+      label: string
+      accountName?: string | null
+      accountNumber?: string | null
+      instructions?: string | null
+      currencies?: string[]
+      active?: boolean
+    }
+    PaymentAccountDto_Output: {
+      id: string
+      /** @enum {string} */
+      kind: "bank" | "mobile_wallet" | "other"
+      label: string
+      accountName: string | null
+      accountNumber: string | null
+      instructions: string | null
+      qrUrl: string | null
+      currencies: string[]
+      position: number
+      active: boolean
+    }
+    ReorderPaymentAccountsDto: {
+      ids: string[]
+    }
+    UpdatePaymentAccountDto: {
+      /** @enum {string} */
+      kind?: "bank" | "mobile_wallet" | "other"
+      label?: string
+      accountName?: string | null
+      accountNumber?: string | null
+      instructions?: string | null
+      currencies?: string[]
+      active?: boolean
+    }
     RecurringListDto_Output: {
       items: {
         id: string
@@ -2895,7 +3106,13 @@ export interface components {
         paidOn: string
         /** @enum {string} */
         method:
-          "bank_transfer" | "card" | "cash" | "cheque" | "online" | "other"
+          | "bank_transfer"
+          | "mobile_wallet"
+          | "card"
+          | "cash"
+          | "cheque"
+          | "online"
+          | "other"
         reference: string | null
         notes: string | null
         /** @enum {string} */
@@ -2925,7 +3142,14 @@ export interface components {
       /** Format: date */
       paidOn: string
       /** @enum {string} */
-      method: "bank_transfer" | "card" | "cash" | "cheque" | "online" | "other"
+      method:
+        | "bank_transfer"
+        | "mobile_wallet"
+        | "card"
+        | "cash"
+        | "cheque"
+        | "online"
+        | "other"
       reference: string | null
       notes: string | null
       /** @enum {string} */
@@ -2948,7 +3172,14 @@ export interface components {
        * @default bank_transfer
        * @enum {string}
        */
-      method: "bank_transfer" | "card" | "cash" | "cheque" | "online" | "other"
+      method:
+        | "bank_transfer"
+        | "mobile_wallet"
+        | "card"
+        | "cash"
+        | "cheque"
+        | "online"
+        | "other"
       reference?: string | null
       notes?: string | null
     }
@@ -2959,6 +3190,87 @@ export interface components {
       /** Format: email */
       to?: string
       message?: string | null
+    }
+    PaymentProofListDto_Output: {
+      items: {
+        id: string
+        invoiceId: string
+        invoiceNumber: string | null
+        clientId: string
+        clientName: string
+        amount: number
+        currency: string
+        /** Format: date */
+        paidOn: string
+        paymentAccountId: string | null
+        paymentAccountLabel: string | null
+        /** @enum {string|null} */
+        paymentAccountKind: "bank" | "mobile_wallet" | "other" | null
+        reference: string | null
+        note: string | null
+        hasFile: boolean
+        fileUrl: string | null
+        /** @enum {string} */
+        status: "pending" | "confirmed" | "rejected"
+        rejectionReason: string | null
+        paymentId: string | null
+        /** Format: date-time */
+        reviewedAt: string | null
+        submittedEmail: string
+        /** Format: date-time */
+        createdAt: string
+      }[]
+      total: number
+      page: number
+      pageSize: number
+    }
+    PaymentProofDto_Output: {
+      id: string
+      invoiceId: string
+      invoiceNumber: string | null
+      clientId: string
+      clientName: string
+      amount: number
+      currency: string
+      /** Format: date */
+      paidOn: string
+      paymentAccountId: string | null
+      paymentAccountLabel: string | null
+      /** @enum {string|null} */
+      paymentAccountKind: "bank" | "mobile_wallet" | "other" | null
+      reference: string | null
+      note: string | null
+      hasFile: boolean
+      fileUrl: string | null
+      /** @enum {string} */
+      status: "pending" | "confirmed" | "rejected"
+      rejectionReason: string | null
+      paymentId: string | null
+      /** Format: date-time */
+      reviewedAt: string | null
+      submittedEmail: string
+      /** Format: date-time */
+      createdAt: string
+    }
+    ConfirmPaymentProofDto: {
+      amount?: number
+      /** Format: date */
+      paidOn?: string
+      /** @enum {string} */
+      method?:
+        | "bank_transfer"
+        | "mobile_wallet"
+        | "card"
+        | "cash"
+        | "cheque"
+        | "online"
+        | "other"
+      reference?: string | null
+      /** @default true */
+      sendReceipt: boolean
+    }
+    RejectPaymentProofDto: {
+      reason: string
     }
     ProjectListDto_Output: {
       items: {
@@ -3712,9 +4024,38 @@ export interface components {
         paidOn: string
         /** @enum {string} */
         method:
-          "bank_transfer" | "card" | "cash" | "cheque" | "online" | "other"
+          | "bank_transfer"
+          | "mobile_wallet"
+          | "card"
+          | "cash"
+          | "cheque"
+          | "online"
+          | "other"
         /** @enum {string} */
         status: "completed" | "refunded"
+      }[]
+      paymentAccounts: {
+        id: string
+        /** @enum {string} */
+        kind: "bank" | "mobile_wallet" | "other"
+        label: string
+        accountName: string | null
+        accountNumber: string | null
+        instructions: string | null
+        qrUrl: string | null
+      }[]
+      paymentProofs: {
+        id: string
+        amount: number
+        currency: string
+        /** Format: date */
+        paidOn: string
+        reference: string | null
+        /** @enum {string} */
+        status: "pending" | "confirmed" | "rejected"
+        rejectionReason: string | null
+        /** Format: date-time */
+        createdAt: string
       }[]
     }
     PortalContractListDto_Output: {
@@ -3791,7 +4132,13 @@ export interface components {
         paidOn: string
         /** @enum {string} */
         method:
-          "bank_transfer" | "card" | "cash" | "cheque" | "online" | "other"
+          | "bank_transfer"
+          | "mobile_wallet"
+          | "card"
+          | "cash"
+          | "cheque"
+          | "online"
+          | "other"
         /** @enum {string} */
         status: "completed" | "refunded"
       }[]
@@ -3861,7 +4208,13 @@ export interface components {
           paidOn: string
           /** @enum {string} */
           method:
-            "bank_transfer" | "card" | "cash" | "cheque" | "online" | "other"
+            | "bank_transfer"
+            | "mobile_wallet"
+            | "card"
+            | "cash"
+            | "cheque"
+            | "online"
+            | "other"
         }[]
       } | null
       quotes: {
@@ -3876,6 +4229,19 @@ export interface components {
           count: number
         }[]
         expiringSoonCount: number
+      } | null
+      pendingProofs: {
+        count: number
+        items: {
+          id: string
+          invoiceId: string
+          invoiceNumber: string | null
+          clientName: string
+          amount: number
+          currency: string
+          /** Format: date-time */
+          createdAt: string
+        }[]
       } | null
     }
   }
@@ -5643,6 +6009,157 @@ export interface operations {
       }
     }
   }
+  PaymentAccountsController_list_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["PaymentAccountListDto_Output"]
+        }
+      }
+    }
+  }
+  PaymentAccountsController_create_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreatePaymentAccountDto"]
+      }
+    }
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["PaymentAccountDto_Output"]
+        }
+      }
+    }
+  }
+  PaymentAccountsController_reorder_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ReorderPaymentAccountsDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["PaymentAccountListDto_Output"]
+        }
+      }
+    }
+  }
+  PaymentAccountsController_remove_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  PaymentAccountsController_update_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdatePaymentAccountDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["PaymentAccountDto_Output"]
+        }
+      }
+    }
+  }
+  PaymentAccountsController_setQr_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["PaymentAccountDto_Output"]
+        }
+      }
+    }
+  }
+  PaymentAccountsController_removeQr_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["PaymentAccountDto_Output"]
+        }
+      }
+    }
+  }
   RecurringController_list_v1: {
     parameters: {
       query?: {
@@ -5936,6 +6453,121 @@ export interface operations {
         }
         content: {
           "application/json": components["schemas"]["PaymentDto_Output"]
+        }
+      }
+    }
+  }
+  PaymentProofsController_list_v1: {
+    parameters: {
+      query?: {
+        page?: number
+        pageSize?: number
+        sort?: string
+        status?: "pending" | "confirmed" | "rejected"
+        invoiceId?: string
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["PaymentProofListDto_Output"]
+        }
+      }
+    }
+  }
+  PaymentProofsController_get_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["PaymentProofDto_Output"]
+        }
+      }
+    }
+  }
+  PaymentProofsController_file_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  PaymentProofsController_confirm_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ConfirmPaymentProofDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["PaymentProofDto_Output"]
+        }
+      }
+    }
+  }
+  PaymentProofsController_reject_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RejectPaymentProofDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["PaymentProofDto_Output"]
         }
       }
     }
@@ -6973,6 +7605,28 @@ export interface operations {
     requestBody?: never
     responses: {
       200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["PortalInvoiceDto_Output"]
+        }
+      }
+    }
+  }
+  PortalController_submitPaymentProof_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+        slug: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      201: {
         headers: {
           [name: string]: unknown
         }

@@ -218,3 +218,35 @@ export function useDeclineContract(slug: string, id: string) {
     )
   )
 }
+
+/** "I've paid": screenshot + details (multipart; the portal cookie scopes it). */
+export function useSubmitPaymentProof(slug: string, invoiceId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (v: {
+      file: File
+      amount: number
+      paidOn: string
+      paymentAccountId?: string
+      reference?: string
+      note?: string
+    }) => {
+      const form = new FormData()
+      form.append("amount", String(v.amount))
+      form.append("paidOn", v.paidOn)
+      if (v.paymentAccountId)
+        form.append("paymentAccountId", v.paymentAccountId)
+      if (v.reference) form.append("reference", v.reference)
+      if (v.note) form.append("note", v.note)
+      form.append("file", v.file)
+      const res = await fetch(
+        `${env.NEXT_PUBLIC_API_URL}/v1/portal/${encodeURIComponent(slug)}/invoices/${invoiceId}/payment-proofs`,
+        { method: "POST", body: form, credentials: "include" }
+      )
+      const body = await res.json().catch(() => undefined)
+      if (!res.ok) throw new ApiError(res.status, body)
+      return body
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: portalKeys.all(slug) }),
+  })
+}

@@ -190,3 +190,20 @@ erDiagram
 Quotes record `responded_by_name`, `responded_via` (`manual` | `portal`) and `decline_reason`. Contracts record `signed_via` and `decline_reason`. A portal e-signature adds a signature-certificate page to the contract PDF.
 
 Portal routes live under `/v1/portal/{slug}`. `PortalGuard` turns the cookie into the workspace and client in the request context, with no member and no permissions. Lists and details never include drafts, and every document is checked against the session's client (otherwise 404). See [ADR-0012](../adr/0012-client-portal-magic-links.md).
+
+### Payment accounts and proofs (`payment-proofs.ts`) — Phase 2
+
+| Table              | Notes                                                                                                                                                                                                                                                                                                    |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `payment_accounts` | How a workspace gets paid: `kind` (bank / mobile_wallet / other), `label` (e.g. KBZPay), `account_name`, `account_number`, `instructions`, `qr_file_id` (→ files), `currencies` (empty = any), `position`, `active`                                                                                      |
+| `payment_proofs`   | A client's "I've paid" from the portal: `invoice_id`, `client_id`, `amount`, `currency`, `paid_on`, `payment_account_id`, `reference`, `note`, `file_id` (screenshot), `status` (pending → confirmed / rejected), `rejection_reason`, `payment_id`, reviewer and time, `submitted_email`, IP, user agent |
+
+**How it shows up:** active accounts for the invoice's currency appear as a "How to pay" section on the invoice PDF (with QR images), in the invoice email (text) and in the client portal, but only while the invoice is issued with a balance.
+
+**Submitting:** in the portal the client uploads a screenshot (PNG or JPEG, up to 2 MB, counted against the workspace's storage quota) with the amount (up to the amount due), date and reference. There can be at most 3 pending proofs per invoice. The business is emailed: its business email, else the owners.
+
+**Confirming** (`payment.record`) records the payment through the normal path, in the same transaction as the proof's status change, so a double click can't record it twice. That path is `PaymentsService.recordInTx`: invoice lock, balance check, gap-free receipt number. The payment method comes from the account kind (mobile wallet → `mobile_wallet`), and the receipt is emailed to the client by default.
+
+**Rejecting** stores a reason and emails the client a portal link to try again.
+
+Pending proofs show on the invoice page, the payments page and the dashboard.

@@ -117,8 +117,12 @@ export function DocumentSheet({
           <TableHeader>
             <TableRow>
               <TableHead>Description</TableHead>
-              <TableHead className="text-right">Qty</TableHead>
-              <TableHead className="text-right">Unit price</TableHead>
+              <TableHead className="hidden text-right sm:table-cell">
+                Qty
+              </TableHead>
+              <TableHead className="hidden text-right sm:table-cell">
+                Unit price
+              </TableHead>
               <TableHead className="hidden text-right sm:table-cell">
                 Tax
               </TableHead>
@@ -137,11 +141,15 @@ export function DocumentSheet({
                 <TableRow key={l.id}>
                   <TableCell className="whitespace-pre-line">
                     {l.description}
+                    {/* Small screens: quantity and price under the description. */}
+                    <span className="mt-0.5 block text-xs text-muted-foreground tabular-nums sm:hidden">
+                      {l.quantity} × {money(l.unitPrice, currency, locale)}
+                    </span>
                   </TableCell>
-                  <TableCell className="text-right tabular-nums">
+                  <TableCell className="hidden text-right tabular-nums sm:table-cell">
                     {l.quantity}
                   </TableCell>
-                  <TableCell className="text-right tabular-nums">
+                  <TableCell className="hidden text-right tabular-nums sm:table-cell">
                     {money(l.unitPrice, currency, locale)}
                   </TableCell>
                   <TableCell className="hidden text-right tabular-nums sm:table-cell">
