@@ -292,6 +292,38 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  "/v1/billing/manual/options": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["ManualBillingController_options_v1"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/billing/manual/payments": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["ManualBillingController_history_v1"]
+    put?: never
+    post: operations["ManualBillingController_submit_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   "/health/live": {
     parameters: {
       query?: never
@@ -2100,6 +2132,150 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  "/v1/admin/prices": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["AdminBillingController_prices_v1"]
+    put?: never
+    post: operations["AdminBillingController_createPrice_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/admin/prices/{id}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    delete: operations["AdminBillingController_removePrice_v1"]
+    options?: never
+    head?: never
+    patch: operations["AdminBillingController_updatePrice_v1"]
+    trace?: never
+  }
+  "/v1/admin/payment-accounts": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["AdminBillingController_accounts_v1"]
+    put?: never
+    post: operations["AdminBillingController_createAccount_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/admin/payment-accounts/order": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put: operations["AdminBillingController_reorderAccounts_v1"]
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/admin/payment-accounts/{id}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    delete: operations["AdminBillingController_removeAccount_v1"]
+    options?: never
+    head?: never
+    patch: operations["AdminBillingController_updateAccount_v1"]
+    trace?: never
+  }
+  "/v1/admin/payment-accounts/{id}/qr": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put: operations["AdminBillingController_setQr_v1"]
+    post?: never
+    delete: operations["AdminBillingController_removeQr_v1"]
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/admin/subscription-payments": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["AdminBillingController_subscriptionPayments_v1"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/admin/subscription-payments/{id}/approve": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["AdminBillingController_approve_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/admin/subscription-payments/{id}/reject": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["AdminBillingController_reject_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   "/v1/dashboard": {
     parameters: {
       query?: never
@@ -2481,6 +2657,8 @@ export interface components {
       checkoutAvailable: boolean
       canManage: boolean
       provider: string
+      /** Format: date-time */
+      graceEndsAt: string | null
       usage: {
         members: number
         clients: number
@@ -2514,6 +2692,111 @@ export interface components {
       /** @enum {string} */
       action:
         "cancel" | "resume" | "payment_failed" | "payment_recovered" | "end_now"
+    }
+    ManualBillingOptionsDto_Output: {
+      prices: {
+        id: string
+        /** @enum {string} */
+        planKey: "pro" | "team"
+        /** @enum {string} */
+        interval: "month" | "year"
+        currency: string
+        amount: number
+        active: boolean
+      }[]
+      accounts: {
+        id: string
+        /** @enum {string} */
+        kind: "bank" | "mobile_wallet" | "other"
+        label: string
+        accountName: string | null
+        accountNumber: string | null
+        instructions: string | null
+        qrUrl: string | null
+        currencies: string[]
+        position: number
+        active: boolean
+      }[]
+      pending: {
+        id: string
+        /** @enum {string} */
+        planKey: "pro" | "team"
+        /** @enum {string} */
+        interval: "month" | "year"
+        currency: string
+        amount: number
+        periods: number
+        /** Format: date */
+        paidOn: string
+        paymentAccountLabel: string | null
+        reference: string | null
+        note: string | null
+        /** @enum {string} */
+        status: "pending" | "approved" | "rejected"
+        rejectionReason: string | null
+        /** Format: date-time */
+        reviewedAt: string | null
+        /** Format: date-time */
+        periodStart: string | null
+        /** Format: date-time */
+        periodEnd: string | null
+        /** Format: date-time */
+        createdAt: string
+      } | null
+    }
+    SubscriptionPaymentListDto_Output: {
+      items: {
+        id: string
+        /** @enum {string} */
+        planKey: "pro" | "team"
+        /** @enum {string} */
+        interval: "month" | "year"
+        currency: string
+        amount: number
+        periods: number
+        /** Format: date */
+        paidOn: string
+        paymentAccountLabel: string | null
+        reference: string | null
+        note: string | null
+        /** @enum {string} */
+        status: "pending" | "approved" | "rejected"
+        rejectionReason: string | null
+        /** Format: date-time */
+        reviewedAt: string | null
+        /** Format: date-time */
+        periodStart: string | null
+        /** Format: date-time */
+        periodEnd: string | null
+        /** Format: date-time */
+        createdAt: string
+      }[]
+    }
+    SubscriptionPaymentDto_Output: {
+      id: string
+      /** @enum {string} */
+      planKey: "pro" | "team"
+      /** @enum {string} */
+      interval: "month" | "year"
+      currency: string
+      amount: number
+      periods: number
+      /** Format: date */
+      paidOn: string
+      paymentAccountLabel: string | null
+      reference: string | null
+      note: string | null
+      /** @enum {string} */
+      status: "pending" | "approved" | "rejected"
+      rejectionReason: string | null
+      /** Format: date-time */
+      reviewedAt: string | null
+      /** Format: date-time */
+      periodStart: string | null
+      /** Format: date-time */
+      periodEnd: string | null
+      /** Format: date-time */
+      createdAt: string
     }
     WorkspaceProfileDto_Output: {
       workspaceId: string
@@ -4452,6 +4735,7 @@ export interface components {
         queue: string
         count: number
       }[]
+      pendingPayments: number
     }
     AdminWorkspaceListDto_Output: {
       items: {
@@ -4662,6 +4946,183 @@ export interface components {
       total: number
       page: number
       pageSize: number
+    }
+    PlatformPriceListDto_Output: {
+      items: {
+        id: string
+        /** @enum {string} */
+        planKey: "pro" | "team"
+        /** @enum {string} */
+        interval: "month" | "year"
+        currency: string
+        amount: number
+        active: boolean
+      }[]
+    }
+    CreatePlatformPriceDto: {
+      /** @enum {string} */
+      planKey: "pro" | "team"
+      /** @enum {string} */
+      interval: "month" | "year"
+      currency: string
+      amount: number
+      active?: boolean
+    }
+    PlatformPriceDto_Output: {
+      id: string
+      /** @enum {string} */
+      planKey: "pro" | "team"
+      /** @enum {string} */
+      interval: "month" | "year"
+      currency: string
+      amount: number
+      active: boolean
+    }
+    UpdatePlatformPriceDto: {
+      amount?: number
+      active?: boolean
+    }
+    PlatformPaymentAccountListDto_Output: {
+      items: {
+        id: string
+        /** @enum {string} */
+        kind: "bank" | "mobile_wallet" | "other"
+        label: string
+        accountName: string | null
+        accountNumber: string | null
+        instructions: string | null
+        qrUrl: string | null
+        currencies: string[]
+        position: number
+        active: boolean
+      }[]
+    }
+    CreatePlatformPaymentAccountDto: {
+      /** @enum {string} */
+      kind: "bank" | "mobile_wallet" | "other"
+      label: string
+      accountName?: string | null
+      accountNumber?: string | null
+      instructions?: string | null
+      currencies?: string[]
+      active?: boolean
+    }
+    PlatformPaymentAccountDto_Output: {
+      id: string
+      /** @enum {string} */
+      kind: "bank" | "mobile_wallet" | "other"
+      label: string
+      accountName: string | null
+      accountNumber: string | null
+      instructions: string | null
+      qrUrl: string | null
+      currencies: string[]
+      position: number
+      active: boolean
+    }
+    ReorderPlatformPaymentAccountsDto: {
+      ids: string[]
+    }
+    UpdatePlatformPaymentAccountDto: {
+      /** @enum {string} */
+      kind?: "bank" | "mobile_wallet" | "other"
+      label?: string
+      accountName?: string | null
+      accountNumber?: string | null
+      instructions?: string | null
+      currencies?: string[]
+      active?: boolean
+    }
+    AdminSubscriptionPaymentListDto_Output: {
+      items: {
+        id: string
+        /** @enum {string} */
+        planKey: "pro" | "team"
+        /** @enum {string} */
+        interval: "month" | "year"
+        currency: string
+        amount: number
+        periods: number
+        /** Format: date */
+        paidOn: string
+        paymentAccountLabel: string | null
+        reference: string | null
+        note: string | null
+        /** @enum {string} */
+        status: "pending" | "approved" | "rejected"
+        rejectionReason: string | null
+        /** Format: date-time */
+        reviewedAt: string | null
+        /** Format: date-time */
+        periodStart: string | null
+        /** Format: date-time */
+        periodEnd: string | null
+        /** Format: date-time */
+        createdAt: string
+        workspace: {
+          id: string
+          name: string
+          slug: string
+        }
+        submittedBy: {
+          name: string
+          email: string
+        } | null
+        fileUrl: string | null
+        /** @enum {string} */
+        currentPlanKey: "free" | "pro" | "team"
+        /** Format: date-time */
+        currentPeriodEnd: string | null
+      }[]
+      total: number
+      page: number
+      pageSize: number
+    }
+    ApproveSubscriptionPaymentDto: {
+      periods?: number
+    }
+    AdminSubscriptionPaymentDto_Output: {
+      id: string
+      /** @enum {string} */
+      planKey: "pro" | "team"
+      /** @enum {string} */
+      interval: "month" | "year"
+      currency: string
+      amount: number
+      periods: number
+      /** Format: date */
+      paidOn: string
+      paymentAccountLabel: string | null
+      reference: string | null
+      note: string | null
+      /** @enum {string} */
+      status: "pending" | "approved" | "rejected"
+      rejectionReason: string | null
+      /** Format: date-time */
+      reviewedAt: string | null
+      /** Format: date-time */
+      periodStart: string | null
+      /** Format: date-time */
+      periodEnd: string | null
+      /** Format: date-time */
+      createdAt: string
+      workspace: {
+        id: string
+        name: string
+        slug: string
+      }
+      submittedBy: {
+        name: string
+        email: string
+      } | null
+      fileUrl: string | null
+      /** @enum {string} */
+      currentPlanKey: "free" | "pro" | "team"
+      /** Format: date-time */
+      currentPeriodEnd: string | null
+    }
+    RejectSubscriptionPaymentDto: {
+      reason: string
     }
     DashboardDto_Output: {
       /** Format: date */
@@ -5235,6 +5696,63 @@ export interface operations {
         }
         content: {
           "application/json": components["schemas"]["BillingOverviewDto_Output"]
+        }
+      }
+    }
+  }
+  ManualBillingController_options_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["ManualBillingOptionsDto_Output"]
+        }
+      }
+    }
+  }
+  ManualBillingController_history_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["SubscriptionPaymentListDto_Output"]
+        }
+      }
+    }
+  }
+  ManualBillingController_submit_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["SubscriptionPaymentDto_Output"]
         }
       }
     }
@@ -8661,6 +9179,317 @@ export interface operations {
         }
         content: {
           "application/json": components["schemas"]["AdminAuditListDto_Output"]
+        }
+      }
+    }
+  }
+  AdminBillingController_prices_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["PlatformPriceListDto_Output"]
+        }
+      }
+    }
+  }
+  AdminBillingController_createPrice_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreatePlatformPriceDto"]
+      }
+    }
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["PlatformPriceDto_Output"]
+        }
+      }
+    }
+  }
+  AdminBillingController_removePrice_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  AdminBillingController_updatePrice_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdatePlatformPriceDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["PlatformPriceDto_Output"]
+        }
+      }
+    }
+  }
+  AdminBillingController_accounts_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["PlatformPaymentAccountListDto_Output"]
+        }
+      }
+    }
+  }
+  AdminBillingController_createAccount_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreatePlatformPaymentAccountDto"]
+      }
+    }
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["PlatformPaymentAccountDto_Output"]
+        }
+      }
+    }
+  }
+  AdminBillingController_reorderAccounts_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ReorderPlatformPaymentAccountsDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["PlatformPaymentAccountListDto_Output"]
+        }
+      }
+    }
+  }
+  AdminBillingController_removeAccount_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  AdminBillingController_updateAccount_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdatePlatformPaymentAccountDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["PlatformPaymentAccountDto_Output"]
+        }
+      }
+    }
+  }
+  AdminBillingController_setQr_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["PlatformPaymentAccountDto_Output"]
+        }
+      }
+    }
+  }
+  AdminBillingController_removeQr_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["PlatformPaymentAccountDto_Output"]
+        }
+      }
+    }
+  }
+  AdminBillingController_subscriptionPayments_v1: {
+    parameters: {
+      query?: {
+        page?: number
+        pageSize?: number
+        sort?: string
+        status?: "pending" | "approved" | "rejected"
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["AdminSubscriptionPaymentListDto_Output"]
+        }
+      }
+    }
+  }
+  AdminBillingController_approve_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ApproveSubscriptionPaymentDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["AdminSubscriptionPaymentDto_Output"]
+        }
+      }
+    }
+  }
+  AdminBillingController_reject_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RejectSubscriptionPaymentDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["AdminSubscriptionPaymentDto_Output"]
         }
       }
     }

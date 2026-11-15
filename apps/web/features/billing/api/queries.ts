@@ -30,3 +30,23 @@ export function useTestBillingSession(session: string) {
     retry: false,
   })
 }
+
+/** Manual billing: prices, Billleaf's payment methods, pending request. */
+export function useManualBillingOptions(enabled = true) {
+  const workspaceId = useWorkspaceStore((s) => s.workspace?.id)
+  return useQuery({
+    queryKey: [...billingKeys.manual(workspaceId), "options"],
+    queryFn: () => unwrap(api.GET("/v1/billing/manual/options")),
+    enabled: enabled && Boolean(workspaceId),
+  })
+}
+
+export function useSubscriptionPayments(enabled = true) {
+  const workspaceId = useWorkspaceStore((s) => s.workspace?.id)
+  return useQuery({
+    queryKey: [...billingKeys.manual(workspaceId), "payments"],
+    queryFn: async () =>
+      (await unwrap(api.GET("/v1/billing/manual/payments"))).items,
+    enabled: enabled && Boolean(workspaceId),
+  })
+}

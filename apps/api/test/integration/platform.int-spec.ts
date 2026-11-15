@@ -20,6 +20,8 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
 import { BILLING_PROVIDER } from "../../src/billing/providers/billing-provider.js"
 import { REDIS } from "../../src/core/cache/redis.module.js"
 import { WORKER_HEARTBEAT_KEY } from "../../src/jobs/worker-heartbeat.js"
+import { addInterval } from "../../src/billing/period.js"
+import { SubscriptionRemindersService } from "../../src/billing/manual/subscription-reminders.service.js"
 import { MailService } from "../../src/mail/mail.service.js"
 import type { TestBillingProvider } from "../../src/billing/providers/test-billing.provider.js"
 import { RecurringService } from "../../src/modules/recurring/recurring.service.js"
@@ -3228,5 +3230,313 @@ describe("platform admin portal", () => {
       "recurring",
       "billing",
     ])
+  })
+})
+
+describe("manual subscriptions", () => {
+  const png = (() => {
+    const crcTable = Array.from({ length: 256 }, (_, n) => {
+      let c = n
+      for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1
+      return c >>> 0
+    })
+    const crc = (buf: Buffer) => {
+      let c = 0xffffffff
+      for (const b of buf) c = crcTable[(c ^ b) & 0xff]! ^ (c >>> 8)
+      return (c ^ 0xffffffff) >>> 0
+    }
+    const chunk = (type: string, data: Buffer) => {
+      const len = Buffer.alloc(4)
+      len.writeUInt32BE(data.length)
+      const td = Buffer.concat([Buffer.from(type), data])
+      const c = Buffer.alloc(4)
+      c.writeUInt32BE(crc(td))
+      return Buffer.concat([len, td, c])
+    }
+    const ihdr = Buffer.alloc(13)
+    ihdr.writeUInt32BE(1, 0)
+    ihdr.writeUInt32BE(1, 4)
+    ihdr.set([8, 6, 0, 0, 0], 8)
+    return Buffer.concat([
+      Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+      chunk("IHDR", ihdr),
+      chunk("IDAT", zlib.deflateSync(Buffer.from([0, 0x40, 0x80, 0x40, 0xff]))),
+      chunk("IEND", Buffer.alloc(0)),
+    ])
+  })()
+
+  const send = (
+    method: "POST" | "PUT",
+    url: string,
+    headers: Record<string, string>,
+    fields: Record<string, string>,
+    withFile = true
+  ) => {
+    const b = "----billleaf-sub"
+    const parts: Buffer[] = []
+    for (const [k, v] of Object.entries(fields))
+      parts.push(
+        Buffer.from(
+          `--${b}\r\nContent-Disposition: form-data; name="${k}"\r\n\r\n${v}\r\n`
+        )
+      )
+    if (withFile)
+      parts.push(
+        Buffer.from(
+          `--${b}\r\nContent-Disposition: form-data; name="file"; filename="proof.png"\r\nContent-Type: image/png\r\n\r\n`
+        ),
+        png,
+        Buffer.from("\r\n")
+      )
+    parts.push(Buffer.from(`--${b}--\r\n`))
+    return t.app
+      .inject({
+        method,
+        url,
+        headers: {
+          ...headers,
+          "content-type": `multipart/form-data; boundary=${b}`,
+        },
+        payload: Buffer.concat(parts),
+      })
+      .then((r) => ({ status: r.statusCode, body: JSON.parse(r.body) }))
+  }
+
+  it("takes proof, waits for approval, stacks renewals, rejects, and expires after the grace period", async () => {
+    const mail = t.app.get(MailService)
+    const sent: any[] = []
+    const spy = vi
+      .spyOn(mail, "send")
+      .mockImplementation(async (m) => void sent.push(m))
+    try {
+      const day = 86_400_000
+      const admin = new Client(t)
+      await admin.signUp("Billing Admin", "billing.admin@example.test")
+      await t.db
+        .update(userTable)
+        .set({ twoFactorEnabled: true })
+        .where(eq(userTable.email, "billing.admin@example.test"))
+      admin.forgetSessionCache()
+
+      const owner = new Client(t)
+      const { email: ownerEmail } = await owner.signUp("Paying Owner")
+      const ws = await owner.createWorkspace("Paying Studio")
+      expect((await owner.get("/v1/admin/prices")).status).toBe(404)
+
+      // Admin: prices and where to pay.
+      const price = (
+        await admin.post("/v1/admin/prices", {
+          planKey: "pro",
+          interval: "month",
+          currency: "MMK",
+          amount: 30_000,
+        })
+      ).body
+      expect(price).toMatchObject({ planKey: "pro", amount: 30_000 })
+      expect(
+        (
+          await admin.post("/v1/admin/prices", {
+            planKey: "pro",
+            interval: "month",
+            currency: "MMK",
+            amount: 1,
+          })
+        ).status
+      ).toBe(409)
+      const account = (
+        await admin.post("/v1/admin/payment-accounts", {
+          kind: "mobile_wallet",
+          label: "KBZPay",
+          accountName: "Billleaf",
+          accountNumber: "09 000 000 000",
+        })
+      ).body
+      const qr = await send(
+        "PUT",
+        `/v1/admin/payment-accounts/${account.id}/qr`,
+        admin.headers(),
+        {}
+      )
+      expect(qr.status).toBe(200)
+      expect(qr.body.qrUrl).toMatch(/^http/)
+
+      // Workspace: sees the price and account, pays with proof.
+      const options = (await owner.get("/v1/billing/manual/options")).body
+      expect(options.prices.map((p: any) => p.id)).toContain(price.id)
+      expect(options.accounts.map((a: any) => a.id)).toContain(account.id)
+      expect(options.pending).toBeNull()
+      const today = new Date().toISOString().slice(0, 10)
+      const fields = {
+        planKey: "pro",
+        interval: "month",
+        currency: "MMK",
+        periods: "2",
+        paidOn: today,
+        platformPaymentAccountId: account.id,
+        reference: "TX-1001",
+      }
+      const url = "/v1/billing/manual/payments"
+      expect(
+        (
+          await send("POST", url, owner.headers(), {
+            ...fields,
+            currency: "USD",
+          })
+        ).status
+      ).toBe(400) // no USD price
+      expect(
+        (await send("POST", url, owner.headers(), fields, false)).status
+      ).toBe(400) // proof required
+      sent.length = 0
+      const paid = await send("POST", url, owner.headers(), fields)
+      expect(paid.status).toBe(201)
+      expect(paid.body).toMatchObject({
+        status: "pending",
+        amount: 60_000,
+        periods: 2,
+        paymentAccountLabel: "KBZPay",
+      })
+      expect(sent.map((m) => m.to)).toContain("billing.admin@example.test")
+      expect((await send("POST", url, owner.headers(), fields)).status).toBe(
+        409
+      )
+      expect(
+        (await owner.get("/v1/billing/manual/options")).body.pending.id
+      ).toBe(paid.body.id)
+
+      // Admin: approve once → Pro for two months.
+      const queue = (
+        await admin.get("/v1/admin/subscription-payments?status=pending")
+      ).body
+      const item = queue.items.find((i: any) => i.id === paid.body.id)
+      expect(item).toMatchObject({
+        workspace: { id: ws.id },
+        submittedBy: { email: ownerEmail },
+        currentPlanKey: "free",
+      })
+      expect(item.fileUrl).toMatch(/^http/)
+      expect(
+        (await admin.get("/v1/admin/overview")).body.pendingPayments
+      ).toBeGreaterThanOrEqual(1)
+      sent.length = 0
+      const approved = await admin.post(
+        `/v1/admin/subscription-payments/${paid.body.id}/approve`,
+        {}
+      )
+      expect(approved.status).toBe(200)
+      expect(approved.body.status).toBe("approved")
+      expect(
+        (
+          await admin.post(
+            `/v1/admin/subscription-payments/${paid.body.id}/approve`,
+            {}
+          )
+        ).status
+      ).toBe(409)
+      const events = await t.db
+        .select()
+        .from(billingEvents)
+        .where(eq(billingEvents.eventId, `manual-${paid.body.id}`))
+      expect(events).toHaveLength(1)
+      expect(sent.map((m) => m.to)).toEqual([ownerEmail])
+      const billing = (await owner.get("/v1/billing")).body
+      expect(billing).toMatchObject({
+        effectivePlanKey: "pro",
+        cancelAtPeriodEnd: true,
+      })
+      const firstEnd = new Date(billing.currentPeriodEnd)
+      const twoMonths = addInterval(new Date(), "month", 2)
+      expect(Math.abs(firstEnd.getTime() - twoMonths.getTime())).toBeLessThan(
+        60_000
+      )
+
+      // An early renewal stacks onto the current period.
+      const renewal = await send("POST", url, owner.headers(), {
+        ...fields,
+        periods: "1",
+        reference: "TX-1002",
+      })
+      await admin.post(
+        `/v1/admin/subscription-payments/${renewal.body.id}/approve`,
+        {}
+      )
+      const stacked = addInterval(firstEnd, "month")
+      expect((await owner.get("/v1/billing")).body.currentPeriodEnd).toBe(
+        stacked.toISOString()
+      )
+
+      // Reject with a note: the owner is told why.
+      const bad = await send("POST", url, owner.headers(), {
+        ...fields,
+        periods: "1",
+        reference: "WRONG",
+      })
+      sent.length = 0
+      expect(
+        (
+          await admin.post(
+            `/v1/admin/subscription-payments/${bad.body.id}/reject`,
+            { reason: "No payment with this reference" }
+          )
+        ).body.status
+      ).toBe("rejected")
+      expect(sent[0]).toMatchObject({ to: ownerEmail })
+      expect(sent[0].text).toContain("No payment with this reference")
+      const history = (await owner.get("/v1/billing/manual/payments")).body
+      expect(history.items.map((p: any) => p.status)).toEqual([
+        "rejected",
+        "approved",
+        "approved",
+      ])
+
+      // Reminders: 7 days before, once; then the day before.
+      const reminders = t.app.get(SubscriptionRemindersService)
+      const setEnd = (end: Date) =>
+        t.db
+          .update(workspaceSubscriptions)
+          .set({ currentPeriodEnd: end })
+          .where(eq(workspaceSubscriptions.workspaceId, ws.id))
+      const mine = () => sent.filter((m) => m.to === ownerEmail)
+      sent.length = 0
+      const end = new Date(Date.now() + 3 * day)
+      await setEnd(end)
+      await reminders.run()
+      await reminders.run()
+      expect(mine().map((m) => m.subject)).toEqual([
+        "Your Pro plan ends in 7 days",
+      ])
+      await reminders.run(new Date(end.getTime() - day / 2))
+      await reminders.run(new Date(end.getTime() - day / 2))
+      expect(mine().map((m) => m.subject)).toEqual([
+        "Your Pro plan ends in 7 days",
+        "Your Pro plan ends tomorrow",
+      ])
+
+      // Grace: still Pro two days after the end, Free after the grace.
+      await setEnd(new Date(Date.now() - 2 * day))
+      const grace = (await owner.get("/v1/billing")).body
+      expect(grace.effectivePlanKey).toBe("pro")
+      expect(grace.graceEndsAt).not.toBeNull()
+      await reminders.run()
+      expect(mine().map((m) => m.subject)).toContain("Your Pro plan has ended")
+      await setEnd(new Date(Date.now() - 8 * day))
+      expect((await owner.get("/v1/billing")).body.effectivePlanKey).toBe(
+        "free"
+      )
+
+      const audit = await t.db
+        .select({ action: auditLogs.action })
+        .from(auditLogs)
+        .where(eq(auditLogs.workspaceId, ws.id))
+      expect(audit.map((a) => a.action)).toEqual(
+        expect.arrayContaining([
+          "billing.payment_submitted",
+          "admin.subscription_payment_approved",
+          "admin.subscription_payment_rejected",
+        ])
+      )
+    } finally {
+      spy.mockRestore()
+    }
   })
 })

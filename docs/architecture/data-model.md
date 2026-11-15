@@ -46,9 +46,18 @@ Exact columns follow the Better Auth schema for the enabled plugins; regenerate 
 
 ### Billing (`billing.ts`)
 
-| Table                     | Notes                                                                                                           |
-| ------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| `workspace_subscriptions` | `workspace_id` (PK), `plan_key`, `status`, `provider`, provider customer/subscription ids, `current_period_end` |
+| Table                     | Notes                                                                                                                                                       |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `workspace_subscriptions` | `workspace_id` (PK), `plan_key`, `status`, `provider`, provider customer/subscription ids, `current_period_end`, `last_reminder` (manual renewal reminders) |
+| `billing_events`          | every provider webhook or manual event, unique (`provider`, `event_id`); applied once, failures retried by the worker                                       |
+
+### Manual subscriptions (`subscription-payments.ts`, [ADR-0013](../adr/0013-manual-payments-for-subscriptions.md))
+
+| Table                       | Notes                                                                                                                                                                                                                                                                                                                      |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `platform_prices`           | Platform-level (no workspace): `plan_key`, `interval`, `currency`, `amount` (minor units), `active`; unique (`plan_key`, `interval`, `currency`)                                                                                                                                                                           |
+| `platform_payment_accounts` | Platform-level: Billleaf's bank accounts / wallets; `qr_key` is an object-storage key, not a `files` row                                                                                                                                                                                                                   |
+| `subscription_payments`     | `workspace_id`, plan, interval, currency, `amount` (price × `periods` at request time), `paid_on`, account, reference, note, `file_key` (proof image), `status` (pending/approved/rejected), reviewer, `period_start`/`period_end` granted, submitter + IP + user agent. Partial unique index: one `pending` per workspace |
 
 ### Workspace & clients (`workspace.ts`, `clients.ts`) — Phase 1
 

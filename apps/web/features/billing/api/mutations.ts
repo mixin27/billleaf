@@ -1,10 +1,16 @@
 "use client"
 
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import type { CheckoutInput, TestPortalAction } from "@workspace/contracts"
+import type {
+  CheckoutInput,
+  SubmitSubscriptionPaymentInput,
+  SubscriptionPayment,
+  TestPortalAction,
+} from "@workspace/contracts"
 
 import { useWorkspaceStore } from "@/features/workspace"
-import { api, unwrap } from "@/lib/api"
+import { api, ApiError, unwrap } from "@/lib/api"
+import { env } from "@/lib/env"
 
 import { billingKeys } from "./keys"
 
@@ -54,6 +60,38 @@ export function useTestPortalAction() {
   return useMutation({
     mutationFn: (body: { session: string; action: TestPortalAction }) =>
       unwrap(api.POST("/v1/billing/test/portal", { body })),
+    onSuccess: invalidate,
+  })
+}
+
+/** Manual billing: upload proof of payment for a plan (multipart). */
+export function useSubmitSubscriptionPayment() {
+  const invalidate = useInvalidate()
+  const ws = useWorkspaceStore((s) => s.workspace?.id)
+  return useMutation({
+    mutationFn: async ({
+      file,
+      ...fields
+    }: SubmitSubscriptionPaymentInput & {
+      file: File
+    }): Promise<SubscriptionPayment> => {
+      const form = new FormData()
+      for (const [k, v] of Object.entries(fields))
+        if (v !== undefined && v !== null && v !== "") form.append(k, String(v))
+      form.append("file", file)
+      const res = await fetch(
+        `${env.NEXT_PUBLIC_API_URL}/v1/billing/manual/payments`,
+        {
+          method: "POST",
+          body: form,
+          credentials: "include",
+          headers: ws ? { "x-workspace-id": ws } : {},
+        }
+      )
+      const body = await res.json().catch(() => undefined)
+      if (!res.ok) throw new ApiError(res.status, body)
+      return body as SubscriptionPayment
+    },
     onSuccess: invalidate,
   })
 }

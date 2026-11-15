@@ -26,6 +26,7 @@ import { formatDate, money } from "@/lib/format"
 
 import { useChangePlan, useCheckout, usePortal } from "../api/mutations"
 import { useBillingOverview } from "../api/queries"
+import { ManualPlans } from "./manual-billing"
 
 const ORDER: PlanKey[] = ["free", "pro", "team"]
 const METER_LABELS: Record<LimitKey, string> = {
@@ -60,6 +61,25 @@ function StatusLine({ b, locale }: { b: BillingOverview; locale?: string }) {
   if (b.effectivePlanKey === "free" && b.planKey !== "free")
     return <>Your {PLANS[b.planKey].name} subscription has ended.</>
   if (b.planKey === "free") return <>You&apos;re on the Free plan.</>
+  if (b.provider === "manual" || b.graceEndsAt) {
+    if (
+      b.graceEndsAt &&
+      new Date(b.graceEndsAt) > new Date() &&
+      b.currentPeriodEnd &&
+      new Date(b.currentPeriodEnd) < new Date()
+    )
+      return (
+        <>
+          Ended on {end}. {PLANS[b.planKey].name} keeps working until{" "}
+          {formatDate(b.graceEndsAt, locale)}; renew to keep it.
+        </>
+      )
+    return b.currentPeriodEnd ? (
+      <>Paid until {end}.</>
+    ) : (
+      <>{PLANS[b.planKey].name} with no end date.</>
+    )
+  }
   if (b.status === "past_due")
     return (
       <>
@@ -173,7 +193,8 @@ export function BillingSettings() {
               </h2>
               {b.status === "past_due" ? (
                 <Badge variant="destructive">Payment failed</Badge>
-              ) : b.cancelAtPeriodEnd && current !== "free" ? (
+              ) : b.provider === "manual" ? null : b.cancelAtPeriodEnd &&
+                current !== "free" ? (
                 <Badge variant="secondary">Cancels soon</Badge>
               ) : null}
             </div>
@@ -207,97 +228,101 @@ export function BillingSettings() {
         </div>
       </section>
 
-      <section className="flex flex-col gap-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold">Plans</h2>
-          <Tabs
-            value={interval}
-            onValueChange={(v) => setInterval(v as BillingInterval)}
-          >
-            <TabsList>
-              <TabsTrigger value="month">Monthly</TabsTrigger>
-              <TabsTrigger value="year">Yearly · 2 months free</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
-        {!b.checkoutAvailable ? (
-          <p className="text-sm text-muted-foreground">
-            Online upgrades aren&apos;t available yet. Contact support to change
-            your plan.
-          </p>
-        ) : null}
-        <div className="grid gap-4 md:grid-cols-3">
-          {ORDER.map((key) => {
-            const plan = PLANS[key]
-            const isCurrent =
-              key === current &&
-              (key === "free" || !subscribed || b.interval === interval)
-            const price = plan.prices?.[interval]
-            return (
-              <div
-                key={key}
-                className={cn(
-                  "flex flex-col gap-4 rounded-lg border p-4",
-                  key === current && "border-primary"
-                )}
-              >
-                <div>
-                  <h3 className="font-semibold">{plan.name}</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {plan.description}
+      {b.provider === "manual" ? (
+        <ManualPlans billing={b} canManage={manage} />
+      ) : (
+        <section className="flex flex-col gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-lg font-semibold">Plans</h2>
+            <Tabs
+              value={interval}
+              onValueChange={(v) => setInterval(v as BillingInterval)}
+            >
+              <TabsList>
+                <TabsTrigger value="month">Monthly</TabsTrigger>
+                <TabsTrigger value="year">Yearly · 2 months free</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+          {!b.checkoutAvailable ? (
+            <p className="text-sm text-muted-foreground">
+              Online upgrades aren&apos;t available yet. Contact support to
+              change your plan.
+            </p>
+          ) : null}
+          <div className="grid gap-4 md:grid-cols-3">
+            {ORDER.map((key) => {
+              const plan = PLANS[key]
+              const isCurrent =
+                key === current &&
+                (key === "free" || !subscribed || b.interval === interval)
+              const price = plan.prices?.[interval]
+              return (
+                <div
+                  key={key}
+                  className={cn(
+                    "flex flex-col gap-4 rounded-lg border p-4",
+                    key === current && "border-primary"
+                  )}
+                >
+                  <div>
+                    <h3 className="font-semibold">{plan.name}</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {plan.description}
+                    </p>
+                  </div>
+                  <p className="text-2xl font-semibold tabular-nums">
+                    {price ? money(price, "USD", "en-US") : "$0"}
+                    <span className="text-sm font-normal text-muted-foreground">
+                      {price ? ` / ${interval}` : " forever"}
+                    </span>
                   </p>
-                </div>
-                <p className="text-2xl font-semibold tabular-nums">
-                  {price ? money(price, "USD", "en-US") : "$0"}
-                  <span className="text-sm font-normal text-muted-foreground">
-                    {price ? ` / ${interval}` : " forever"}
-                  </span>
-                </p>
-                <ul className="flex flex-1 flex-col gap-1.5 text-sm">
-                  {LIMITS.map((k) => (
-                    <li key={k}>{limitText(k, plan.limits[k])}</li>
-                  ))}
-                  {(Object.keys(plan.features) as FeatureKey[])
-                    .filter((f) => plan.features[f])
-                    .map((f) => (
-                      <li key={f}>{FEATURE_LABELS[f]}</li>
+                  <ul className="flex flex-1 flex-col gap-1.5 text-sm">
+                    {LIMITS.map((k) => (
+                      <li key={k}>{limitText(k, plan.limits[k])}</li>
                     ))}
-                </ul>
-                {key === "free" ? (
-                  <Button variant="outline" disabled>
-                    {current === "free" ? "Current plan" : "Included"}
-                  </Button>
-                ) : isCurrent ? (
-                  <Button variant="outline" disabled>
-                    Current plan
-                  </Button>
-                ) : (
-                  <Button
-                    disabled={!manage || !b.checkoutAvailable || busy}
-                    onClick={() => choose(key)}
-                  >
-                    {subscribed
-                      ? `Switch to ${plan.name}`
-                      : `Upgrade to ${plan.name}`}
-                  </Button>
-                )}
-              </div>
-            )
-          })}
-        </div>
-        {subscribed ? (
-          <p className="text-xs text-muted-foreground">
-            To cancel or move to Free, use Manage billing. Downgrading never
-            deletes data; anything over the new limits becomes read-only for new
-            additions.
-          </p>
-        ) : null}
-        {!manage ? (
-          <p className="text-xs text-muted-foreground">
-            Only members who can manage billing can change the plan.
-          </p>
-        ) : null}
-      </section>
+                    {(Object.keys(plan.features) as FeatureKey[])
+                      .filter((f) => plan.features[f])
+                      .map((f) => (
+                        <li key={f}>{FEATURE_LABELS[f]}</li>
+                      ))}
+                  </ul>
+                  {key === "free" ? (
+                    <Button variant="outline" disabled>
+                      {current === "free" ? "Current plan" : "Included"}
+                    </Button>
+                  ) : isCurrent ? (
+                    <Button variant="outline" disabled>
+                      Current plan
+                    </Button>
+                  ) : (
+                    <Button
+                      disabled={!manage || !b.checkoutAvailable || busy}
+                      onClick={() => choose(key)}
+                    >
+                      {subscribed
+                        ? `Switch to ${plan.name}`
+                        : `Upgrade to ${plan.name}`}
+                    </Button>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+          {subscribed ? (
+            <p className="text-xs text-muted-foreground">
+              To cancel or move to Free, use Manage billing. Downgrading never
+              deletes data; anything over the new limits becomes read-only for
+              new additions.
+            </p>
+          ) : null}
+          {!manage ? (
+            <p className="text-xs text-muted-foreground">
+              Only members who can manage billing can change the plan.
+            </p>
+          ) : null}
+        </section>
+      )}
     </div>
   )
 }

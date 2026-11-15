@@ -12,3 +12,4 @@ export {
   PortalInvoiceView,
   PortalQuoteView,
 } from "./components/portal-documents"
+export { HowToPay } from "./components/portal-pay"

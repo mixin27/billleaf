@@ -61,6 +61,8 @@ import {
   useReorderPaymentAccounts,
   useSavePaymentAccount,
   useUploadQr,
+  type AccountsSource,
+  AccountsSourceContext,
 } from "../api/queries"
 
 const QR_MAX = 1024 * 1024
@@ -70,9 +72,22 @@ const QR_MAX = 1024 * 1024
  * WavePay, AYA Pay…) shown on invoices, in invoice emails and in the client
  * portal, with optional QR codes.
  */
-export function PaymentAccountsSettings() {
+export function PaymentAccountsSettings({
+  source = "workspace",
+}: {
+  /** "platform": Billleaf's own accounts (admin portal). */
+  source?: AccountsSource
+}) {
+  return (
+    <AccountsSourceContext.Provider value={source}>
+      <AccountsList source={source} />
+    </AccountsSourceContext.Provider>
+  )
+}
+
+function AccountsList({ source }: { source: AccountsSource }) {
   const { can } = usePermissions()
-  const editable = can("workspace.update")
+  const editable = source === "platform" || can("workspace.update")
   const accounts = usePaymentAccounts()
   const reorder = useReorderPaymentAccounts()
   const [editing, setEditing] = React.useState<PaymentAccount | "new" | null>(
@@ -93,9 +108,9 @@ export function PaymentAccountsSettings() {
         <div className="max-w-xl">
           <h2 className="text-base font-semibold">Payment methods</h2>
           <p className="text-sm text-muted-foreground">
-            How clients can pay you. They appear on invoices that have a
-            balance, in invoice emails and in the client portal, where clients
-            can upload a screenshot after paying.
+            {source === "platform"
+              ? "Where workspaces pay Billleaf for their plan. Shown on the pay page in Settings → Billing."
+              : "How clients can pay you. They appear on invoices that have a balance, in invoice emails and in the client portal, where clients can upload a screenshot after paying."}
           </p>
         </div>
         {editable ? (

@@ -11,6 +11,9 @@ import type {
   AdminBanInput,
   AdminJobsQuery,
   AdminSetPlanInput,
+  AdminSubscriptionPaymentQuery,
+  CreatePlatformPriceInput,
+  UpdatePlatformPriceInput,
   AdminUserListQuery,
   AdminWorkspaceListQuery,
 } from "@workspace/contracts"
@@ -29,6 +32,9 @@ export const adminKeys = {
   user: (id: string) => ["admin", "user", id] as const,
   jobs: (q: AdminJobsQuery) => ["admin", "jobs", q] as const,
   audit: (q: AdminAuditQuery) => ["admin", "audit", q] as const,
+  prices: ["admin", "prices"] as const,
+  payments: (q: AdminSubscriptionPaymentQuery) =>
+    ["admin", "subscription-payments", q] as const,
 }
 
 export function useAdminOverview() {
@@ -192,6 +198,75 @@ export function useRemoveJob() {
     unwrap(
       api.DELETE("/v1/admin/jobs/{queue}/{id}", {
         params: { path: { queue, id } },
+      })
+    )
+  )
+}
+
+// ── Manual billing ──────────────────────────────────────────
+
+export function useAdminPrices() {
+  return useQuery({
+    queryKey: adminKeys.prices,
+    queryFn: async () => (await unwrap(api.GET("/v1/admin/prices"))).items,
+  })
+}
+
+export function useSavePrice() {
+  return useAdminMutation(
+    ({
+      id,
+      ...body
+    }: (CreatePlatformPriceInput | UpdatePlatformPriceInput) & {
+      id?: string
+    }) =>
+      id
+        ? unwrap(
+            api.PATCH("/v1/admin/prices/{id}", {
+              params: { path: { id } },
+              body: body as never,
+            })
+          )
+        : unwrap(api.POST("/v1/admin/prices", { body: body as never }))
+  )
+}
+
+export function useDeletePrice() {
+  return useAdminMutation((id: string) =>
+    unwrap(api.DELETE("/v1/admin/prices/{id}", { params: { path: { id } } }))
+  )
+}
+
+export function useAdminSubscriptionPayments(q: AdminSubscriptionPaymentQuery) {
+  return useQuery({
+    queryKey: adminKeys.payments(q),
+    queryFn: () =>
+      unwrap(
+        api.GET("/v1/admin/subscription-payments", {
+          params: { query: q as never },
+        })
+      ),
+    placeholderData: keepPreviousData,
+  })
+}
+
+export function useApprovePayment() {
+  return useAdminMutation(({ id, periods }: { id: string; periods?: number }) =>
+    unwrap(
+      api.POST("/v1/admin/subscription-payments/{id}/approve", {
+        params: { path: { id } },
+        body: periods ? { periods } : {},
+      })
+    )
+  )
+}
+
+export function useRejectPayment() {
+  return useAdminMutation(({ id, reason }: { id: string; reason: string }) =>
+    unwrap(
+      api.POST("/v1/admin/subscription-payments/{id}/reject", {
+        params: { path: { id } },
+        body: { reason },
       })
     )
   )

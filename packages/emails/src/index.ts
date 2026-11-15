@@ -282,3 +282,100 @@ export function paymentProofRejectedEmail(p: {
     text: `${line}\n\nTheir note: ${p.reason}\n\nUpload a new screenshot: ${p.url}`,
   }
 }
+
+// ── Manual subscriptions (ADR-0013) ───────────────────────────
+
+/** To platform admins: a workspace uploaded proof for a plan. */
+export function subscriptionPaymentSubmittedEmail(p: {
+  to: string
+  workspaceName: string
+  plan: string
+  amount: string
+  reference: string | null
+  url: string
+}): EmailMessage {
+  const line = `${p.workspaceName} paid ${p.amount} for ${p.plan}${p.reference ? ` (ref ${p.reference})` : ""}.`
+  return {
+    to: p.to,
+    subject: `Subscription payment to review: ${p.workspaceName}`,
+    html: layout(
+      `Payment to review`,
+      `<p>${esc(line)}</p><p>Check the screenshot, then approve or reject it.</p>`,
+      { label: "Review payment", url: p.url }
+    ),
+    text: `${line}\n\nReview it: ${p.url}`,
+  }
+}
+
+/** To workspace owners: the payment was approved and the plan is active. */
+export function subscriptionApprovedEmail(p: {
+  to: string
+  workspaceName: string
+  plan: string
+  until: string
+  url: string
+}): EmailMessage {
+  const line = `Your payment was approved. ${p.workspaceName} is on ${p.plan} until ${p.until}.`
+  return {
+    to: p.to,
+    subject: `${p.plan} is active for ${p.workspaceName}`,
+    html: layout(`Payment approved`, `<p>${esc(line)}</p>`, {
+      label: "Open billing",
+      url: p.url,
+    }),
+    text: `${line}\n\n${p.url}`,
+  }
+}
+
+/** To workspace owners: the payment couldn't be matched. */
+export function subscriptionRejectedEmail(p: {
+  to: string
+  workspaceName: string
+  plan: string
+  amount: string
+  reason: string
+  url: string
+}): EmailMessage {
+  const line = `We couldn't confirm the ${p.amount} payment for ${p.plan} on ${p.workspaceName}.`
+  return {
+    to: p.to,
+    subject: `Your ${p.plan} payment needs another look`,
+    html: layout(
+      `Payment not approved`,
+      `<p>${esc(line)}</p><p>Our note:</p><p style="white-space:pre-line;border-left:3px solid #d0d7d4;padding-left:12px">${esc(p.reason)}</p><p>You can upload a new screenshot from the billing page.</p>`,
+      { label: "Open billing", url: p.url }
+    ),
+    text: `${line}\n\nOur note: ${p.reason}\n\nUpload a new screenshot: ${p.url}`,
+  }
+}
+
+/** To workspace owners: renewal reminders and the end of the plan. */
+export function subscriptionReminderEmail(p: {
+  to: string
+  workspaceName: string
+  plan: string
+  stage: "7d" | "1d" | "ended"
+  /** Period end (7d/1d) or the end of the grace period (ended). */
+  date: string
+  url: string
+}): EmailMessage {
+  const line =
+    p.stage === "ended"
+      ? `${p.workspaceName}'s ${p.plan} plan has ended. It keeps working until ${p.date}; after that the workspace moves to Free limits. Nothing is deleted.`
+      : `${p.workspaceName}'s ${p.plan} plan ends on ${p.date}. Renew to keep your ${p.plan} features.`
+  const subject =
+    p.stage === "ended"
+      ? `Your ${p.plan} plan has ended`
+      : p.stage === "1d"
+        ? `Your ${p.plan} plan ends tomorrow`
+        : `Your ${p.plan} plan ends in 7 days`
+  return {
+    to: p.to,
+    subject,
+    html: layout(subject, `<p>${esc(line)}</p>`, {
+      label: "Renew",
+      url: p.url,
+    }),
+    text: `${line}\n\nRenew: ${p.url}`,
+  }
+}

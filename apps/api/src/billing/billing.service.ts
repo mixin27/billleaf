@@ -13,6 +13,7 @@ import {
   type BillingOverview,
   type CheckoutInput,
   effectivePlan,
+  manualGraceEndsAt,
   isPlanKey,
   type PaidPlanKey,
   subscriptionStatusSchema,
@@ -33,6 +34,7 @@ import { RequestContext } from "../common/context/request-context.js"
 import { InjectDb, type Database } from "../core/database/database.module.js"
 import { QUEUES } from "../core/queue/queue.module.js"
 import { AuditService } from "../iam/audit/audit.service.js"
+import { addInterval } from "./period.js"
 import {
   BILLING_PROVIDER,
   type BillingEvent,
@@ -43,13 +45,6 @@ import { TestBillingProvider } from "./providers/test-billing.provider.js"
 import { UsageService } from "./usage.service.js"
 
 type SubscriptionRow = typeof workspaceSubscriptions.$inferSelect
-
-const addInterval = (from: Date, interval: BillingInterval) => {
-  const d = new Date(from)
-  if (interval === "year") d.setUTCFullYear(d.getUTCFullYear() + 1)
-  else d.setUTCMonth(d.getUTCMonth() + 1)
-  return d
-}
 
 /**
  * SaaS subscription for the active workspace: overview, checkout, plan
@@ -90,6 +85,7 @@ export class BillingService {
       checkoutAvailable: this.provider.available,
       canManage: Boolean(sub?.providerCustomerId),
       provider: this.provider.key,
+      graceEndsAt: sub ? (manualGraceEndsAt(sub)?.toISOString() ?? null) : null,
       usage: await this.usage.all(tz),
     }
   }
@@ -97,7 +93,9 @@ export class BillingService {
   async checkout(input: CheckoutInput): Promise<{ url: string }> {
     this.assertAvailable()
     const sub = await this.subscription(this.ctx.workspaceId)
-    if (this.hasLiveSubscription(sub))
+    // Manual billing: every period is paid separately, so renewing early or
+    // switching plan is just another checkout.
+    if (this.provider.key !== "manual" && this.hasLiveSubscription(sub))
       throw new ConflictException({
         message: "You already have a subscription. Switch plans instead.",
         code: "already_subscribed",

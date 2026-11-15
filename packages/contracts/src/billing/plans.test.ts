@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest"
 
-import { effectivePlan, PAST_DUE_GRACE_DAYS } from "./plans.js"
+import {
+  effectivePlan,
+  MANUAL_GRACE_DAYS,
+  manualGraceEndsAt,
+  PAST_DUE_GRACE_DAYS,
+} from "./plans.js"
 
 const now = new Date("2026-11-15T00:00:00Z")
 const day = 86_400_000
@@ -52,5 +57,49 @@ describe("effectivePlan", () => {
 
   it("drops to free when canceled", () => {
     expect(effectivePlan(sub({ status: "canceled" }), now)).toBe("free")
+  })
+})
+
+describe("manual plans", () => {
+  const manual = (endOffsetDays: number) =>
+    sub({
+      provider: "manual",
+      cancelAtPeriodEnd: true,
+      currentPeriodEnd: new Date(now.getTime() + endOffsetDays * day),
+    })
+
+  it("keep the plan until the period end", () => {
+    expect(effectivePlan(manual(3), now)).toBe("pro")
+  })
+
+  it("keep the plan during the grace period after the end", () => {
+    expect(effectivePlan(manual(-1), now)).toBe("pro")
+    expect(effectivePlan(manual(-MANUAL_GRACE_DAYS + 0.1), now)).toBe("pro")
+  })
+
+  it("fall back to free after the grace period", () => {
+    expect(effectivePlan(manual(-MANUAL_GRACE_DAYS - 0.1), now)).toBe("free")
+  })
+
+  it("other providers get no grace on a scheduled cancellation", () => {
+    expect(
+      effectivePlan(
+        sub({
+          cancelAtPeriodEnd: true,
+          currentPeriodEnd: new Date(now.getTime() - day),
+        }),
+        now
+      )
+    ).toBe("free")
+  })
+
+  it("report when the grace ends", () => {
+    const end = new Date(now.getTime() - day)
+    expect(
+      manualGraceEndsAt({ provider: "manual", currentPeriodEnd: end })
+    ).toEqual(new Date(end.getTime() + MANUAL_GRACE_DAYS * day))
+    expect(manualGraceEndsAt({ provider: "test", currentPeriodEnd: end })).toBe(
+      null
+    )
   })
 })
