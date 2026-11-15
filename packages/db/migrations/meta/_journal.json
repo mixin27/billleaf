@@ -15,6 +15,13 @@
       "when": 1794706022344,
       "tag": "0001_thankful_shiva",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794711965808,
+      "tag": "0002_tough_blizzard",
+      "breakpoints": true
     }
   ]
 }

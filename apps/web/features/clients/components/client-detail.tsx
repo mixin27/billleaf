@@ -36,6 +36,7 @@ import * as React from "react"
 import { toast } from "sonner"
 
 import { Can, usePermissions } from "@/components/permissions/can"
+import { ClientQuotes } from "@/features/quotes"
 import { useWorkspaceProfile, useWorkspaceStore } from "@/features/workspace"
 import { errorMessage } from "@/lib/api"
 
@@ -183,14 +184,7 @@ function ClientDetailView({ client }: { client: ClientDetailData }) {
         />
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Activity</CardTitle>
-        </CardHeader>
-        <CardContent className="text-sm text-muted-foreground">
-          Quotes, invoices and payments for this client will appear here.
-        </CardContent>
-      </Card>
+      <ClientQuotes clientId={client.id} canCreate={!archived} />
 
       <ClientFormDialog
         open={editing}

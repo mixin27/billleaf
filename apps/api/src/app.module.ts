@@ -12,6 +12,7 @@ import { HealthModule } from "./health/health.module.js"
 import { IamModule } from "./iam/iam.module.js"
 import { WorkspaceGuard } from "./iam/workspace.guard.js"
 import { ClientsModule } from "./modules/clients/clients.module.js"
+import { QuotesModule } from "./modules/quotes/quotes.module.js"
 import { WorkspaceProfileModule } from "./modules/workspace/workspace-profile.module.js"
 
 @Module({
@@ -25,6 +26,7 @@ import { WorkspaceProfileModule } from "./modules/workspace/workspace-profile.mo
     // Business modules
     WorkspaceProfileModule,
     ClientsModule,
+    QuotesModule,
   ],
   providers: [
     // Guard order matters: rate limit → session → workspace/RBAC.
