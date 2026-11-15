@@ -50,7 +50,7 @@ billleaf/
 | ----------------------------------------------------------- | -------------------------------------------- |
 | `pnpm dev`                                                  | Run all apps (web :3000, api :4000)          |
 | `pnpm build` / `lint` / `typecheck` / `test`                | Turbo pipelines across the repo              |
-| `pnpm infra:up` / `infra:down`                              | Local Postgres, Valkey, MinIO, Mailpit       |
+| `pnpm infra:up` / `infra:down`                              | Local Postgres, Valkey, S3, Mailpit          |
 | `pnpm db:generate` / `db:migrate` / `db:seed` / `db:studio` | Drizzle tasks in `@workspace/db`             |
 | `pnpm gen:api-client`                                       | Regenerate the typed API client from OpenAPI |
 | `pnpm --filter <pkg> <script>`                              | Run in one package                           |

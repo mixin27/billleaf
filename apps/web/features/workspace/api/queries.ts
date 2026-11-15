@@ -29,3 +29,13 @@ export function useWorkspaces() {
     },
   })
 }
+
+/** Business profile of the active workspace (name, address, document defaults). */
+export function useWorkspaceProfile() {
+  const workspaceId = useWorkspaceStore((s) => s.workspace?.id)
+  return useQuery({
+    queryKey: workspaceKeys.profile(workspaceId),
+    queryFn: () => unwrap(api.GET("/v1/workspace")),
+    enabled: Boolean(workspaceId),
+  })
+}

@@ -1,3 +1,5 @@
 export * from "./auth.js"
 export * from "./iam.js"
 export * from "./billing.js"
+export * from "./workspace.js"
+export * from "./clients.js"

@@ -4,4 +4,6 @@ export const workspaceKeys = {
   list: () => [...workspaceKeys.all, "list"] as const,
   me: (workspaceId: string | undefined) =>
     [...workspaceKeys.all, "me", workspaceId] as const,
+  profile: (workspaceId: string | undefined) =>
+    [...workspaceKeys.all, "profile", workspaceId] as const,
 }

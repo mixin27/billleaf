@@ -8,6 +8,13 @@
       "when": 1794703018133,
       "tag": "0000_dusty_chimera",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1794706022344,
+      "tag": "0001_thankful_shiva",
+      "breakpoints": true
     }
   ]
 }

@@ -33,7 +33,7 @@ Read `docs/README.md` (product + architecture + ADRs) before non-trivial work.
 
 ```bash
 pnpm install
-pnpm infra:up                  # postgres, valkey, minio, mailpit (docker)
+pnpm infra:up                  # postgres, valkey, s3 (seaweedfs), mailpit (docker)
 pnpm db:migrate && pnpm db:seed
 pnpm dev                       # web :3000, api :4000 (+ package watchers)
 pnpm --filter api dev:worker   # background jobs (emails)

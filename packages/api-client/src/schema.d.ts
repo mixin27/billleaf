@@ -132,6 +132,118 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  "/v1/workspace": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["WorkspaceProfileController_get_v1"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch: operations["WorkspaceProfileController_update_v1"]
+    trace?: never
+  }
+  "/v1/clients": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["ClientsController_list_v1"]
+    put?: never
+    post: operations["ClientsController_create_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/clients/{id}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["ClientsController_get_v1"]
+    put?: never
+    post?: never
+    delete: operations["ClientsController_remove_v1"]
+    options?: never
+    head?: never
+    patch: operations["ClientsController_update_v1"]
+    trace?: never
+  }
+  "/v1/clients/{id}/archive": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["ClientsController_archive_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/clients/{id}/restore": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["ClientsController_restore_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/clients/{id}/contacts": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["ClientsController_addContact_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/clients/{id}/contacts/{contactId}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    delete: operations["ClientsController_removeContact_v1"]
+    options?: never
+    head?: never
+    patch: operations["ClientsController_updateContact_v1"]
+    trace?: never
+  }
 }
 export type webhooks = Record<string, never>
 export interface components {
@@ -399,6 +511,215 @@ export interface components {
     }
     AssignMemberRolesDto: {
       roleIds: string[]
+    }
+    WorkspaceProfileDto_Output: {
+      workspaceId: string
+      name: string
+      slug: string
+      legalName: string | null
+      email: string | null
+      phone: string | null
+      website: string | null
+      taxId: string | null
+      addressLine1: string | null
+      addressLine2: string | null
+      city: string | null
+      state: string | null
+      postalCode: string | null
+      country: string | null
+      defaultCurrency: string
+      timezone: string
+      locale: string
+      paymentTermsDays: number
+      defaultTaxRateBps: number
+      documentFooter: string | null
+      brandColor: string | null
+      /** Format: date-time */
+      updatedAt: string
+    }
+    UpdateWorkspaceProfileDto: {
+      name?: string
+      legalName?: string | null
+      email?: ("" | string) | null
+      phone?: string | null
+      website?: ("" | string) | null
+      taxId?: string | null
+      defaultCurrency?: string
+      timezone?: string
+      locale?: string
+      paymentTermsDays?: number
+      defaultTaxRateBps?: number
+      documentFooter?: string | null
+      brandColor?: (string | null) | ""
+      addressLine1?: string | null
+      addressLine2?: string | null
+      city?: string | null
+      state?: string | null
+      postalCode?: string | null
+      country?: string | null
+    }
+    ClientListDto_Output: {
+      items: {
+        id: string
+        workspaceId: string
+        /** @enum {string} */
+        type: "company" | "individual"
+        name: string
+        email: string | null
+        phone: string | null
+        website: string | null
+        taxId: string | null
+        addressLine1: string | null
+        addressLine2: string | null
+        city: string | null
+        state: string | null
+        postalCode: string | null
+        country: string | null
+        currency: string | null
+        paymentTermsDays: number | null
+        notes: string | null
+        /** @enum {string} */
+        status: "active" | "archived"
+        /** Format: date-time */
+        archivedAt: string | null
+        /** Format: date-time */
+        createdAt: string
+        /** Format: date-time */
+        updatedAt: string
+      }[]
+      nextCursor: string | null
+    }
+    ClientDetailDto_Output: {
+      id: string
+      workspaceId: string
+      /** @enum {string} */
+      type: "company" | "individual"
+      name: string
+      email: string | null
+      phone: string | null
+      website: string | null
+      taxId: string | null
+      addressLine1: string | null
+      addressLine2: string | null
+      city: string | null
+      state: string | null
+      postalCode: string | null
+      country: string | null
+      currency: string | null
+      paymentTermsDays: number | null
+      notes: string | null
+      /** @enum {string} */
+      status: "active" | "archived"
+      /** Format: date-time */
+      archivedAt: string | null
+      /** Format: date-time */
+      createdAt: string
+      /** Format: date-time */
+      updatedAt: string
+      contacts: {
+        id: string
+        clientId: string
+        name: string
+        email: string | null
+        phone: string | null
+        title: string | null
+        isPrimary: boolean
+        /** Format: date-time */
+        createdAt: string
+      }[]
+    }
+    CreateClientDto: {
+      /**
+       * @default company
+       * @enum {string}
+       */
+      type: "company" | "individual"
+      name: string
+      email?: ("" | string) | null
+      phone?: string | null
+      website?: ("" | string) | null
+      taxId?: string | null
+      currency?: (string | null) | ""
+      paymentTermsDays?: number | null
+      notes?: string | null
+      addressLine1?: string | null
+      addressLine2?: string | null
+      city?: string | null
+      state?: string | null
+      postalCode?: string | null
+      country?: string | null
+    }
+    ClientDto_Output: {
+      id: string
+      workspaceId: string
+      /** @enum {string} */
+      type: "company" | "individual"
+      name: string
+      email: string | null
+      phone: string | null
+      website: string | null
+      taxId: string | null
+      addressLine1: string | null
+      addressLine2: string | null
+      city: string | null
+      state: string | null
+      postalCode: string | null
+      country: string | null
+      currency: string | null
+      paymentTermsDays: number | null
+      notes: string | null
+      /** @enum {string} */
+      status: "active" | "archived"
+      /** Format: date-time */
+      archivedAt: string | null
+      /** Format: date-time */
+      createdAt: string
+      /** Format: date-time */
+      updatedAt: string
+    }
+    UpdateClientDto: {
+      /** @enum {string} */
+      type?: "company" | "individual"
+      name?: string
+      email?: ("" | string) | null
+      phone?: string | null
+      website?: ("" | string) | null
+      taxId?: string | null
+      currency?: (string | null) | ""
+      paymentTermsDays?: number | null
+      notes?: string | null
+      addressLine1?: string | null
+      addressLine2?: string | null
+      city?: string | null
+      state?: string | null
+      postalCode?: string | null
+      country?: string | null
+    }
+    CreateClientContactDto: {
+      name: string
+      email?: ("" | string) | null
+      phone?: string | null
+      title?: string | null
+      /** @default false */
+      isPrimary: boolean
+    }
+    ClientContactDto_Output: {
+      id: string
+      clientId: string
+      name: string
+      email: string | null
+      phone: string | null
+      title: string | null
+      isPrimary: boolean
+      /** Format: date-time */
+      createdAt: string
+    }
+    UpdateClientContactDto: {
+      name?: string
+      email?: ("" | string) | null
+      phone?: string | null
+      title?: string | null
+      isPrimary?: boolean
     }
   }
   responses: never
@@ -755,6 +1076,273 @@ export interface operations {
               }
             }
           }
+        }
+      }
+    }
+  }
+  WorkspaceProfileController_get_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["WorkspaceProfileDto_Output"]
+        }
+      }
+    }
+  }
+  WorkspaceProfileController_update_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateWorkspaceProfileDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["WorkspaceProfileDto_Output"]
+        }
+      }
+    }
+  }
+  ClientsController_list_v1: {
+    parameters: {
+      query?: {
+        cursor?: string
+        limit?: number
+        q?: string
+        status?: "active" | "archived"
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["ClientListDto_Output"]
+        }
+      }
+    }
+  }
+  ClientsController_create_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateClientDto"]
+      }
+    }
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["ClientDto_Output"]
+        }
+      }
+    }
+  }
+  ClientsController_get_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["ClientDetailDto_Output"]
+        }
+      }
+    }
+  }
+  ClientsController_remove_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  ClientsController_update_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateClientDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["ClientDto_Output"]
+        }
+      }
+    }
+  }
+  ClientsController_archive_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["ClientDto_Output"]
+        }
+      }
+    }
+  }
+  ClientsController_restore_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["ClientDto_Output"]
+        }
+      }
+    }
+  }
+  ClientsController_addContact_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateClientContactDto"]
+      }
+    }
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["ClientContactDto_Output"]
+        }
+      }
+    }
+  }
+  ClientsController_removeContact_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+        contactId: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  ClientsController_updateContact_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+        contactId: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateClientContactDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["ClientContactDto_Output"]
         }
       }
     }

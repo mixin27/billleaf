@@ -5,6 +5,7 @@ import {
   memberRoles,
   rolePermissions,
   roles,
+  workspaceProfiles,
   workspaceSubscriptions,
   type Transaction,
 } from "@workspace/db"
@@ -41,6 +42,10 @@ export class WorkspaceBootstrapService {
       await tx
         .insert(workspaceSubscriptions)
         .values({ workspaceId, planKey: "free" })
+        .onConflictDoNothing()
+      await tx
+        .insert(workspaceProfiles)
+        .values({ workspaceId })
         .onConflictDoNothing()
       await tx
         .insert(documentSequences)
@@ -100,14 +105,12 @@ export class WorkspaceBootstrapService {
         .returning({ id: roles.id })
       ids[slug] = row!.id
       if (tpl.permissions.length > 0) {
-        await tx
-          .insert(rolePermissions)
-          .values(
-            tpl.permissions.map((permissionKey) => ({
-              roleId: row!.id,
-              permissionKey,
-            }))
-          )
+        await tx.insert(rolePermissions).values(
+          tpl.permissions.map((permissionKey) => ({
+            roleId: row!.id,
+            permissionKey,
+          }))
+        )
       }
     }
     return ids
