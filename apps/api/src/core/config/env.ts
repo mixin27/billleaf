@@ -67,6 +67,15 @@ export const envSchema = z.object({
     .min(16)
     .default("dev-only-billing-webhook-secret"),
 
+  /** Enables GET /health/deep when sent as `x-health-token` (unset = disabled). */
+  HEALTH_CHECK_TOKEN: z
+    .string()
+    .optional()
+    .transform((v) => v || undefined)
+    .pipe(z.string().min(24).optional()),
+  /** Build version (git sha), baked into the image; shown by /health/live. */
+  APP_VERSION: z.string().default("dev"),
+
   SMTP_URL: z.string().default("smtp://localhost:1025"),
   EMAIL_FROM: z.string().default("Billleaf <no-reply@billleaf.local>"),
 })

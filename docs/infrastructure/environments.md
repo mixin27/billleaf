@@ -1,18 +1,18 @@
 # Environments
 
-|                | **local**                  | **staging**                                       | **production**                |
-| -------------- | -------------------------- | ------------------------------------------------- | ----------------------------- |
-| Where          | Developer machine          | Same VPS, separate Dokploy project/stack          | VPS (Dokploy)                 |
-| Web            | `localhost:3000`           | `app.staging.billleaf.com`                        | `app.billleaf.com`            |
-| API            | `localhost:4000`           | `api.staging.billleaf.com`                        | `api.billleaf.com`            |
-| Docs           | `localhost` (Fumadocs dev) | Vercel preview                                    | `docs.billleaf.com` (Vercel)  |
-| Postgres       | docker compose             | own container + own DB/credentials                | own container (later own VPS) |
-| Valkey         | docker compose             | own container                                     | own container                 |
-| Storage        | SeaweedFS (S3, :8333)      | R2 bucket `billleaf-staging`                      | R2 bucket `billleaf-prod`     |
-| Email          | Mailpit (`localhost:8025`) | Resend (restricted / test domain)                 | Resend                        |
-| Billing        | provider sandbox           | provider sandbox                                  | provider live                 |
-| Deploy trigger | —                          | push to `main`                                    | tag `v*` + manual approval    |
-| Data           | seed data                  | seed + anonymized fixtures, **never prod copies** | real                          |
+|                | **local**                  | **staging**                                               | **production**                |
+| -------------- | -------------------------- | --------------------------------------------------------- | ----------------------------- |
+| Where          | Developer machine          | Same VPS, separate Dokploy project (`STACK_NAME=staging`) | VPS (Dokploy)                 |
+| Web            | `localhost:3000`           | `app.staging.billleaf.com`                                | `app.billleaf.com`            |
+| API            | `localhost:4000`           | `api.staging.billleaf.com`                                | `api.billleaf.com`            |
+| Docs           | `localhost` (Fumadocs dev) | Vercel preview                                            | `docs.billleaf.com` (Vercel)  |
+| Postgres       | docker compose             | own container + own DB/credentials                        | own container (later own VPS) |
+| Valkey         | docker compose             | own container                                             | own container                 |
+| Storage        | SeaweedFS (S3, :8333)      | R2 bucket `billleaf-staging`                              | R2 bucket `billleaf-prod`     |
+| Email          | Mailpit (`localhost:8025`) | Resend (restricted / test domain)                         | Resend                        |
+| Billing        | provider sandbox           | provider sandbox                                          | provider live                 |
+| Deploy trigger | —                          | Actions → Deploy → Run workflow (staging)                 | tag `v*` + manual approval    |
+| Data           | seed data                  | seed + anonymized fixtures, **never prod copies**         | real                          |
 
 Hostnames are indicative until the domain is confirmed.
 

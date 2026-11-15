@@ -8,6 +8,8 @@ const PUBLIC_PATHS = [
   "/accept-invitation",
   // Client portal: its own emailed-link session, checked by the API.
   "/portal",
+  // Health check for containers and the post-deploy smoke test.
+  "/healthz",
 ]
 
 /**

@@ -1,25 +1,43 @@
 name: Deploy
 
-# tag v*            -> build & push images to GHCR -> Dokploy production webhook
-# manual run on main -> build & push images to GHCR -> Dokploy staging webhook
+# Release flow (runbook: docs/infrastructure/dokploy-runbook.md):
 #
-# Pushes to main do NOT deploy until a VPS + Dokploy exist. When staging is live,
-# add `branches: [main]` back under `on.push` for continuous staging deploys.
+#   tag v*                  -> production (waits for approval on the
+#                              "production" GitHub environment)
+#   Actions → Deploy → Run  -> staging or production (choose)
 #
-# Setup (GitHub repo settings):
-#   - Environments: create `staging` and `production`.
-#     Add "Required reviewers" to `production` so tag deploys wait for manual approval.
-#   - Secrets: DOKPLOY_STAGING_WEBHOOK (staging env or repo), DOKPLOY_PRODUCTION_WEBHOOK (production env).
-#   - The api image also runs the BullMQ worker (different command in Dokploy).
-#   - DB migrations run as a one-off `migrate` job in Dokploy before the api rolls.
+# 1. build: api + web images, tagged only with immutable tags
+#      <env>-sha-<7>  (and vX.Y.Z for production releases)
+#    The web image is built per environment because Next inlines its
+#    NEXT_PUBLIC_* URLs at build time.
+# 2. deploy (after approval): move the <env> tag to this build, call the
+#    Dokploy webhook, then run infra/smoke.sh until the new build is live.
+#
+# Rollback: set IMAGE_TAG=<env>-sha-<7> in Dokploy and redeploy (or re-run
+# this workflow on that commit).
+#
+# Repository variables (Settings → Secrets and variables → Actions → Variables),
+# per environment prefix STAGING_ / PRODUCTION_:
+#   <ENV>_WEB_URL         e.g. https://app.example.com
+#   <ENV>_API_URL         e.g. https://api.example.com
+#   <ENV>_WEB_SENTRY_DSN  optional, Sentry DSN for the browser
+# Environment secrets (Settings → Environments → staging / production):
+#   DOKPLOY_WEBHOOK       the compose app's deploy webhook URL
+#   HEALTH_CHECK_TOKEN    same value as in Dokploy (enables the deep check)
 
 on:
   push:
     tags: ["v*"]
   workflow_dispatch:
+    inputs:
+      environment:
+        description: Where to deploy
+        type: choice
+        options: [staging, production]
+        default: staging
 
 concurrency:
-  group: deploy-${{ github.ref }}
+  group: deploy-${{ github.event_name == 'push' && 'production' || inputs.environment }}
   cancel-in-progress: false
 
 permissions:
@@ -29,8 +47,26 @@ env:
   REGISTRY: ghcr.io
 
 jobs:
+  prepare:
+    name: Prepare release
+    runs-on: ubuntu-latest
+    outputs:
+      env: ${{ steps.r.outputs.env }}
+      prefix: ${{ steps.r.outputs.prefix }}
+      sha: ${{ steps.r.outputs.sha }}
+      owner: ${{ steps.r.outputs.owner }}
+    steps:
+      - id: r
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then env=production; else env="${{ inputs.environment }}"; fi
+          echo "env=$env" >> "$GITHUB_OUTPUT"
+          echo "prefix=$(echo "$env" | tr '[:lower:]' '[:upper:]')" >> "$GITHUB_OUTPUT"
+          echo "sha=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          echo "owner=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
+
   build:
-    name: Build & push ${{ matrix.app }}
+    name: Build ${{ matrix.app }} (${{ needs.prepare.outputs.env }})
+    needs: prepare
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
@@ -40,36 +76,26 @@ jobs:
       fail-fast: true
       matrix:
         app: [web, api]
+    env:
+      IMAGE: ghcr.io/${{ needs.prepare.outputs.owner }}/billleaf-${{ matrix.app }}
+      TAG: ${{ needs.prepare.outputs.env }}-sha-${{ needs.prepare.outputs.sha }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
+      - uses: actions/checkout@v7
 
-      - name: Lowercase image name
-        id: image
-        run: echo "name=${REGISTRY}/${GITHUB_REPOSITORY,,}-${{ matrix.app }}" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-buildx-action@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
-
-      - name: Log in to GHCR
-        uses: docker/login-action@v4
+      - uses: docker/login-action@v4
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Docker metadata
-        id: meta
-        uses: docker/metadata-action@v6
-        with:
-          images: ${{ steps.image.outputs.name }}
-          tags: |
-            type=sha,format=long
-            type=sha
-            type=ref,event=branch
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+      - name: Tags
+        id: tags
+        run: |
+          tags="$IMAGE:$TAG"
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then tags="$tags,$IMAGE:${GITHUB_REF_NAME}"; fi
+          echo "list=$tags" >> "$GITHUB_OUTPUT"
 
       - name: Build & push
         uses: docker/build-push-action@v7
@@ -77,50 +103,81 @@ jobs:
           context: .
           file: apps/${{ matrix.app }}/Dockerfile
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          # Web inlines NEXT_PUBLIC_* at build time (repo/environment variables).
-          # NOTE: one image serves both envs, so staging and production share these
-          # values unless you split the build per environment.
+          tags: ${{ steps.tags.outputs.list }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
           build-args: |
-            NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}
-            NEXT_PUBLIC_APP_URL=${{ vars.NEXT_PUBLIC_APP_URL }}
-          cache-from: type=gha,scope=${{ matrix.app }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.app }}
+            APP_VERSION=${{ needs.prepare.outputs.sha }}
+            NEXT_PUBLIC_API_URL=${{ vars[format('{0}_API_URL', needs.prepare.outputs.prefix)] }}
+            NEXT_PUBLIC_APP_URL=${{ vars[format('{0}_WEB_URL', needs.prepare.outputs.prefix)] }}
+            NEXT_PUBLIC_SENTRY_DSN=${{ vars[format('{0}_WEB_SENTRY_DSN', needs.prepare.outputs.prefix)] }}
+            NEXT_PUBLIC_SENTRY_ENVIRONMENT=${{ needs.prepare.outputs.env }}
+          cache-from: type=gha,scope=${{ matrix.app }}-${{ needs.prepare.outputs.env }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.app }}-${{ needs.prepare.outputs.env }}
 
-  deploy-staging:
-    name: Deploy to staging
-    needs: build
-    if: github.ref == 'refs/heads/main'
+  deploy:
+    name: Deploy to ${{ needs.prepare.outputs.env }}
+    needs: [prepare, build]
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
+    # Add "Required reviewers" to the production environment for approval.
     environment:
-      name: staging
+      name: ${{ needs.prepare.outputs.env }}
+      url: ${{ vars[format('{0}_WEB_URL', needs.prepare.outputs.prefix)] }}
+    env:
+      ENV_NAME: ${{ needs.prepare.outputs.env }}
+      SHA: ${{ needs.prepare.outputs.sha }}
+      OWNER: ${{ needs.prepare.outputs.owner }}
     steps:
-      - name: Trigger Dokploy staging deploy
+      - uses: actions/checkout@v7
+
+      - uses: docker/setup-buildx-action@v4
+
+      - uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Only now (after approval) does the moving tag point at this build.
+      - name: Point ${{ needs.prepare.outputs.env }} at this build
+        run: |
+          for app in api web; do
+            image="ghcr.io/$OWNER/billleaf-$app"
+            docker buildx imagetools create \
+              --tag "$image:$ENV_NAME" "$image:$ENV_NAME-sha-$SHA"
+          done
+
+      - name: Trigger Dokploy deploy
         env:
-          WEBHOOK: ${{ secrets.DOKPLOY_STAGING_WEBHOOK }}
+          WEBHOOK: ${{ secrets.DOKPLOY_WEBHOOK }}
         run: |
           if [ -z "$WEBHOOK" ]; then
-            echo "::warning::DOKPLOY_STAGING_WEBHOOK is not set; images were pushed but nothing was deployed."
+            echo "::warning::DOKPLOY_WEBHOOK is not set for $ENV_NAME; images are tagged but nothing was deployed."
+            echo "SKIP_SMOKE=1" >> "$GITHUB_ENV"
             exit 0
           fi
           curl -fsS -X POST "$WEBHOOK"
 
-  deploy-production:
-    name: Deploy to production
-    needs: build
-    if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
-    # Configure "Required reviewers" on this environment for manual approval.
-    environment:
-      name: production
-    steps:
-      - name: Trigger Dokploy production deploy
+      - name: Smoke test
+        if: env.SKIP_SMOKE != '1'
         env:
-          WEBHOOK: ${{ secrets.DOKPLOY_PRODUCTION_WEBHOOK }}
+          API_URL: ${{ vars[format('{0}_API_URL', needs.prepare.outputs.prefix)] }}
+          WEB_URL: ${{ vars[format('{0}_WEB_URL', needs.prepare.outputs.prefix)] }}
+          EXPECT_VERSION: ${{ needs.prepare.outputs.sha }}
+          HEALTH_CHECK_TOKEN: ${{ secrets.HEALTH_CHECK_TOKEN }}
+          WAIT_SECONDS: "600"
+        run: infra/smoke.sh
+
+      - name: Summary
+        if: always()
         run: |
-          if [ -z "$WEBHOOK" ]; then
-            echo "::warning::DOKPLOY_PRODUCTION_WEBHOOK is not set; images were pushed but nothing was deployed."
-            exit 0
-          fi
-          curl -fsS -X POST "$WEBHOOK"
+          {
+            echo "### $ENV_NAME → sha-$SHA"
+            echo "Images: \`ghcr.io/$OWNER/billleaf-{api,web}:$ENV_NAME-sha-$SHA\`"
+            echo "Roll back: set \`IMAGE_TAG=$ENV_NAME-sha-<previous>\` in Dokploy and redeploy."
+          } >> "$GITHUB_STEP_SUMMARY"
