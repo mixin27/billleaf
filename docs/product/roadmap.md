@@ -1,6 +1,6 @@
 # Roadmap
 
-Phases are scope buckets, not dates. Each phase ends with a production deploy.
+Phases are scope buckets, not dates. Each phase ends with a production deploy. Concrete next items and their order: [Future plan](future-plan.md).
 
 ## Phase 0 — Foundation _(done)_
 

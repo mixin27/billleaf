@@ -12,6 +12,7 @@ Billleaf is an all-in-one business workspace for freelancers — **Client → Qu
 | [Modules](product/modules.md)               | Product modules and the business journey  |
 | [Business model](product/business-model.md) | Freemium tiers, MoR billing, entitlements |
 | [Roadmap](product/roadmap.md)               | Phases 0–4                                |
+| [Future plan](product/future-plan.md)       | Next concrete items, in order, for later  |
 
 ## Architecture
 
