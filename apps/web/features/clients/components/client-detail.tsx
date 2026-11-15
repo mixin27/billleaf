@@ -50,6 +50,7 @@ import {
 import { useClient } from "../api/queries"
 import { ClientFormDialog } from "./client-form-dialog"
 import { ContactFormDialog } from "./contact-form-dialog"
+import { PageHeader } from "@/components/page-header"
 
 export function ClientDetail({ clientId }: { clientId: string }) {
   const client = useClient(clientId)
@@ -89,65 +90,63 @@ function ClientDetailView({ client }: { client: ClientDetailData }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <Link
-            href={`/${slug}/clients`}
-            className="text-sm text-muted-foreground hover:underline"
-          >
-            ← Clients
-          </Link>
-          <h1 className="mt-1 flex items-center gap-2 text-2xl font-semibold tracking-tight">
-            {client.name}
-            {archived ? <Badge variant="secondary">Archived</Badge> : null}
-          </h1>
-          <p className="text-sm text-muted-foreground capitalize">
-            {client.type}
-          </p>
-        </div>
-        {can("client.update") || can("client.delete") ? (
-          <div className="flex gap-2">
-            <Can permission="client.update">
-              {!archived ? (
-                <Button variant="outline" onClick={() => setEditing(true)}>
-                  Edit
-                </Button>
-              ) : null}
-            </Can>
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={<Button variant="outline">More</Button>}
-              />
-              <DropdownMenuContent align="end">
+      <PageHeader
+        title={client.name}
+        badge={archived ? <Badge variant="secondary">Archived</Badge> : null}
+        meta={
+          <>
+            <p className="text-sm text-muted-foreground capitalize">
+              {client.type}
+            </p>
+          </>
+        }
+        actions={
+          <>
+            {can("client.update") || can("client.delete") ? (
+              <div className="flex gap-2">
                 <Can permission="client.update">
-                  <DropdownMenuItem
-                    onClick={() =>
-                      archive.mutate(!archived, {
-                        onSuccess: () =>
-                          toast.success(
-                            archived ? "Client restored" : "Client archived"
-                          ),
-                        onError: (e) => toast.error(errorMessage(e)),
-                      })
-                    }
-                  >
-                    {archived ? "Restore" : "Archive"}
-                  </DropdownMenuItem>
+                  {!archived ? (
+                    <Button variant="outline" onClick={() => setEditing(true)}>
+                      Edit
+                    </Button>
+                  ) : null}
                 </Can>
-                <Can permission="client.delete">
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    variant="destructive"
-                    onClick={() => setConfirmDelete(true)}
-                  >
-                    Delete
-                  </DropdownMenuItem>
-                </Can>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        ) : null}
-      </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    render={<Button variant="outline">More</Button>}
+                  />
+                  <DropdownMenuContent align="end">
+                    <Can permission="client.update">
+                      <DropdownMenuItem
+                        onClick={() =>
+                          archive.mutate(!archived, {
+                            onSuccess: () =>
+                              toast.success(
+                                archived ? "Client restored" : "Client archived"
+                              ),
+                            onError: (e) => toast.error(errorMessage(e)),
+                          })
+                        }
+                      >
+                        {archived ? "Restore" : "Archive"}
+                      </DropdownMenuItem>
+                    </Can>
+                    <Can permission="client.delete">
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        variant="destructive"
+                        onClick={() => setConfirmDelete(true)}
+                      >
+                        Delete
+                      </DropdownMenuItem>
+                    </Can>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            ) : null}
+          </>
+        }
+      />
 
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">

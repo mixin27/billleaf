@@ -20,7 +20,7 @@ middleware to **`proxy.ts`**, `params`/`searchParams` are Promises, etc.).
 app/                      thin route files only — compose features, no logic
   (auth)/                 sign-in, sign-up, verify-email
   (app)/onboarding        create first workspace
-  (app)/[workspaceSlug]/  WorkspaceGate + AppShell, then pages
+  (app)/[workspaceSlug]/  WorkspaceGate + AppShell (inset sidebar), then pages
   providers.tsx           Theme, TanStack Query, nuqs, Toaster
 features/<feature>/
   api/                    keys.ts (query-key factory), queries.ts, mutations.ts
@@ -49,6 +49,8 @@ proxy.ts                  optimistic session-cookie redirect (no data fetching)
 - After changing API routes run `pnpm gen:api-client` to refresh types.
 
 ## UI
+
+Read `docs/engineering/design-system.md` first (tokens, shell, PageHeader, page anatomy).
 
 - Primitives from `@workspace/ui/components/*`; add new ones with
   `packages/ui/node_modules/.bin/shadcn add <name>` (run from `apps/web`).

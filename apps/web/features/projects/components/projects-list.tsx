@@ -8,7 +8,12 @@ import { Skeleton } from "@workspace/ui/components/skeleton"
 import { Tabs, TabsList, TabsTrigger } from "@workspace/ui/components/tabs"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { parseAsString, parseAsStringLiteral, useQueryState } from "nuqs"
+import {
+  parseAsBoolean,
+  parseAsString,
+  parseAsStringLiteral,
+  useQueryState,
+} from "nuqs"
 import * as React from "react"
 
 import { Can } from "@/components/permissions/can"
@@ -37,7 +42,12 @@ export function ProjectsList() {
   )
   const [q, setQ] = useQueryState("q", parseAsString.withDefault(""))
   const [search, setSearch] = React.useState(q)
-  const [creating, setCreating] = React.useState(false)
+  // ?new=true opens the create dialog (used by the command menu).
+  const [creating, setCreatingParam] = useQueryState(
+    "new",
+    parseAsBoolean.withDefault(false)
+  )
+  const setCreating = (v: boolean) => void setCreatingParam(v || null)
   React.useEffect(() => {
     const t = setTimeout(() => void setQ(search || null), 250)
     return () => clearTimeout(t)

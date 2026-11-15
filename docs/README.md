@@ -39,12 +39,13 @@ Billleaf is an all-in-one business workspace for freelancers — **Client → Qu
 
 ## Engineering
 
-| Doc                                                 | What                                    |
-| --------------------------------------------------- | --------------------------------------- |
-| [Conventions](engineering/conventions.md)           | Naming, money, dates, API and web rules |
-| [Git workflow](engineering/git-workflow.md)         | Trunk-based, conventional commits, PRs  |
-| [Testing strategy](engineering/testing-strategy.md) | Vitest, Testcontainers, Playwright      |
-| [Adding a module](engineering/adding-a-module.md)   | Step-by-step guide + definition of done |
+| Doc                                                 | What                                      |
+| --------------------------------------------------- | ----------------------------------------- |
+| [Conventions](engineering/conventions.md)           | Naming, money, dates, API and web rules   |
+| [Design system](engineering/design-system.md)       | Tokens, app shell, page anatomy, UI rules |
+| [Git workflow](engineering/git-workflow.md)         | Trunk-based, conventional commits, PRs    |
+| [Testing strategy](engineering/testing-strategy.md) | Vitest, Testcontainers, Playwright        |
+| [Adding a module](engineering/adding-a-module.md)   | Step-by-step guide + definition of done   |
 
 ## Architecture Decision Records
 

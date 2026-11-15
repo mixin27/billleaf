@@ -10,12 +10,22 @@ import {
   DialogTitle,
 } from "@workspace/ui/components/dialog"
 import { Input } from "@workspace/ui/components/input"
-import { cn } from "@workspace/ui/lib/utils"
+import {
+  SidebarMenu,
+  SidebarMenuAction,
+  SidebarMenuButton,
+  SidebarMenuItem,
+} from "@workspace/ui/components/sidebar"
+import { PlayIcon, StopIcon } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
+import Link from "next/link"
 import * as React from "react"
 import { toast } from "sonner"
+import { create } from "zustand"
 
 import { Field } from "@/components/form/field"
 import { usePermissions } from "@/components/permissions/can"
+import { useWorkspaceStore } from "@/features/workspace"
 import { errorMessage } from "@/lib/api"
 
 import { useStartTimer, useStopTimer } from "../api/mutations"
@@ -34,77 +44,111 @@ function useElapsed(startedAt: string | undefined) {
     : 0
 }
 
-/** Start/stop the member's timer from anywhere in the app shell. */
-export function TimerWidget({ compact }: { compact?: boolean }) {
+/** Lets the command menu (or any button) open the start-timer dialog. */
+export const useTimerDialog = create<{
+  open: boolean
+  setOpen: (open: boolean) => void
+}>((set) => ({ open: false, setOpen: (open) => set({ open }) }))
+
+export function formatClock(s: number) {
+  return `${Math.floor(s / 3600)}:${String(Math.floor((s % 3600) / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`
+}
+
+/** Stop the running timer with the standard toasts. */
+export function useStopTimerAction() {
+  const stop = useStopTimer()
+  return {
+    pending: stop.isPending,
+    stop: () =>
+      stop.mutate(undefined, {
+        onSuccess: (e) =>
+          toast.success(
+            `Logged ${formatDuration(e.durationSeconds ?? 0)}${e.projectName ? ` on ${e.projectName}` : ""}`
+          ),
+        onError: (err) => toast.error(errorMessage(err)),
+      }),
+  }
+}
+
+function PulseDot() {
+  return (
+    <span className="relative flex size-2 shrink-0" aria-hidden>
+      <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary opacity-60" />
+      <span className="relative inline-flex size-2 rounded-full bg-primary" />
+    </span>
+  )
+}
+
+/**
+ * The member's timer in the sidebar header: "Start timer" when idle; the
+ * running entry with a live clock and a stop action otherwise. Collapsed to
+ * icons it shows a play button or a pulsing dot (with the clock in a tooltip).
+ */
+export function SidebarTimer() {
   const { can } = usePermissions()
+  const slug = useWorkspaceStore((s) => s.workspace?.slug)
   const allowed = can("time.track") || can("time.manage")
   const running = useRunningTimer(allowed)
-  const stop = useStopTimer()
-  const [open, setOpen] = React.useState(false)
+  const { stop, pending } = useStopTimerAction()
+  const { open, setOpen } = useTimerDialog()
   const entry = running.data ?? null
   const elapsed = useElapsed(entry?.startedAt)
 
   if (!allowed) return null
 
-  if (entry) {
-    const s = elapsed
-    const clock = `${Math.floor(s / 3600)}:${String(Math.floor((s % 3600) / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`
+  if (!entry) {
     return (
-      <div
-        className={cn(
-          "flex items-center gap-2 rounded-md border px-2 py-1",
-          compact ? "text-xs" : "text-sm"
-        )}
-      >
-        <span className="relative flex size-2" aria-hidden>
-          <span className="absolute inline-flex size-full animate-ping rounded-full bg-[var(--color-chart-3)] opacity-60" />
-          <span className="relative inline-flex size-2 rounded-full bg-[var(--color-chart-3)]" />
-        </span>
-        <span
-          className="min-w-0 flex-1 truncate"
-          title={`${entry.projectName}${entry.taskTitle ? ` · ${entry.taskTitle}` : ""}`}
-        >
-          {entry.taskTitle ?? entry.projectName}
-        </span>
-        <span
-          className="font-mono tabular-nums"
-          aria-label={`Elapsed ${formatDuration(s)}`}
-        >
-          {clock}
-        </span>
-        <Button
-          size="sm"
-          variant="outline"
-          className="h-6 px-2"
-          disabled={stop.isPending}
-          onClick={() =>
-            stop.mutate(undefined, {
-              onSuccess: (e) =>
-                toast.success(
-                  `Logged ${formatDuration(e.durationSeconds ?? 0)} on ${e.projectName}`
-                ),
-              onError: (err) => toast.error(errorMessage(err)),
-            })
-          }
-        >
-          Stop
-        </Button>
-      </div>
+      <SidebarMenu>
+        <SidebarMenuItem>
+          <SidebarMenuButton
+            tooltip="Start timer"
+            onClick={() => setOpen(true)}
+          >
+            <HugeiconsIcon icon={PlayIcon} strokeWidth={1.8} />
+            <span>Start timer</span>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+        <StartTimerDialog open={open} onOpenChange={setOpen} />
+      </SidebarMenu>
     )
   }
 
+  const label =
+    entry.description ||
+    [entry.projectName, entry.taskTitle].filter(Boolean).join(" · ") ||
+    "Timer running"
+  const clock = formatClock(elapsed)
   return (
-    <>
-      <Button
-        size="sm"
-        variant="outline"
-        className={cn(compact && "h-7 px-2 text-xs")}
-        onClick={() => setOpen(true)}
-      >
-        ▶ Start timer
-      </Button>
+    <SidebarMenu>
+      <SidebarMenuItem>
+        <SidebarMenuButton
+          tooltip={`${clock} · ${label}`}
+          className="bg-primary/10 hover:bg-primary/15"
+          render={<Link href={`/${slug}/time`} />}
+        >
+          <span className="flex size-4 items-center justify-center">
+            <PulseDot />
+          </span>
+          <span className="min-w-0 flex-1 truncate">{label}</span>
+          <span
+            className="font-mono text-xs tabular-nums"
+            aria-label={`Elapsed ${formatDuration(elapsed)}`}
+          >
+            {clock}
+          </span>
+        </SidebarMenuButton>
+        <SidebarMenuAction
+          title="Stop timer"
+          aria-label="Stop timer"
+          disabled={pending}
+          onClick={stop}
+          className="right-1.5"
+        >
+          <HugeiconsIcon icon={StopIcon} strokeWidth={2} />
+        </SidebarMenuAction>
+      </SidebarMenuItem>
       <StartTimerDialog open={open} onOpenChange={setOpen} />
-    </>
+    </SidebarMenu>
   )
 }
 

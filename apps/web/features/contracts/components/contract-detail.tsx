@@ -53,6 +53,7 @@ import {
 import { useContract } from "../api/queries"
 import { ContractStatusBadge } from "./contract-status-badge"
 import { ContractText } from "./contract-text"
+import { PageHeader } from "@/components/page-header"
 
 export function ContractDetail({ id }: { id: string }) {
   const contract = useContract(id)
@@ -151,93 +152,95 @@ function ContractDetailView({ contract: c }: { contract: Contract }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <Link
-            href={`/${slug}/contracts`}
-            className="text-sm text-muted-foreground hover:underline"
-          >
-            ← Contracts
-          </Link>
-          <h1 className="mt-1 flex flex-wrap items-center gap-2 text-2xl font-semibold tracking-tight">
-            {c.title}
-            <ContractStatusBadge status={c.status} />
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {c.number ?? "Draft"}
-            {c.sentAt
-              ? ` · Sent ${formatDate(c.sentAt.slice(0, 10), locale)}`
-              : ""}
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {draft && can("contract.update") ? (
-            <Button
-              variant="outline"
-              nativeButton={false}
-              render={<Link href={`/${slug}/contracts/${c.id}/edit`} />}
-            >
-              Edit
-            </Button>
-          ) : null}
-          {draft && canSend ? (
-            <Button
-              onClick={() => setDialog("send")}
-              disabled={c.unresolvedFields.length > 0}
-            >
-              Mark as sent
-            </Button>
-          ) : null}
-          {c.status === "sent" && canSend ? (
-            <Button onClick={() => setDialog("sign")}>Record signature</Button>
-          ) : null}
-          {(c.status === "sent" || c.status === "signed") && canSend ? (
-            <Button variant="outline" onClick={() => setDialog("email")}>
-              Email
-            </Button>
-          ) : null}
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={<Button variant="outline">More</Button>}
-            />
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                onClick={() => openPdf(`/v1/contracts/${c.id}/pdf`).catch(fail)}
-              >
-                Download PDF
-              </DropdownMenuItem>
-              {c.status === "sent" && canSend ? (
-                <DropdownMenuItem
-                  onClick={() =>
-                    action.mutate("decline", {
-                      onSuccess: () => toast.success("Marked as declined"),
-                      onError: fail,
-                    })
-                  }
+      <PageHeader
+        title={c.title}
+        badge={<ContractStatusBadge status={c.status} />}
+        meta={
+          <>
+            <p className="text-sm text-muted-foreground">
+              {c.number ?? "Draft"}
+              {c.sentAt
+                ? ` · Sent ${formatDate(c.sentAt.slice(0, 10), locale)}`
+                : ""}
+            </p>
+          </>
+        }
+        actions={
+          <>
+            <div className="flex flex-wrap gap-2">
+              {draft && can("contract.update") ? (
+                <Button
+                  variant="outline"
+                  nativeButton={false}
+                  render={<Link href={`/${slug}/contracts/${c.id}/edit`} />}
                 >
-                  Mark declined
-                </DropdownMenuItem>
+                  Edit
+                </Button>
+              ) : null}
+              {draft && canSend ? (
+                <Button
+                  onClick={() => setDialog("send")}
+                  disabled={c.unresolvedFields.length > 0}
+                >
+                  Mark as sent
+                </Button>
+              ) : null}
+              {c.status === "sent" && canSend ? (
+                <Button onClick={() => setDialog("sign")}>
+                  Record signature
+                </Button>
               ) : null}
               {(c.status === "sent" || c.status === "signed") && canSend ? (
-                <DropdownMenuItem
-                  variant="destructive"
-                  onClick={() => setDialog("void")}
-                >
-                  Void
-                </DropdownMenuItem>
+                <Button variant="outline" onClick={() => setDialog("email")}>
+                  Email
+                </Button>
               ) : null}
-              {draft && can("contract.delete") ? (
-                <DropdownMenuItem
-                  variant="destructive"
-                  onClick={() => setDialog("delete")}
-                >
-                  Delete draft
-                </DropdownMenuItem>
-              ) : null}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={<Button variant="outline">More</Button>}
+                />
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onClick={() =>
+                      openPdf(`/v1/contracts/${c.id}/pdf`).catch(fail)
+                    }
+                  >
+                    Download PDF
+                  </DropdownMenuItem>
+                  {c.status === "sent" && canSend ? (
+                    <DropdownMenuItem
+                      onClick={() =>
+                        action.mutate("decline", {
+                          onSuccess: () => toast.success("Marked as declined"),
+                          onError: fail,
+                        })
+                      }
+                    >
+                      Mark declined
+                    </DropdownMenuItem>
+                  ) : null}
+                  {(c.status === "sent" || c.status === "signed") && canSend ? (
+                    <DropdownMenuItem
+                      variant="destructive"
+                      onClick={() => setDialog("void")}
+                    >
+                      Void
+                    </DropdownMenuItem>
+                  ) : null}
+                  {draft && can("contract.delete") ? (
+                    <DropdownMenuItem
+                      variant="destructive"
+                      onClick={() => setDialog("delete")}
+                    >
+                      Delete draft
+                    </DropdownMenuItem>
+                  ) : null}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </>
+        }
+      />
 
       {draft && c.unresolvedFields.length > 0 ? (
         <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100">
