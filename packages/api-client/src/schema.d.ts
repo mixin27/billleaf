@@ -756,6 +756,118 @@ export interface paths {
     patch: operations["ProjectsController_updateTask_v1"]
     trace?: never
   }
+  "/v1/time-entries": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["TimeController_list_v1"]
+    put?: never
+    post: operations["TimeController_create_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/time-entries/running": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["TimeController_running_v1"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/time-entries/start": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["TimeController_start_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/time-entries/stop": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["TimeController_stop_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/time-entries/{id}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    delete: operations["TimeController_remove_v1"]
+    options?: never
+    head?: never
+    patch: operations["TimeController_update_v1"]
+    trace?: never
+  }
+  "/v1/projects/{id}/time-summary": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["TimeController_summary_v1"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/invoices/from-time": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["TimeController_invoiceFromTime_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   "/v1/dashboard": {
     parameters: {
       query?: never
@@ -1772,6 +1884,132 @@ export interface components {
       assigneeMemberId?: string | null
       /** Format: uuid */
       afterTaskId?: string | null
+    }
+    TimeEntryListDto_Output: {
+      items: {
+        id: string
+        projectId: string
+        projectName: string
+        clientName: string | null
+        taskId: string | null
+        taskTitle: string | null
+        memberId: string | null
+        memberName: string
+        description: string | null
+        /** Format: date */
+        entryDate: string
+        /** Format: date-time */
+        startedAt: string
+        /** Format: date-time */
+        endedAt: string | null
+        durationSeconds: number | null
+        billable: boolean
+        invoiceId: string | null
+        invoiceNumber: string | null
+        isRunning: boolean
+        isMine: boolean
+      }[]
+      totalSeconds: number
+      billableSeconds: number
+    }
+    RunningDto_Output: {
+      entry: {
+        id: string
+        projectId: string
+        projectName: string
+        clientName: string | null
+        taskId: string | null
+        taskTitle: string | null
+        memberId: string | null
+        memberName: string
+        description: string | null
+        /** Format: date */
+        entryDate: string
+        /** Format: date-time */
+        startedAt: string
+        /** Format: date-time */
+        endedAt: string | null
+        durationSeconds: number | null
+        billable: boolean
+        invoiceId: string | null
+        invoiceNumber: string | null
+        isRunning: boolean
+        isMine: boolean
+      } | null
+    }
+    StartDto: {
+      /** Format: uuid */
+      projectId: string
+      /** Format: uuid */
+      taskId?: string | null
+      description?: string | null
+    }
+    TimeEntryDto_Output: {
+      id: string
+      projectId: string
+      projectName: string
+      clientName: string | null
+      taskId: string | null
+      taskTitle: string | null
+      memberId: string | null
+      memberName: string
+      description: string | null
+      /** Format: date */
+      entryDate: string
+      /** Format: date-time */
+      startedAt: string
+      /** Format: date-time */
+      endedAt: string | null
+      durationSeconds: number | null
+      billable: boolean
+      invoiceId: string | null
+      invoiceNumber: string | null
+      isRunning: boolean
+      isMine: boolean
+    }
+    CreateDto: {
+      /** Format: uuid */
+      projectId: string
+      /** Format: uuid */
+      taskId?: string | null
+      description?: string | null
+      /** Format: date-time */
+      startedAt?: string
+      /** Format: date-time */
+      endedAt?: string
+      /** Format: date */
+      entryDate?: string
+      durationMinutes?: number
+      billable?: boolean
+      /** Format: uuid */
+      memberId?: string
+    }
+    UpdateDto: {
+      /** Format: uuid */
+      projectId?: string
+      /** Format: uuid */
+      taskId?: string | null
+      description?: string | null
+      /** Format: date-time */
+      startedAt?: string
+      /** Format: date-time */
+      endedAt?: string
+      /** Format: date */
+      entryDate?: string
+      durationMinutes?: number
+      billable?: boolean
+    }
+    SummaryDto_Output: {
+      totalSeconds: number
+      billableSeconds: number
+      unbilledSeconds: number
+      unbilledAmount: number | null
+      currency: string
+    }
+    InvoiceFromTimeDto: {
+      /** Format: uuid */
+      projectId: string
+      entryIds?: string[]
     }
     DashboardDto_Output: {
       /** Format: date */
@@ -3472,6 +3710,204 @@ export interface operations {
         }
         content: {
           "application/json": components["schemas"]["TaskDto_Output"]
+        }
+      }
+    }
+  }
+  TimeController_list_v1: {
+    parameters: {
+      query: {
+        from: string
+        to: string
+        projectId?: string
+        memberId?: "me" | string
+        billable?: "true" | "false"
+        uninvoiced?: "true"
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["TimeEntryListDto_Output"]
+        }
+      }
+    }
+  }
+  TimeController_create_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateDto"]
+      }
+    }
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["TimeEntryDto_Output"]
+        }
+      }
+    }
+  }
+  TimeController_running_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["RunningDto_Output"]
+        }
+      }
+    }
+  }
+  TimeController_start_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["StartDto"]
+      }
+    }
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["TimeEntryDto_Output"]
+        }
+      }
+    }
+  }
+  TimeController_stop_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["TimeEntryDto_Output"]
+        }
+      }
+    }
+  }
+  TimeController_remove_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  TimeController_update_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["TimeEntryDto_Output"]
+        }
+      }
+    }
+  }
+  TimeController_summary_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["SummaryDto_Output"]
+        }
+      }
+    }
+  }
+  TimeController_invoiceFromTime_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["InvoiceFromTimeDto"]
+      }
+    }
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["InvoiceDto_Output"]
         }
       }
     }

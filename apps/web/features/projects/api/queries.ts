@@ -52,6 +52,6 @@ export function useTasks(projectId: string) {
           params: { path: { id: projectId } },
         })
       ),
-    enabled: Boolean(workspaceId),
+    enabled: Boolean(workspaceId) && Boolean(projectId),
   })
 }

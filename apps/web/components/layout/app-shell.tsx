@@ -9,6 +9,8 @@ import { SignOutButton } from "@/features/auth"
 import { useMe, useWorkspaceStore } from "@/features/workspace"
 
 import { usePermissions } from "../permissions/can"
+import { TimerWidget } from "@/features/time"
+
 import { WorkspaceSwitcher } from "./workspace-switcher"
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -47,7 +49,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </Link>
           ))}
         </nav>
-        <div className="mt-auto flex items-center justify-between gap-2 text-sm">
+        <div className="mt-auto flex flex-col gap-3">
+          <TimerWidget />
+        </div>
+        <div className="mt-3 flex items-center justify-between gap-2 text-sm">
           <span className="truncate">{me.data?.user.name}</span>
           <SignOutButton />
         </div>
@@ -64,6 +69,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <SignOutButton />
             </span>
           </div>
+          <TimerWidget compact />
           <nav className="-mx-1 flex gap-1 overflow-x-auto pb-2">
             {items.map((item) => (
               <Link

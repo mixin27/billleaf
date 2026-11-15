@@ -5,6 +5,7 @@ import {
   invoiceLines,
   invoices,
   quotes,
+  timeEntries,
   type Transaction,
 } from "@workspace/db"
 import {
@@ -214,6 +215,19 @@ export class InvoicesRepository {
     }
   }
 
+  /** Voided invoices give their tracked time back so it can be billed again. */
+  async releaseTime(tx: Database | Transaction, invoiceId: string) {
+    await tx
+      .update(timeEntries)
+      .set({ invoiceId: null })
+      .where(
+        and(
+          eq(timeEntries.workspaceId, this.ctx.workspaceId),
+          eq(timeEntries.invoiceId, invoiceId)
+        )
+      )
+  }
+
   async delete(id: string): Promise<void> {
     await this.db.delete(invoices).where(and(this.scope(), eq(invoices.id, id)))
   }
@@ -224,14 +238,12 @@ export class InvoicesRepository {
     lines: StoredLine[]
   ) {
     if (lines.length === 0) return
-    await tx
-      .insert(invoiceLines)
-      .values(
-        lines.map((l) => ({
-          ...l,
-          invoiceId,
-          workspaceId: this.ctx.workspaceId,
-        }))
-      )
+    await tx.insert(invoiceLines).values(
+      lines.map((l) => ({
+        ...l,
+        invoiceId,
+        workspaceId: this.ctx.workspaceId,
+      }))
+    )
   }
 }

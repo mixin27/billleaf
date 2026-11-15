@@ -31,6 +31,7 @@ import * as React from "react"
 import { toast } from "sonner"
 
 import { usePermissions } from "@/components/permissions/can"
+import { ProjectTime } from "@/features/time"
 import { useWorkspaceProfile, useWorkspaceStore } from "@/features/workspace"
 import { errorMessage } from "@/lib/api"
 import { formatDate, money } from "@/lib/format"
@@ -222,6 +223,14 @@ function ProjectView({ project }: { project: Project }) {
           ) : null}
         </CardContent>
       </Card>
+
+      <ProjectTime
+        projectId={project.id}
+        billing={project.billing}
+        hasClient={Boolean(project.clientId)}
+        locale={locale}
+        today={today}
+      />
 
       <TaskBoard projectId={project.id} locale={locale} today={today} />
 

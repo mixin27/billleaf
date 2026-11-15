@@ -4,8 +4,8 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common"
-import { member, memberRoles, roles, user } from "@workspace/db"
-import { and, eq } from "drizzle-orm"
+import { member, memberRoles, roles, timeEntries, user } from "@workspace/db"
+import { and, eq, isNull, sql } from "drizzle-orm"
 
 import { RequestContext } from "../../common/context/request-context.js"
 import { InjectDb, type Database } from "../../core/database/database.module.js"
@@ -155,11 +155,23 @@ export class MembersService {
       }
     }
 
-    await this.db
-      .delete(member)
-      .where(
-        and(eq(member.id, memberId), eq(member.organizationId, workspaceId))
-      )
+    await this.db.transaction(async (tx) => {
+      // Their tracked time stays (member_id → null, name kept); close any running timer first.
+      await tx
+        .update(timeEntries)
+        .set({
+          endedAt: sql`now()`,
+          durationSeconds: sql`greatest(1, extract(epoch from (now() - ${timeEntries.startedAt}))::int)`,
+        })
+        .where(
+          and(eq(timeEntries.memberId, memberId), isNull(timeEntries.endedAt))
+        )
+      await tx
+        .delete(member)
+        .where(
+          and(eq(member.id, memberId), eq(member.organizationId, workspaceId))
+        )
+    })
     await this.resolver.invalidateWorkspace(workspaceId)
     await this.audit.record("member.removed", {
       resourceType: "member",
