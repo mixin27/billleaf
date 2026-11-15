@@ -969,3 +969,84 @@ describe("time tracking", () => {
     )
   })
 })
+
+describe("time after a member leaves", () => {
+  it("keeps their entries (incl. invoiced ones) with their name, and stops their running timer", async () => {
+    const owner = new Client(t)
+    await owner.signUp("Lead")
+    const ws = await owner.createWorkspace("Agency")
+    await t.db
+      .update(workspaceSubscriptions)
+      .set({ planKey: "team" })
+      .where(eq(workspaceSubscriptions.workspaceId, ws.id))
+    const client = (await owner.post("/v1/clients", { name: "Retainer Co" }))
+      .body
+    const project = (
+      await owner.post("/v1/projects", {
+        name: "Ongoing",
+        clientId: client.id,
+        hourlyRate: 5_000,
+      })
+    ).body
+
+    const contractor = new Client(t)
+    const { email } = await contractor.signUp("Casey Contractor")
+    const role = (
+      await owner.post("/v1/roles", {
+        name: "Contractor",
+        permissions: ["project.read", "time.track"],
+      })
+    ).body
+    const inv = (
+      await owner.post("/v1/invitations", { email, roleId: role.id })
+    ).body
+    await contractor.post("/api/auth/organization/accept-invitation", {
+      invitationId: inv.id,
+    })
+    contractor.workspaceId = ws.id
+
+    const today = new Date().toISOString().slice(0, 10)
+    const logged = (
+      await contractor.post("/v1/time-entries", {
+        projectId: project.id,
+        entryDate: today,
+        durationMinutes: 120,
+      })
+    ).body
+    expect(logged.memberName).toBe("Casey Contractor")
+    const invoice = (
+      await owner.post("/v1/invoices/from-time", { projectId: project.id })
+    ).body
+    await contractor.post("/v1/time-entries/start", { projectId: project.id })
+
+    const members = (await owner.get("/v1/members")).body
+    const casey = members.find((m: { email: string }) => m.email === email)
+    expect((await owner.del(`/v1/members/${casey.id}`)).status).toBe(204)
+
+    const entries = (
+      await owner.get(
+        `/v1/time-entries?from=${today}&to=${today}&projectId=${project.id}`
+      )
+    ).body.items
+    expect(entries).toHaveLength(2)
+    for (const e of entries) {
+      expect(e).toMatchObject({
+        memberId: null,
+        memberName: "Casey Contractor",
+        isRunning: false,
+      })
+    }
+    expect(
+      entries.find((e: { id: string }) => e.id === logged.id).invoiceId
+    ).toBe(invoice.id)
+    // Former members' entries can still be managed by someone with time.manage.
+    const timer = entries.find((e: { id: string }) => e.id !== logged.id)
+    expect(
+      (
+        await owner.patch(`/v1/time-entries/${timer.id}`, {
+          description: "Wrap-up",
+        })
+      ).status
+    ).toBe(200)
+  })
+})

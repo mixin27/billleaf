@@ -27,9 +27,10 @@ export const timeEntries = pgTable(
       .notNull()
       .references(() => projects.id, { onDelete: "restrict" }),
     taskId: uuid().references(() => tasks.id, { onDelete: "set null" }),
-    memberId: uuid()
-      .notNull()
-      .references(() => member.id, { onDelete: "cascade" }),
+    /** Null once the member leaves the workspace; their time is kept. */
+    memberId: uuid().references(() => member.id, { onDelete: "set null" }),
+    /** Name of the person who did the work, kept after they leave. */
+    memberName: text().notNull().default(""),
     description: text(),
     /** Workspace-local date of startedAt (timesheet grouping). */
     entryDate: date({ mode: "string" }).notNull(),

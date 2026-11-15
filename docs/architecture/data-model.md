@@ -108,11 +108,11 @@ Task moves send `afterTaskId` (null = top) and optionally a new `status`; the AP
 
 ### Time tracking (`time.ts`) — Phase 2
 
-| Table          | Notes                                                                                                                                                                                                                    |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `time_entries` | `project_id` (restrict), `task_id` (set null), `member_id`, `description`, `entry_date` (workspace-local date), `started_at`, `ended_at` (null = running timer), `duration_seconds`, `billable`, `invoice_id` (set null) |
+| Table          | Notes                                                                                                                                                                                                                                                                                                         |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `time_entries` | `project_id` (restrict), `task_id` (set null), `member_id` (set null — kept when a member leaves), `member_name` (snapshot of who did the work), `description`, `entry_date` (workspace-local date), `started_at`, `ended_at` (null = running timer), `duration_seconds`, `billable`, `invoice_id` (set null) |
 
-Rules: one running timer per member (partial unique index `WHERE ended_at IS NULL`; starting a timer stops the current one). Own entries need `time.track`, others' need `time.manage`, reading others' needs `time.read`. **Invoice from time** turns billable, finished, uninvoiced entries into a draft invoice (one line per task, hours = seconds rounded to 0.01 h, at the project's hourly rate); entries are claimed atomically and locked. Deleting that draft (FK set null) or voiding the invoice releases them. Projects with time can't be deleted.
+Rules: one running timer per member (partial unique index `WHERE ended_at IS NULL`; starting a timer stops the current one). Own entries need `time.track`, others' need `time.manage`, reading others' needs `time.read`. **Invoice from time** turns billable, finished, uninvoiced entries into a draft invoice (one line per task, hours = seconds rounded to 0.01 h, at the project's hourly rate); entries are claimed atomically and locked. Deleting that draft (FK set null) or voiding the invoice releases them. Projects with time can't be deleted. Removing a member stops their running timer and keeps all their entries (`member_id` → null, `member_name` retained); former members' entries are editable with `time.manage`.
 
 ## Planned business tables (Phase 1+)
 

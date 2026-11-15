@@ -71,6 +71,13 @@
       "when": 1794720230452,
       "tag": "0009_lucky_justice",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1794721162012,
+      "tag": "0010_tiresome_maestro",
+      "breakpoints": true
     }
   ]
 }

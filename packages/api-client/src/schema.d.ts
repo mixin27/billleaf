@@ -1893,7 +1893,7 @@ export interface components {
         clientName: string | null
         taskId: string | null
         taskTitle: string | null
-        memberId: string
+        memberId: string | null
         memberName: string
         description: string | null
         /** Format: date */
@@ -1920,7 +1920,7 @@ export interface components {
         clientName: string | null
         taskId: string | null
         taskTitle: string | null
-        memberId: string
+        memberId: string | null
         memberName: string
         description: string | null
         /** Format: date */
@@ -1951,7 +1951,7 @@ export interface components {
       clientName: string | null
       taskId: string | null
       taskTitle: string | null
-      memberId: string
+      memberId: string | null
       memberName: string
       description: string | null
       /** Format: date */

@@ -71,8 +71,8 @@ export class TimeService {
     isMine: e.memberId === this.ctx.memberId,
   })
 
-  /** May the current member write entries owned by `memberId`? */
-  private assertCanWrite(memberId: string) {
+  /** May the current member write entries owned by `memberId` (null = former member)? */
+  private assertCanWrite(memberId: string | null) {
     const ok =
       memberId === this.ctx.memberId
         ? this.can("time.track") || this.can("time.manage")
@@ -132,6 +132,7 @@ export class TimeService {
     )
     const now = new Date()
     const entryDate = await this.localDate(now)
+    const memberName = (await this.repo.memberName(this.ctx.memberId)) ?? ""
     try {
       const id = await this.repo.database.transaction(async (tx) => {
         const running = await this.repo.findRunning(this.ctx.memberId, tx)
@@ -140,6 +141,7 @@ export class TimeService {
           projectId: input.projectId,
           taskId: input.taskId ?? null,
           memberId: this.ctx.memberId,
+          memberName,
           description: input.description ?? null,
           entryDate,
           startedAt: now,
@@ -185,6 +187,12 @@ export class TimeService {
   async create(input: CreateTimeEntryInput): Promise<TimeEntry> {
     const memberId = input.memberId ?? this.ctx.memberId
     this.assertCanWrite(memberId)
+    const memberName = await this.repo.memberName(memberId)
+    if (memberName === null) {
+      throw new BadRequestException(
+        "That person is not a member of this workspace"
+      )
+    }
     const project = await this.validateTarget(
       input.projectId,
       input.taskId ?? null
@@ -194,6 +202,7 @@ export class TimeService {
       projectId: input.projectId,
       taskId: input.taskId ?? null,
       memberId,
+      memberName,
       description: input.description ?? null,
       entryDate,
       startedAt,

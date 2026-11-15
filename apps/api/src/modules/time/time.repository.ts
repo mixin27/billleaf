@@ -55,22 +55,25 @@ export class TimeRepository {
   }
 
   private select(tx: Database | Transaction = this.db) {
-    return tx
-      .select({
-        entry: timeEntries,
-        projectName: projects.name,
-        clientName: clients.name,
-        taskTitle: tasks.title,
-        memberName: user.name,
-        invoiceNumber: invoices.number,
-      })
-      .from(timeEntries)
-      .innerJoin(projects, eq(projects.id, timeEntries.projectId))
-      .leftJoin(clients, eq(clients.id, projects.clientId))
-      .leftJoin(tasks, eq(tasks.id, timeEntries.taskId))
-      .innerJoin(member, eq(member.id, timeEntries.memberId))
-      .innerJoin(user, eq(user.id, member.userId))
-      .leftJoin(invoices, eq(invoices.id, timeEntries.invoiceId))
+    return (
+      tx
+        .select({
+          entry: timeEntries,
+          projectName: projects.name,
+          clientName: clients.name,
+          taskTitle: tasks.title,
+          memberName: sql<string>`coalesce(${user.name}, ${timeEntries.memberName})`,
+          invoiceNumber: invoices.number,
+        })
+        .from(timeEntries)
+        .innerJoin(projects, eq(projects.id, timeEntries.projectId))
+        .leftJoin(clients, eq(clients.id, projects.clientId))
+        .leftJoin(tasks, eq(tasks.id, timeEntries.taskId))
+        // Left joins: entries of members who left keep their name snapshot.
+        .leftJoin(member, eq(member.id, timeEntries.memberId))
+        .leftJoin(user, eq(user.id, member.userId))
+        .leftJoin(invoices, eq(invoices.id, timeEntries.invoiceId))
+    )
   }
 
   private static flatten(r: {
@@ -222,6 +225,22 @@ export class TimeRepository {
       billable: Number(row?.billable ?? 0),
       unbilled: Number(row?.unbilled ?? 0),
     }
+  }
+
+  /** Display name of a workspace member (for the entry's name snapshot). */
+  async memberName(memberId: string): Promise<string | null> {
+    const [row] = await this.db
+      .select({ name: user.name })
+      .from(member)
+      .innerJoin(user, eq(user.id, member.userId))
+      .where(
+        and(
+          eq(member.id, memberId),
+          eq(member.organizationId, this.ctx.workspaceId)
+        )
+      )
+      .limit(1)
+    return row?.name ?? null
   }
 
   async taskBelongsToProject(taskId: string, projectId: string) {

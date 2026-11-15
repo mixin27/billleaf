@@ -15,7 +15,8 @@ export const timeEntrySchema = z.object({
   clientName: z.string().nullable(),
   taskId: z.string().nullable(),
   taskTitle: z.string().nullable(),
-  memberId: z.string(),
+  /** Null when the member has left the workspace (their time is kept). */
+  memberId: z.string().nullable(),
   memberName: z.string(),
   description: z.string().nullable(),
   /** Workspace-local calendar date of the start. */
