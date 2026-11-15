@@ -1,7 +1,10 @@
 name: Deploy
 
-# main   -> build & push images to GHCR -> Dokploy staging webhook
-# tag v* -> build & push images to GHCR -> Dokploy production webhook
+# tag v*            -> build & push images to GHCR -> Dokploy production webhook
+# manual run on main -> build & push images to GHCR -> Dokploy staging webhook
+#
+# Pushes to main do NOT deploy until a VPS + Dokploy exist. When staging is live,
+# add `branches: [main]` back under `on.push` for continuous staging deploys.
 #
 # Setup (GitHub repo settings):
 #   - Environments: create `staging` and `production`.
@@ -12,7 +15,6 @@ name: Deploy
 
 on:
   push:
-    branches: [main]
     tags: ["v*"]
   workflow_dispatch:
 
@@ -98,7 +100,10 @@ jobs:
         env:
           WEBHOOK: ${{ secrets.DOKPLOY_STAGING_WEBHOOK }}
         run: |
-          if [ -z "$WEBHOOK" ]; then echo "::error::DOKPLOY_STAGING_WEBHOOK is not set"; exit 1; fi
+          if [ -z "$WEBHOOK" ]; then
+            echo "::warning::DOKPLOY_STAGING_WEBHOOK is not set; images were pushed but nothing was deployed."
+            exit 0
+          fi
           curl -fsS -X POST "$WEBHOOK"
 
   deploy-production:
@@ -114,5 +119,8 @@ jobs:
         env:
           WEBHOOK: ${{ secrets.DOKPLOY_PRODUCTION_WEBHOOK }}
         run: |
-          if [ -z "$WEBHOOK" ]; then echo "::error::DOKPLOY_PRODUCTION_WEBHOOK is not set"; exit 1; fi
+          if [ -z "$WEBHOOK" ]; then
+            echo "::warning::DOKPLOY_PRODUCTION_WEBHOOK is not set; images were pushed but nothing was deployed."
+            exit 0
+          fi
           curl -fsS -X POST "$WEBHOOK"
