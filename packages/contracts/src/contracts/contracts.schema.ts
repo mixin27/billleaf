@@ -83,7 +83,10 @@ export const contractSchema = contractSummarySchema.extend({
   projectId: z.string().nullable(),
   projectName: z.string().nullable(),
   signedByName: z.string().nullable(),
+  /** "portal": typed-name e-signature by the client (with an evidence page on the PDF). */
+  signedVia: z.enum(["manual", "portal"]).nullable(),
   declinedAt: z.iso.datetime().nullable(),
+  declineReason: z.string().nullable(),
   voidedAt: z.iso.datetime().nullable(),
   voidReason: z.string().nullable(),
   clientSnapshot: partySnapshotSchema.nullable(),

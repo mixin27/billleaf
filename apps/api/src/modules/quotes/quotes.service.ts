@@ -80,6 +80,9 @@ function toQuote(
     sentAt: q.sentAt?.toISOString() ?? null,
     acceptedAt: q.acceptedAt?.toISOString() ?? null,
     declinedAt: q.declinedAt?.toISOString() ?? null,
+    respondedByName: q.respondedByName ?? null,
+    respondedVia: q.respondedVia ?? null,
+    declineReason: q.declineReason ?? null,
     clientSnapshot: q.clientSnapshot ?? null,
     issuerSnapshot: q.issuerSnapshot ?? null,
     invoiceId: q.invoiceId ?? null,
@@ -221,7 +224,20 @@ export class QuotesService {
     return this.get(id)
   }
 
-  async respond(id: string, outcome: "accepted" | "declined"): Promise<Quote> {
+  /**
+   * Accept or decline a sent quote. Members record it by hand ("manual");
+   * the client portal passes the typed name and an optional reason.
+   */
+  async respond(
+    id: string,
+    outcome: "accepted" | "declined",
+    by: {
+      via: "manual" | "portal"
+      name?: string | null
+      reason?: string | null
+      email?: string | null
+    } = { via: "manual" }
+  ): Promise<Quote> {
     await this.repo.database.transaction(async (tx) => {
       const quote = await this.repo.findById(id, tx, { forUpdate: true })
       if (!quote) throw new NotFoundException("Quote not found")
@@ -233,11 +249,18 @@ export class QuotesService {
         ...(outcome === "accepted"
           ? { acceptedAt: new Date() }
           : { declinedAt: new Date() }),
+        respondedByName: by.name ?? null,
+        respondedVia: by.via,
+        declineReason: outcome === "declined" ? (by.reason ?? null) : null,
       })
     })
     await this.audit.record(`quote.${outcome}`, {
       resourceType: "quote",
       resourceId: id,
+      metadata:
+        by.via === "portal"
+          ? { via: "portal", name: by.name, email: by.email }
+          : undefined,
     })
     return this.get(id)
   }

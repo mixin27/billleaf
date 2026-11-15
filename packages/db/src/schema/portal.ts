@@ -52,3 +52,34 @@ export const portalSessions = pgTable(
   },
   (t) => [index().on(t.clientId)]
 )
+
+/**
+ * Evidence of a client's response in the portal: who (typed name + the
+ * session's email), when, from where, and a hash of exactly what they saw.
+ */
+export const portalResponses = pgTable(
+  "portal_responses",
+  {
+    id: id(),
+    workspaceId: uuid()
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    clientId: uuid()
+      .notNull()
+      .references(() => clients.id, { onDelete: "cascade" }),
+    documentType: text({ enum: ["quote", "contract"] }).notNull(),
+    /** No FK: quotes or contracts. Kept even if the document is deleted. */
+    documentId: uuid().notNull(),
+    documentNumber: text(),
+    action: text({ enum: ["accepted", "declined", "signed"] }).notNull(),
+    name: text(),
+    email: text().notNull(),
+    reason: text(),
+    /** SHA-256 of the document content the client responded to. */
+    documentHash: text().notNull(),
+    ipAddress: text(),
+    userAgent: text(),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index().on(t.documentType, t.documentId)]
+)

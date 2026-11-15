@@ -17,8 +17,10 @@ import { ApiParam, ApiTags } from "@nestjs/swagger"
 import { Throttle } from "@nestjs/throttler"
 import { AllowAnonymous } from "@thallesp/nestjs-better-auth"
 import {
+  portalAcceptQuoteSchema,
   portalContractListSchema,
   portalContractSchema,
+  portalDeclineSchema,
   portalInvoiceListSchema,
   portalInvoiceSchema,
   portalMeSchema,
@@ -27,6 +29,7 @@ import {
   portalReceiptListSchema,
   portalSessionCreateSchema,
   portalSessionSchema,
+  portalSignContractSchema,
   portalSignInSchema,
   portalWorkspaceSchema,
 } from "@workspace/contracts"
@@ -54,9 +57,17 @@ class PortalInvoiceListDto extends createZodDto(portalInvoiceListSchema) {}
 class PortalInvoiceDto extends createZodDto(portalInvoiceSchema) {}
 class PortalContractListDto extends createZodDto(portalContractListSchema) {}
 class PortalContractDto extends createZodDto(portalContractSchema) {}
+class PortalAcceptQuoteDto extends createZodDto(portalAcceptQuoteSchema) {}
+class PortalDeclineDto extends createZodDto(portalDeclineSchema) {}
+class PortalSignContractDto extends createZodDto(portalSignContractSchema) {}
 class PortalReceiptListDto extends createZodDto(portalReceiptListSchema) {}
 
 const uuid = new ParseUUIDPipe()
+
+const meta = (req: FastifyRequest) => ({
+  ip: req.ip,
+  userAgent: req.headers["user-agent"],
+})
 
 /**
  * Client portal. No member session: public routes (branding, sign-in, session
@@ -91,10 +102,7 @@ export class PortalController {
     @Req() req: FastifyRequest,
     @Res({ passthrough: true }) reply: FastifyReply
   ) {
-    const s = await this.portal.createSession(body.token, {
-      ip: req.ip,
-      userAgent: req.headers["user-agent"],
-    })
+    const s = await this.portal.createSession(body.token, meta(req))
     if (!s)
       throw new UnauthorizedException({
         message:
@@ -156,6 +164,38 @@ export class PortalController {
     return this.portal.quote(id)
   }
 
+  @Post(":slug/quotes/:id/accept")
+  @HttpCode(200)
+  @UseGuards(PortalGuard)
+  @ApiParam({ name: "slug", type: String })
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @ZodResponse({ status: 200, type: PortalQuoteDto })
+  acceptQuote(
+    @Param("id", uuid) id: string,
+    @Body() body: PortalAcceptQuoteDto,
+    @Req() req: FastifyRequest
+  ) {
+    return this.portal.acceptQuote(id, body.name, meta(req))
+  }
+
+  @Post(":slug/quotes/:id/decline")
+  @HttpCode(200)
+  @UseGuards(PortalGuard)
+  @ApiParam({ name: "slug", type: String })
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @ZodResponse({ status: 200, type: PortalQuoteDto })
+  declineQuote(
+    @Param("id", uuid) id: string,
+    @Body() body: PortalDeclineDto,
+    @Req() req: FastifyRequest
+  ) {
+    return this.portal.declineQuote(
+      id,
+      (body as { reason: string | null }).reason,
+      meta(req)
+    )
+  }
+
   @Get(":slug/invoices")
   @UseGuards(PortalGuard)
   @ApiParam({ name: "slug", type: String })
@@ -186,6 +226,39 @@ export class PortalController {
   @ZodResponse({ status: 200, type: PortalContractDto })
   contract(@Param("id", uuid) id: string) {
     return this.portal.contract(id)
+  }
+
+  /** Typed-name e-signature. */
+  @Post(":slug/contracts/:id/sign")
+  @HttpCode(200)
+  @UseGuards(PortalGuard)
+  @ApiParam({ name: "slug", type: String })
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @ZodResponse({ status: 200, type: PortalContractDto })
+  signContract(
+    @Param("id", uuid) id: string,
+    @Body() body: PortalSignContractDto,
+    @Req() req: FastifyRequest
+  ) {
+    return this.portal.signContract(id, body.name, meta(req))
+  }
+
+  @Post(":slug/contracts/:id/decline")
+  @HttpCode(200)
+  @UseGuards(PortalGuard)
+  @ApiParam({ name: "slug", type: String })
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @ZodResponse({ status: 200, type: PortalContractDto })
+  declineContract(
+    @Param("id", uuid) id: string,
+    @Body() body: PortalDeclineDto,
+    @Req() req: FastifyRequest
+  ) {
+    return this.portal.declineContract(
+      id,
+      (body as { reason: string | null }).reason,
+      meta(req)
+    )
   }
 
   @Get(":slug/receipts")

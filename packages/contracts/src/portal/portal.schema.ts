@@ -144,6 +144,8 @@ export const portalQuoteSchema = portalQuoteSummarySchema.extend({
   ...documentBody,
   acceptedAt: z.iso.datetime().nullable(),
   declinedAt: z.iso.datetime().nullable(),
+  respondedByName: z.string().nullable(),
+  declineReason: z.string().nullable(),
 })
 export type PortalQuote = z.infer<typeof portalQuoteSchema>
 
@@ -157,9 +159,39 @@ export const portalContractSchema = portalContractSummarySchema.extend({
   /** The text as sent (merge fields resolved). */
   body: z.string(),
   signedByName: z.string().nullable(),
+  signedVia: z.enum(["manual", "portal"]).nullable(),
   declinedAt: z.iso.datetime().nullable(),
+  declineReason: z.string().nullable(),
   voidedAt: z.iso.datetime().nullable(),
   issuer: partySnapshotSchema.nullable(),
   client: partySnapshotSchema.nullable(),
 })
 export type PortalContract = z.infer<typeof portalContractSchema>
+
+// ── Client responses ──────────────────────────────────────
+
+const typedName = z.string().trim().min(2, "Type your full name").max(200)
+
+export const portalAcceptQuoteSchema = z.object({ name: typedName })
+export type PortalAcceptQuoteInput = z.input<typeof portalAcceptQuoteSchema>
+
+export const portalDeclineSchema = z.object({
+  reason: z
+    .string()
+    .trim()
+    .max(1000)
+    .optional()
+    .transform((v) => v || null),
+})
+export type PortalDeclineInput = z.input<typeof portalDeclineSchema>
+
+/** Typed-name e-signature; `agree` must be ticked. */
+export const portalSignContractSchema = z.object({
+  name: typedName,
+  agree: z.literal(true, { error: "Tick the box to sign" }),
+})
+export type PortalSignContractInput = z.input<typeof portalSignContractSchema>
+
+/** The wording the signer agrees to (also printed on the signature certificate). */
+export const E_SIGN_CONSENT =
+  "I agree that typing my name is my electronic signature, and that I have read and accept this contract."

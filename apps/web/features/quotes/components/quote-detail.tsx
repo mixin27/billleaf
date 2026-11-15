@@ -109,6 +109,14 @@ function QuoteDetailView({ quote }: { quote: Quote }) {
             {quote.title ? (
               <p className="text-sm text-muted-foreground">{quote.title}</p>
             ) : null}
+            {quote.status === "accepted" || quote.status === "declined" ? (
+              <p className="mt-1 text-sm text-muted-foreground">
+                {quote.status === "accepted" ? "Accepted" : "Declined"}
+                {quote.respondedByName ? ` by ${quote.respondedByName}` : ""}
+                {quote.respondedVia === "portal" ? " in the client portal" : ""}
+                {quote.declineReason ? ` · “${quote.declineReason}”` : ""}
+              </p>
+            ) : null}
             {quote.invoiceId ? (
               <p className="mt-1 text-sm">
                 Invoiced as{" "}
