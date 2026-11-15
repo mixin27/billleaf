@@ -118,7 +118,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             <Button
               className="self-start"
               nativeButton={false}
-              render={<Link href="/" />}
+              render={<Link href="/app" />}
             >
               Back to Billleaf
             </Button>
@@ -162,7 +162,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             <SidebarMenuItem>
               <SidebarMenuButton
                 tooltip="Back to app"
-                render={<Link href="/" />}
+                render={<Link href="/app" />}
               >
                 <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={1.8} />
                 <span>Back to app</span>

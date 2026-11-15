@@ -56,6 +56,27 @@ export class ProblemDetailsFilter implements ExceptionFilter {
             ? String((res as { code: unknown }).code)
             : undefined,
       }
+    } else if (isBadJsonBody(exception, req)) {
+      problem = {
+        type: "about:blank",
+        title: "bad request",
+        status: HttpStatus.BAD_REQUEST,
+        detail: "The request body isn't valid JSON",
+        code: "invalid_json",
+      }
+    } else if (isClientError(exception)) {
+      // Fastify's own request errors (invalid JSON, body too large, unsupported
+      // content type…) are the client's fault, not a 500.
+      problem = {
+        type: "about:blank",
+        title:
+          HttpStatus[exception.statusCode]
+            ?.replaceAll("_", " ")
+            .toLowerCase() ?? "bad request",
+        status: exception.statusCode,
+        detail: exception.message,
+        code: exception.code?.toLowerCase(),
+      }
     } else {
       this.logger.error(exception)
       problem = {
@@ -71,4 +92,20 @@ export class ProblemDetailsFilter implements ExceptionFilter {
       .header("content-type", "application/problem+json")
       .send(problem)
   }
+}
+
+function isClientError(
+  e: unknown
+): e is { statusCode: number; message: string; code?: string } {
+  const status = (e as { statusCode?: unknown })?.statusCode
+  return typeof status === "number" && status >= 400 && status < 500
+}
+
+/** A JSON body that failed to parse (the body parser throws a SyntaxError). */
+function isBadJsonBody(e: unknown, req: FastifyRequest) {
+  return (
+    e instanceof SyntaxError &&
+    /json/i.test(String(req.headers["content-type"] ?? "")) &&
+    /json/i.test(e.message)
+  )
 }

@@ -15,6 +15,7 @@ import {
 } from "@workspace/db"
 import { and, eq } from "drizzle-orm"
 import { ClsService } from "nestjs-cls"
+import { strFromU8, unzipSync } from "fflate"
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
 
 import { BILLING_PROVIDER } from "../../src/billing/providers/billing-provider.js"
@@ -3538,5 +3539,130 @@ describe("manual subscriptions", () => {
     } finally {
       spy.mockRestore()
     }
+  })
+})
+
+describe("launch readiness", () => {
+  it("answers malformed JSON with 400, not 500", async () => {
+    const owner = new Client(t)
+    await owner.signUp("Bad JSON")
+    await owner.createWorkspace("Bad JSON Studio")
+    const res = await t.app.inject({
+      method: "POST",
+      url: "/v1/clients",
+      headers: { ...owner.headers(), "content-type": "application/json" },
+      payload: "{not json",
+    })
+    expect(res.statusCode).toBe(400)
+    expect(res.headers["content-type"]).toContain("application/problem+json")
+  })
+
+  it("refuses workspace URLs that clash with the app's pages", async () => {
+    const owner = new Client(t)
+    await owner.signUp("Slug Picker")
+    for (const slug of ["pricing", "admin", "app"]) {
+      const res = await owner.post("/api/auth/organization/create", {
+        name: "Clash",
+        slug,
+      })
+      expect(res.status, slug).toBe(400)
+    }
+    const ok = await owner.post("/api/auth/organization/create", {
+      name: "Fine",
+      slug: `pricing-studio-${Date.now()}`,
+    })
+    expect(ok.status).toBe(200)
+  })
+
+  it("serves public pricing without a session", async () => {
+    const anon = new Client(t)
+    const res = await anon.get("/v1/billing/pricing")
+    expect(res.status).toBe(200)
+    expect(res.body).toHaveProperty("provider")
+    expect(Array.isArray(res.body.prices)).toBe(true)
+  })
+
+  it("exports every record as CSV and deletes the workspace for owners only", async () => {
+    const owner = new Client(t)
+    const { email: ownerEmail } = await owner.signUp("Leaving Owner")
+    const ws = await owner.createWorkspace("Leaving Studio")
+    await t.db
+      .update(workspaceSubscriptions)
+      .set({ planKey: "team" })
+      .where(eq(workspaceSubscriptions.workspaceId, ws.id))
+    const client = (
+      await owner.post("/v1/clients", {
+        name: 'Quote "Heavy", Ltd',
+        email: "heavy@client.test",
+      })
+    ).body
+    await owner.post("/v1/invoices", {
+      clientId: client.id,
+      lines: [{ description: "Work", quantity: 1, unitPrice: 12_345 }],
+    })
+
+    // An Admin (not Owner) can do neither.
+    const admin = new Client(t)
+    const { email } = await admin.signUp("Leaving Admin")
+    const adminRole = (await owner.get("/v1/roles")).body.find(
+      (r: { slug: string }) => r.slug === "admin"
+    )
+    const inv = (
+      await owner.post("/v1/invitations", { email, roleId: adminRole.id })
+    ).body
+    await admin.post("/api/auth/organization/accept-invitation", {
+      invitationId: inv.id,
+    })
+    admin.workspaceId = ws.id
+    expect((await admin.get("/v1/workspace/export")).status).toBe(403)
+    expect(
+      (await admin.post("/v1/workspace/delete", { confirmSlug: ws.slug }))
+        .status
+    ).toBe(403)
+
+    // Export: a ZIP of CSVs, quoting values with commas and quotes.
+    const res = await t.app.inject({
+      method: "GET",
+      url: "/v1/workspace/export",
+      headers: owner.headers(),
+    })
+    expect(res.statusCode).toBe(200)
+    expect(res.headers["content-type"]).toBe("application/zip")
+    expect(res.headers["content-disposition"]).toContain(".zip")
+    const zip = unzipSync(new Uint8Array(res.rawPayload))
+    expect(Object.keys(zip)).toEqual(
+      expect.arrayContaining([
+        "README.txt",
+        "clients.csv",
+        "invoices.csv",
+        "invoice_lines.csv",
+        "members.csv",
+      ])
+    )
+    const clientsCsv = strFromU8(zip["clients.csv"]!)
+    expect(clientsCsv.split("\r\n")[0]).toContain("workspace_id")
+    expect(clientsCsv).toContain('"Quote ""Heavy"", Ltd"')
+    expect(strFromU8(zip["invoice_lines.csv"]!)).toContain("12345")
+    expect(strFromU8(zip["members.csv"]!)).toContain(ownerEmail)
+    expect(strFromU8(zip["files.csv"]!)).not.toContain("key")
+
+    // Delete: needs the slug; then everything is gone, users stay.
+    expect(
+      (await owner.post("/v1/workspace/delete", { confirmSlug: "nope" })).status
+    ).toBe(400)
+    expect(
+      (await owner.post("/v1/workspace/delete", { confirmSlug: ws.slug }))
+        .status
+    ).toBe(204)
+    expect((await owner.get("/v1/clients")).status).toBe(403)
+    expect((await admin.get("/v1/clients")).status).toBe(403)
+    const orgs = await owner.get("/api/auth/organization/list")
+    expect(orgs.status).toBe(200) // the account itself stays
+    expect(orgs.body.map((o: { id: string }) => o.id)).not.toContain(ws.id)
+    const left = await t.db
+      .select({ action: auditLogs.action, ws: auditLogs.workspaceId })
+      .from(auditLogs)
+      .where(eq(auditLogs.resourceId, ws.id))
+    expect(left).toContainEqual({ action: "workspace.deleted", ws: null })
   })
 })

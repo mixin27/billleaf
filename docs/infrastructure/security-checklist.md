@@ -50,6 +50,6 @@ Review before first production launch and quarterly after.
 
 ## Privacy & compliance
 
-- [ ] Privacy policy, terms, DPA template; cookie banner only if non-essential cookies are used.
-- [ ] Data export and account/workspace deletion flows.
-- [ ] Billing via Merchant of Record (no card data touches our servers).
+- [ ] Terms (`/terms`) and Privacy Policy (`/privacy`) reviewed for the operating country, `SUPPORT_EMAIL` set; DPA template; no cookie banner needed while only essential cookies are used.
+- [ ] Data export and workspace deletion (Settings → Data) tested on production; account deletion (pending).
+- [ ] Billing via manual payments (ADR-0013): no card data touches our servers; payment screenshots stay private (presigned URLs).

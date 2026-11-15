@@ -6,8 +6,11 @@ import type { RequestContextStore } from "../../common/context/request-context.j
 import { InjectDb, type Database } from "../../core/database/database.module.js"
 
 export interface AuditEntry {
-  /** Override for system contexts without a request workspace (e.g. webhooks). */
-  workspaceId?: string
+  /**
+   * Override for system contexts without a request workspace (e.g.
+   * webhooks); `null` records a platform-level entry with no workspace.
+   */
+  workspaceId?: string | null
   resourceType?: string
   resourceId?: string
   metadata?: Record<string, unknown>
@@ -31,7 +34,10 @@ export class AuditService {
         ipAddress: this.cls.get("ip") ?? null,
         userAgent: this.cls.get("userAgent") ?? null,
         ...entry,
-        workspaceId: entry.workspaceId ?? this.cls.get("workspaceId") ?? null,
+        workspaceId:
+          entry.workspaceId === null
+            ? null
+            : (entry.workspaceId ?? this.cls.get("workspaceId") ?? null),
       })
     } catch (err) {
       // Never break the user's action because the audit insert failed.

@@ -7,6 +7,7 @@ import { Label } from "@workspace/ui/components/label"
 import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { toast } from "sonner"
+import { isReservedWorkspaceSlug } from "@workspace/contracts"
 import { z } from "zod"
 
 import { useCreateWorkspace } from "../api/mutations"
@@ -18,7 +19,8 @@ const schema = z.object({
     .trim()
     .min(2)
     .max(40)
-    .regex(/^[a-z0-9-]+$/, "Lowercase letters, numbers and dashes only"),
+    .regex(/^[a-z0-9-]+$/, "Lowercase letters, numbers and dashes only")
+    .refine((v) => !isReservedWorkspaceSlug(v), "That URL is reserved"),
 })
 type Values = z.infer<typeof schema>
 

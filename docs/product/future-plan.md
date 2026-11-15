@@ -2,107 +2,56 @@
 
 Work we've agreed to do later, with enough detail to pick up without re-research. The [roadmap](roadmap.md) lists phases; this page holds the next concrete items and their order.
 
-**Done:** Clockify-style time tracking: tracker (timer bar, tags, entries without a project, continue/duplicate, bulk edit), weekly timesheet grid, Summary/Detailed/Weekly reports with CSV export, and Clockify CSV import. Client portal, part 1 (magic-link sign-in, read-only quotes/contracts/invoices/receipts, portal links in document emails; [ADR-0012](../adr/0012-client-portal-magic-links.md)). Client portal, part 2: quotes accepted or declined online; contracts e-signed by typed name, with a signature certificate on the PDF; the business is notified. Next: production deploy readiness, then online invoice payments.
+## Done so far
 
-**Suggested order afterwards:** Client portal → Production deploy readiness → Online invoice payments → small follow-ups as capacity allows. The billing provider adapter goes in whenever the company's jurisdiction is settled.
+- **Core loop:** clients, quotes, contracts, projects and tasks, time tracking, invoices, payments and receipts, recurring invoices, dashboard.
+- **Time tracking (Clockify-style):** tracker with tags, weekly timesheet grid, reports with CSV export, Clockify CSV import.
+- **Client portal:** magic-link sign-in; quotes accepted or declined online; contracts e-signed with a signature certificate; invoices and receipts; payment proofs ([ADR-0012](../adr/0012-client-portal-magic-links.md)).
+- **Getting paid without card gateways:** payment instructions (bank, wallet, QR) on invoices, emails and the portal; clients upload proof and the freelancer confirms it.
+- **SaaS billing:** plans and limits; manual subscription payments approved by platform admins, with reminders and a 7-day grace period ([ADR-0013](../adr/0013-manual-payments-for-subscriptions.md)).
+- **Platform admin portal:** workspaces, users (ban, impersonate), jobs, audit log, approvals, pricing. Two-factor authentication for everyone, required for admins.
+- **Launch readiness:** public home and pricing pages, Terms and Privacy pages, data export (ZIP of CSVs) and workspace deletion.
+- **Deploy readiness:** production compose stack, pinned images, approval gate, smoke test, [Dokploy runbook](../infrastructure/dokploy-runbook.md).
 
----
+## Next, in order
 
-## Client portal (recommended next)
+1. **Production deploy.** The repo is ready. What's left is the deploy session (server, Dokploy, DNS, R2, email) with the runbook. After it:
+   - set prices and Billleaf's payment methods in `/admin/pricing`;
+   - set `SUPPORT_EMAIL`;
+   - have the Terms and Privacy pages reviewed for the operating country.
+2. **Account deletion.** A user deletes their own login (Better Auth `deleteUser`) once they own no workspace, or after deleting or handing over the ones they own. **Size:** S–M.
+3. **Invoice reminders.** Optional emails to clients before and after the due date, per workspace, with the portal link. **Size:** M.
+4. **Small follow-ups** (table below).
 
-**Goal:** clients act on documents themselves instead of the freelancer recording outcomes by hand.
+## Later
 
-**Scope:**
+### Online payments
 
-- A magic-link or tokenised portal per client, scoped to one workspace, read-only by default.
-- View and **accept or decline quotes**. This replaces "mark accepted" and records who accepted and when.
-- View and **sign contracts** (typed-name e-sign with IP, user agent and timestamp; signed PDF with an audit trail page). This replaces "record signature".
-- View invoices, receipts and payment history; download PDFs.
-- Branded with the workspace logo and colour (paid plans), "Made with Billleaf" on Free.
-- Emails link to the portal instead of only attaching PDFs.
+When a provider serves the operating country (a Merchant of Record for subscriptions, or a local gateway such as KBZPay / 2C2P merchant APIs):
 
-**Depends on:** nothing new. It reuses the document services, snapshots and entitlements (`portal.enabled` flag for Team).
+- **Subscriptions:** another `BillingProvider` adapter next to `manual`. Both can coexist, since each subscription records its provider.
+- **Invoices:** payment links on invoices and in the portal. Webhooks record payments and issue receipts automatically.
 
-**Size:** large. Part 1 (done): sign-in, sessions, read-only documents and PDFs, email links. Part 2 (done): accept/decline quotes and typed-name e-sign for contracts (IP, user agent, timestamp, signature certificate on the signed PDF).
+### Product
 
-## Production deploy readiness
+- **Outgoing webhooks and integrations:** signed event deliveries (invoice issued, payment recorded, …) with retries and a delivery log; Zapier/Make templates.
+- **Teams/agencies:** per-seat pricing, timesheet approvals.
+- **i18n:** translated UI, emails and PDFs, if a market needs it.
 
-**Status:** the repo side is ready:
+### Time tracking, later tier
 
-- the hardened compose stack and a production env template;
-- pinned image tags, an approval gate and GHCR cleanup;
-- a smoke test with a deep health check;
-- the [Dokploy runbook](../infrastructure/dokploy-runbook.md).
-
-What remains is the deploy session itself (VPS, Dokploy, DNS, R2, email), done by the founder with the runbook.
-
-**Goal:** Phase 1 counts as shipped once it runs on the VPS (Dokploy + Cloudflare R2).
-
-**Scope:**
-
-- Review `infra/docker-compose.prod.yml` and the web/api/worker images: healthchecks, resource limits, non-root users.
-- Run migrations as a one-off `migrate` job before the API rolls.
-- A post-deploy smoke test script: health, sign-in, PDF render, email enqueue, storage round-trip.
-- Walk through `docs/infrastructure/deployment.md` and the backup/restore runbook end to end, then fix the gaps.
-- Production env checklist: secrets, `BILLING_PROVIDER`, `COOKIE_DOMAIN`, Sentry, SMTP provider, R2 bucket and CORS.
-
-**Depends on:** access to the VPS and Dokploy (done by the founder; we prepare everything in the repo).
-
-**Size:** medium (1 PR + a deploy session).
-
-## SaaS billing provider adapter
-
-**Goal:** take real subscription payments. See [ADR-0011](../adr/0011-billing-core-with-test-provider.md).
-
-**Scope:**
-
-- A `PaddleBillingProvider` or `LemonSqueezyBillingProvider` implementing `BillingProvider`: checkout, portal, change plan, webhook verification and normalisation.
-- Map provider prices to `PLANS`, set final prices, and add the env vars and webhook URL in production.
-- An app-wide "payment failed" banner for past-due workspaces.
-
-**Depends on:** choosing the provider (company jurisdiction).
-
-**Size:** medium (1 PR).
-
-## Online invoice payments
-
-**Goal:** a freelancer's clients pay invoices online.
-
-**Scope:**
-
-- Payment links on invoices and in the portal (Stripe and/or PayPal Connect accounts owned by the freelancer).
-- Webhooks record payments and issue receipts automatically; an optional small platform fee.
-- Partial payments, currency support per provider, and refunds synced back.
-
-**Depends on:** the client portal; the provider's availability per freelancer country.
-
-**Size:** large.
+- **Calendar:** a view where you drag to create and resize entries.
+- **Rates and budgets:** a billable rate hierarchy (workspace → member → project → task) with cost rates; project estimates with budget alerts.
+- **Faster entry:** favourites; keyboard shortcuts.
+- **Rules:** rounding rules; locked periods.
+- **Reminders:** idle detection and reminders (needs a browser extension or desktop app).
+- **Imports:** Toggl and Harvest CSV imports reusing the Clockify importer; import history with undo.
 
 ## Small follow-ups
 
-| Item            | Notes                                                          | Size |
-| --------------- | -------------------------------------------------------------- | ---- |
-| Past-due banner | Show billing problems app-wide, not only on Settings → Billing | S    |
-| Audit log UI    | Settings → Audit log over `audit_logs` (filters, `audit.read`) | S–M  |
-| CJK PDF fonts   | Noto Sans SC/JP/KR subsets on demand; keep image size in check | S    |
-| E-sign          | Comes with the client portal (typed signature + audit trail)   | —    |
-
-## Later (Phase 3+)
-
-- **Outgoing webhooks and integrations:** signed event deliveries (invoice issued, payment recorded, …) with retries and a delivery log; Zapier/Make templates.
-- **i18n:** translated UI (start with Burmese, Thai, Vietnamese), localised emails and PDFs.
-- **Teams/agencies:** per-seat pricing and approvals.
-
-## Time tracking — later tier
-
-After core Clockify parity (tracker, timesheet grid, tags, reports, CSV export, Clockify import):
-
-- Calendar view (drag to create and resize entries).
-- Billable rate hierarchy: workspace → member → project (→ task), with cost rates for profitability.
-- Project estimates (hours or money) with budget progress and alerts.
-- Favorites / pinned entries, and keyboard shortcuts.
-- Idle detection and reminders (a browser extension or desktop app later).
-- Rounding rules for reports and invoicing (e.g. up to 15 minutes).
-- Timesheet approvals (submit week → approve/reject) and locked periods.
-- Imports from Toggl and Harvest CSVs, reusing the Clockify importer.
-- Import history with "undo this import" (entries already carry `import_batch_id`), and a background job for files beyond today's 10 MB / 50,000-row limit.
+| Item                    | Notes                                                                       | Size |
+| ----------------------- | --------------------------------------------------------------------------- | ---- |
+| CJK PDF fonts           | Noto Sans SC/JP/KR subsets on demand; keep the image size in check          | S    |
+| Export includes PDFs    | Optional "with PDFs" export as a background job, emailed as a link          | M    |
+| Admin plan history      | Show `subscription_payments` on the admin workspace page                    | S    |
+| Past-due banner (other) | For a future online provider's `past_due` status (manual plans have theirs) | S    |

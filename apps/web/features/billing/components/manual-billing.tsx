@@ -50,6 +50,56 @@ export function priceCurrencies(prices: PlatformPrice[]) {
   return [...new Set(prices.map((p) => p.currency))]
 }
 
+const INTERVAL_ORDER: BillingInterval[] = ["month", "year"]
+const INTERVAL_LABELS: Record<BillingInterval, string> = {
+  month: "Monthly",
+  year: "Yearly",
+}
+
+/** Billing periods that have at least one price (in `currency`), month first. */
+export function priceIntervals(
+  prices: Pick<PlatformPrice, "interval" | "currency">[],
+  currency?: string | null
+): BillingInterval[] {
+  return INTERVAL_ORDER.filter((i) =>
+    prices.some(
+      (p) => p.interval === i && (!currency || p.currency === currency)
+    )
+  )
+}
+
+/** `wanted` if it has prices, else the first period that does. */
+export function pickInterval(
+  intervals: BillingInterval[],
+  wanted: BillingInterval
+): BillingInterval {
+  return intervals.includes(wanted) ? wanted : (intervals[0] ?? wanted)
+}
+
+/** Monthly / Yearly switch, shown only when both have prices. */
+export function IntervalTabs({
+  intervals,
+  value,
+  onChange,
+}: {
+  intervals: BillingInterval[]
+  value: BillingInterval
+  onChange: (v: BillingInterval) => void
+}) {
+  if (intervals.length < 2) return null
+  return (
+    <Tabs value={value} onValueChange={(v) => onChange(v as BillingInterval)}>
+      <TabsList>
+        {intervals.map((i) => (
+          <TabsTrigger key={i} value={i}>
+            {INTERVAL_LABELS[i]}
+          </TabsTrigger>
+        ))}
+      </TabsList>
+    </Tabs>
+  )
+}
+
 /**
  * Settings → Billing when Billleaf is paid manually (ADR-0013): admin-set
  * prices, "Pay for …" → the pay page, the request waiting for approval, and
@@ -65,7 +115,7 @@ export function ManualPlans({
   const slug = useWorkspaceStore((s) => s.workspace?.slug)
   const options = useManualBillingOptions()
   const history = useSubscriptionPayments()
-  const [interval, setInterval] = React.useState<BillingInterval>(
+  const [wanted, setInterval] = React.useState<BillingInterval>(
     billing.interval ?? "month"
   )
   const currencies = priceCurrencies(options.data?.prices ?? [])
@@ -77,6 +127,8 @@ export function ManualPlans({
     return <p className="text-sm text-destructive">{options.error.message}</p>
   const { prices, pending } = options.data
   const current = billing.effectivePlanKey
+  const intervals = priceIntervals(prices, cur)
+  const interval = pickInterval(intervals, wanted)
 
   return (
     <div className="flex flex-col gap-8">
@@ -111,15 +163,11 @@ export function ManualPlans({
                 </TabsList>
               </Tabs>
             ) : null}
-            <Tabs
+            <IntervalTabs
+              intervals={intervals}
               value={interval}
-              onValueChange={(v) => setInterval(v as BillingInterval)}
-            >
-              <TabsList>
-                <TabsTrigger value="month">Monthly</TabsTrigger>
-                <TabsTrigger value="year">Yearly</TabsTrigger>
-              </TabsList>
-            </Tabs>
+              onChange={setInterval}
+            />
           </div>
         </div>
         {prices.length === 0 ? (
@@ -155,14 +203,19 @@ export function ManualPlans({
                     {plan.description}
                   </p>
                 </div>
-                <p className="text-2xl font-semibold tabular-nums">
-                  {price ? money(price.amount, price.currency) : "—"}
-                  {price ? (
+                {price ? (
+                  <p className="text-2xl font-semibold tabular-nums">
+                    {money(price.amount, price.currency)}
                     <span className="text-sm font-normal text-muted-foreground">
                       {` / ${interval}`}
                     </span>
-                  ) : null}
-                </p>
+                  </p>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Not available {interval === "year" ? "yearly" : "monthly"}
+                    {cur ? ` in ${cur}` : ""} yet.
+                  </p>
+                )}
                 <ul className="flex flex-1 flex-col gap-1.5 text-sm">
                   {(Object.keys(plan.features) as FeatureKey[])
                     .filter((f) => plan.features[f])

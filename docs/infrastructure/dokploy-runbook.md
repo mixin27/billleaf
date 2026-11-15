@@ -102,14 +102,15 @@ All of these are in the repo's **Settings**.
 1. **Environments:** create `staging` and `production`. On `production`, add **Required reviewers** (yourself), so a release waits for your click.
 2. **Secrets and variables → Actions → Variables** (repository variables):
 
-   | Name                        | Example                               |
-   | --------------------------- | ------------------------------------- |
-   | `PRODUCTION_WEB_URL`        | `https://app.example.com`             |
-   | `PRODUCTION_API_URL`        | `https://api.example.com`             |
-   | `PRODUCTION_WEB_SENTRY_DSN` | (optional) Sentry DSN for the browser |
-   | `STAGING_WEB_URL`           | `https://app.staging.example.com`     |
-   | `STAGING_API_URL`           | `https://api.staging.example.com`     |
-   | `STAGING_WEB_SENTRY_DSN`    | (optional)                            |
+   | Name                        | Example                                                            |
+   | --------------------------- | ------------------------------------------------------------------ |
+   | `PRODUCTION_WEB_URL`        | `https://app.example.com`                                          |
+   | `PRODUCTION_API_URL`        | `https://api.example.com`                                          |
+   | `PRODUCTION_WEB_SENTRY_DSN` | (optional) Sentry DSN for the browser                              |
+   | `STAGING_WEB_URL`           | `https://app.staging.example.com`                                  |
+   | `STAGING_API_URL`           | `https://api.staging.example.com`                                  |
+   | `STAGING_WEB_SENTRY_DSN`    | (optional)                                                         |
+   | `SUPPORT_EMAIL`             | `support@example.com`: shown on the public site, Terms and Privacy |
 
 3. **Environments → production → Environment secrets** (and the same for staging):
    - `DOKPLOY_WEBHOOK`: added in step 8.

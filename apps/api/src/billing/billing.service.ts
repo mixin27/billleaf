@@ -64,6 +64,11 @@ export class BillingService {
     private readonly audit: AuditService
   ) {}
 
+  /** The configured provider ("test", "manual", …). */
+  get providerKey() {
+    return this.provider.key
+  }
+
   // ── Workspace-facing ───────────────────────────────────────────────────
 
   async overview(): Promise<BillingOverview> {
