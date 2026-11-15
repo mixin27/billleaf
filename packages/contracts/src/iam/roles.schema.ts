@@ -56,6 +56,10 @@ export const meSchema = z.object({
     name: z.string(),
     email: z.email(),
     image: z.string().nullable().optional(),
+    /** Billleaf staff (admin portal access). */
+    isPlatformAdmin: z.boolean(),
+    /** Set while a platform admin is impersonating this user. */
+    impersonatedBy: z.string().nullable(),
   }),
   workspace: z
     .object({ id: z.string(), name: z.string(), slug: z.string() })

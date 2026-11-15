@@ -1,6 +1,7 @@
 import type {
   BillingInterval,
   PaidPlanKey,
+  PlanKey,
   SubscriptionStatus,
 } from "@workspace/contracts"
 
@@ -14,13 +15,19 @@ export interface BillingEvent {
   workspaceId: string
   customerId: string | null
   subscriptionId: string | null
-  planKey: PaidPlanKey
+  /** Paid plans from providers; "free" only from manual/admin events. */
+  planKey: PlanKey
   interval: BillingInterval
   status: SubscriptionStatus
   currentPeriodEnd: Date | null
   cancelAtPeriodEnd: boolean
   /** Original payload, stored for audit/debugging. */
   raw: Record<string, unknown>
+  /**
+   * Who produced the event when it isn't the configured provider, e.g.
+   * "manual" for a plan set by a platform admin or a manual payment.
+   */
+  provider?: string
 }
 
 export interface CheckoutRequest {

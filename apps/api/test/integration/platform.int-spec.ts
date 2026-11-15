@@ -4,6 +4,8 @@ import zlib from "node:zlib"
 import { createHash } from "node:crypto"
 
 import {
+  auditLogs,
+  user as userTable,
   billingEvents,
   portalResponses,
   rolePermissions,
@@ -3010,5 +3012,221 @@ describe("payment instructions and proofs", () => {
     } finally {
       spy.mockRestore()
     }
+  })
+})
+
+describe("platform admin portal", () => {
+  it("is hidden from non-admins, needs 2FA, and audits plan changes, bans and impersonation", async () => {
+    const setTwoFactor = (email: string, on: boolean) =>
+      t.db
+        .update(userTable)
+        .set({ twoFactorEnabled: on })
+        .where(eq(userTable.email, email))
+
+    // A normal workspace owner (the target).
+    const target = new Client(t)
+    const { email: targetEmail } = await target.signUp("Target Owner")
+    const ws = await target.createWorkspace("Target Studio")
+    const targetUserId = (await target.get("/v1/me")).body.user.id
+    expect((await target.get("/v1/me")).body.user).toMatchObject({
+      isPlatformAdmin: false,
+      impersonatedBy: null,
+    })
+    expect((await target.get("/v1/admin/overview")).status).toBe(404)
+
+    // The admin (listed in PLATFORM_ADMIN_EMAILS) needs 2FA first.
+    const admin = new Client(t)
+    await admin.signUp("Platform Admin", "platform.admin@example.test")
+    await admin.createWorkspace("Billleaf HQ")
+    const denied = await admin.get("/v1/admin/overview")
+    expect(denied.status).toBe(403)
+    expect(denied.body.code).toBe("admin_2fa_required")
+    await setTwoFactor("platform.admin@example.test", true)
+    admin.forgetSessionCache()
+    const overview = await admin.get("/v1/admin/overview")
+    expect(overview.status).toBe(200)
+    expect(overview.body.users.total).toBeGreaterThanOrEqual(2)
+    expect(overview.body.signupsByWeek).toHaveLength(12)
+    expect((await admin.get("/v1/me")).body.user.isPlatformAdmin).toBe(true)
+    const [row] = await t.db
+      .select({ role: userTable.role })
+      .from(userTable)
+      .where(eq(userTable.email, "platform.admin@example.test"))
+    expect(row!.role).toBe("admin")
+
+    // Better Auth's own admin routes are closed.
+    expect(
+      (
+        await admin.post("/api/auth/admin/set-role", {
+          userId: targetUserId,
+          role: "admin",
+        })
+      ).status
+    ).toBe(404)
+
+    // Workspaces: find, open, set a plan with an end date.
+    const list = (
+      await admin.get(
+        `/v1/admin/workspaces?q=${encodeURIComponent("Target Studio")}`
+      )
+    ).body
+    expect(list.items[0]).toMatchObject({
+      id: ws.id,
+      effectivePlanKey: "free",
+      owner: { email: targetEmail },
+    })
+    const periodEnd = new Date(Date.now() + 30 * 86_400_000)
+      .toISOString()
+      .slice(0, 10)
+    expect(
+      (
+        await admin.put(`/v1/admin/workspaces/${ws.id}/plan`, {
+          planKey: "pro",
+          periodEnd,
+        })
+      ).status
+    ).toBe(422) // reason required
+    const planned = (
+      await admin.put(`/v1/admin/workspaces/${ws.id}/plan`, {
+        planKey: "pro",
+        interval: "month",
+        periodEnd,
+        reason: "Early supporter, first month free",
+      })
+    ).body
+    expect(planned.subscription).toMatchObject({
+      effectivePlanKey: "pro",
+      provider: "manual",
+      cancelAtPeriodEnd: true,
+    })
+    expect(planned.billingEvents[0]).toMatchObject({ provider: "manual" })
+    expect((await target.get("/v1/me")).body.plan.key).toBe("pro")
+    // The workspace sees it in its own audit log, and nothing else's.
+    const wsAudit = (await target.get("/v1/audit?action=admin.")).body
+    expect(wsAudit.items.map((e: any) => e.action)).toEqual([
+      "admin.workspace_plan_set",
+    ])
+    expect(wsAudit.items[0].metadata.reason).toBe(
+      "Early supporter, first month free"
+    )
+
+    // Users: no acting on yourself; ban → signed out and can't sign in.
+    const adminId = (await admin.get("/v1/me")).body.user.id
+    expect(
+      (await admin.post(`/v1/admin/users/${adminId}/ban`, { reason: "test" }))
+        .status
+    ).toBe(400)
+    const users = (
+      await admin.get(`/v1/admin/users?q=${encodeURIComponent(targetEmail)}`)
+    ).body
+    expect(users.items[0]).toMatchObject({ id: targetUserId, workspaces: 1 })
+    const banned = (
+      await admin.post(`/v1/admin/users/${targetUserId}/ban`, {
+        reason: "Chargeback fraud",
+      })
+    ).body
+    expect(banned).toMatchObject({
+      banned: true,
+      banReason: "Chargeback fraud",
+    })
+    target.forgetSessionCache()
+    expect((await target.get("/v1/me")).status).toBe(401)
+    expect(
+      (
+        await target.post("/api/auth/sign-in/email", {
+          email: targetEmail,
+          password: "integration-password-123",
+        })
+      ).status
+    ).not.toBe(200)
+    await admin.post(`/v1/admin/users/${targetUserId}/unban`, {
+      reason: "Resolved with the bank",
+    })
+    expect(
+      (
+        await target.post("/api/auth/sign-in/email", {
+          email: targetEmail,
+          password: "integration-password-123",
+        })
+      ).status
+    ).toBe(200)
+    expect(
+      (await admin.post(`/v1/admin/users/${targetUserId}/resend-verification`))
+        .body.code
+    ).toBe("already_verified")
+
+    // Impersonation: only right after a reason is recorded, and only once.
+    admin.forgetSessionCache()
+    expect(
+      (
+        await admin.post("/api/auth/admin/impersonate-user", {
+          userId: targetUserId,
+        })
+      ).status
+    ).toBe(403)
+    expect(
+      (
+        await admin.post(`/v1/admin/users/${targetUserId}/impersonation`, {
+          reason: "Ticket #42: invoice totals look wrong",
+        })
+      ).status
+    ).toBe(200)
+    const imp = await admin.post("/api/auth/admin/impersonate-user", {
+      userId: targetUserId,
+    })
+    expect(imp.status).toBe(200)
+    // The impersonated session works in the user's own workspace.
+    const adminWorkspace = admin.workspaceId
+    admin.workspaceId = ws.id
+    const asTarget = (await admin.get("/v1/me")).body.user
+    expect(asTarget).toMatchObject({
+      id: targetUserId,
+      impersonatedBy: adminId,
+    })
+    expect((await admin.get("/v1/admin/overview")).status).toBe(404)
+    expect(
+      (await admin.post("/api/auth/admin/stop-impersonating")).status
+    ).toBe(200)
+    admin.workspaceId = adminWorkspace
+    admin.forgetSessionCache()
+    expect((await admin.get("/v1/me")).body.user.id).toBe(adminId)
+    expect(
+      (
+        await admin.post("/api/auth/admin/impersonate-user", {
+          userId: targetUserId,
+        })
+      ).status
+    ).toBe(403) // the reason is single-use
+
+    // Everything is in the platform audit log, with IP addresses.
+    const log = (await admin.get("/v1/admin/audit?action=admin.&pageSize=50"))
+      .body.items
+    expect(log.map((e: any) => e.action)).toEqual(
+      expect.arrayContaining([
+        "admin.workspace_plan_set",
+        "admin.user_banned",
+        "admin.user_unbanned",
+        "admin.impersonation_started",
+      ])
+    )
+    expect(
+      log.find((e: any) => e.action === "admin.user_banned")
+    ).toMatchObject({
+      actor: { email: "platform.admin@example.test" },
+      ipAddress: expect.any(String),
+    })
+    const [raw] = await t.db
+      .select({ ip: auditLogs.ipAddress })
+      .from(auditLogs)
+      .where(eq(auditLogs.action, "admin.impersonation_started"))
+    expect(raw!.ip).toBeTruthy()
+
+    // Jobs: counts per queue.
+    const jobs = (await admin.get("/v1/admin/jobs")).body
+    expect(jobs.counts.map((c: any) => c.queue)).toEqual([
+      "email",
+      "recurring",
+      "billing",
+    ])
   })
 })

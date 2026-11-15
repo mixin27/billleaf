@@ -3,6 +3,8 @@
 import {
   ComputerIcon,
   Logout01Icon,
+  Shield01Icon,
+  UserIcon,
   Moon02Icon,
   Sun03Icon,
   UnfoldMoreIcon,
@@ -30,10 +32,11 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@workspace/ui/components/sidebar"
+import Link from "next/link"
 import { useTheme } from "next-themes"
 
 import { useSignOut } from "@/features/auth"
-import { useMe } from "@/features/workspace"
+import { useMe, useWorkspaceStore } from "@/features/workspace"
 
 import { initials } from "./initials"
 
@@ -45,6 +48,7 @@ const THEMES = [
 
 export function NavUser() {
   const me = useMe()
+  const slug = useWorkspaceStore((st) => st.workspace?.slug)
   const { isMobile } = useSidebar()
   const { theme, setTheme } = useTheme()
   const signOut = useSignOut()
@@ -110,6 +114,16 @@ export function NavUser() {
               </DropdownMenuRadioGroup>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
+            <DropdownMenuItem render={<Link href={`/${slug}/account`} />}>
+              <HugeiconsIcon icon={UserIcon} className="size-4" />
+              Your account
+            </DropdownMenuItem>
+            {user?.isPlatformAdmin ? (
+              <DropdownMenuItem render={<Link href="/admin" />}>
+                <HugeiconsIcon icon={Shield01Icon} className="size-4" />
+                Platform admin
+              </DropdownMenuItem>
+            ) : null}
             <DropdownMenuItem onClick={() => void signOut()}>
               <HugeiconsIcon icon={Logout01Icon} className="size-4" />
               Sign out

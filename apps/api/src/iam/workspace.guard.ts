@@ -19,6 +19,7 @@ import { InjectDb, type Database } from "../core/database/database.module.js"
 import { PermissionResolver } from "./permissions/permission-resolver.service.js"
 
 interface AuthedRequest {
+  ip?: string
   headers: Record<string, string | string[] | undefined>
   session?: {
     user: { id: string }
@@ -62,6 +63,11 @@ export class WorkspaceGuard implements CanActivate {
       ) === true
 
     const req = context.switchToHttp().getRequest<AuthedRequest>()
+    const ua = req.headers["user-agent"]
+    this.ctx.set({
+      ip: req.ip?.slice(0, 100),
+      userAgent: (Array.isArray(ua) ? ua[0] : ua)?.slice(0, 500),
+    })
     const userId = req.session?.user.id
     if (userId) this.ctx.set({ userId })
     if (!needsWorkspace) return true

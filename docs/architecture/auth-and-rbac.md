@@ -52,6 +52,31 @@ Global guard order (`app.module.ts`): `ThrottlerGuard → AuthGuard → Workspac
 
 `GET /v1/me` returns the user, active workspace and **effective permission keys**. The web uses them to hide/disable UI. This is cosmetic; the API is always the authority.
 
+## Platform admin
+
+Billleaf staff run the platform from `/admin` in the web app (API: `/v1/admin/*`, `apps/api/src/admin/`). It is separate from workspace RBAC: a platform admin has no extra rights inside workspaces.
+
+- **Who:** users whose email is in `PLATFORM_ADMIN_EMAILS` (comma-separated). On boot, `AdminAccessService` sets `user.role = "admin"` for them and demotes anyone else. Nobody can become an admin from the UI.
+- **Guard:** `PlatformAdminGuard` on every `/v1/admin/*` route:
+  - 404 unless the user's email is in the list (the portal's existence isn't revealed);
+  - 403 `admin_impersonating` from an impersonated session;
+  - 403 `admin_2fa_required` until the admin turns on two-factor (Your account → Two-factor authentication).
+- **Better Auth admin routes:** most are disabled (`DISABLED_ADMIN_PATHS` in `auth.ts`). Ban, unban, session revoke and plan changes go through `/v1/admin`, which checks targets (not yourself, not another admin) and writes `admin.*` audit entries with the reason.
+- **Impersonation** ("Sign in as user"):
+  1. `POST /v1/admin/users/:id/impersonation { reason }` checks the target, audits `admin.impersonation_started`, and stores a one-time permission in Valkey (2 minutes).
+  2. The browser calls Better Auth `/admin/impersonate-user`. A `before` hook consumes that permission and refuses without it.
+  3. The new session lasts 1 hour and has `session.impersonatedBy` set. `/v1/me` returns `user.impersonatedBy`, and the app shows a red banner with **Stop** (`/admin/stop-impersonating`).
+  4. Actions taken meanwhile are attributed to the user; the session row and the start entry tie them to the admin.
+- **Sections:** overview, workspaces (set a plan by hand, with a reason), users (ban, unban, sign out everywhere, resend verification, impersonate), background jobs (retry, remove), and the platform-wide audit log.
+
+## Two-factor authentication
+
+Better Auth `twoFactor` (TOTP + backup codes). Users turn it on under **Your account**; sign-in then asks for an authenticator code or a backup code, with an option to trust the device. Required for platform admins.
+
+## Audit log
+
+`AuditService.record()` writes `audit_logs` with the actor, workspace, IP address and user agent. Workspace owners read their own log at **Settings → Audit log** (`GET /v1/audit`, `audit.read`). Platform admins read every workspace's at `/admin/audit`.
+
 ## Members & invitations
 
 - `GET/POST /v1/invitations`, `POST /v1/invitations/:id/resend`, `DELETE /v1/invitations/:id` (`member.invite`); `DELETE /v1/members/:id` (`member.remove`); `PUT /v1/members/:id/roles` (`member.update`).

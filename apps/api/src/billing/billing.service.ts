@@ -198,6 +198,34 @@ export class BillingService {
     return { received: true, duplicate: false }
   }
 
+  /**
+   * Store and apply an event that doesn't come from a provider webhook, e.g.
+   * a plan set by a platform admin or an approved manual payment. Goes
+   * through the same store → apply path (idempotent on `event.id`).
+   */
+  async applyDirect(event: BillingEvent & { provider: string }) {
+    const [stored] = await this.db
+      .insert(billingEvents)
+      .values({
+        provider: event.provider,
+        eventId: event.id,
+        type: event.type,
+        workspaceId: event.workspaceId,
+        payload: { event: { ...event, raw: undefined }, raw: event.raw },
+        occurredAt: event.occurredAt,
+      })
+      .onConflictDoNothing()
+      .returning({ id: billingEvents.id })
+    if (!stored)
+      throw new ConflictException({
+        message: "This change was already applied",
+        code: "billing_event_duplicate",
+      })
+    const ok = await this.process(stored.id, event)
+    if (!ok)
+      throw new Error("Couldn't apply the plan change; it will be retried")
+  }
+
   /** Apply a stored event; on failure record the error and queue a retry. */
   async process(eventRowId: string, parsed?: BillingEvent): Promise<boolean> {
     try {
@@ -296,7 +324,7 @@ export class BillingService {
           interval: e.interval,
           cancelAtPeriodEnd: e.cancelAtPeriodEnd,
           currentPeriodEnd: e.currentPeriodEnd,
-          provider: this.provider.key,
+          provider: e.provider ?? this.provider.key,
           providerCustomerId: e.customerId,
           providerSubscriptionId: e.subscriptionId,
           lastEventAt: e.occurredAt,

@@ -1,6 +1,7 @@
 "use client"
 
 import {
+  adminClient,
   magicLinkClient,
   organizationClient,
   twoFactorClient,
@@ -13,7 +14,12 @@ import { env } from "./env"
 export const authClient = createAuthClient({
   baseURL: env.NEXT_PUBLIC_API_URL,
   basePath: "/api/auth",
-  plugins: [organizationClient(), twoFactorClient(), magicLinkClient()],
+  plugins: [
+    organizationClient(),
+    twoFactorClient(),
+    magicLinkClient(),
+    adminClient(),
+  ],
 })
 
 export const { useSession, signIn, signUp, signOut } = authClient

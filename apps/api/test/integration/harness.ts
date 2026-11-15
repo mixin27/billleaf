@@ -90,9 +90,20 @@ export class Client {
   put = (url: string, body: Json) => this.request("PUT", url, body)
   del = (url: string) => this.request("DELETE", url)
 
+  /**
+   * Drop Better Auth's cached session data so the next request re-reads
+   * the user from the database (after changing it directly in a test).
+   */
+  forgetSessionCache() {
+    for (const k of [...this.cookies.keys()])
+      if (k.includes("session_data")) this.cookies.delete(k)
+  }
+
   /** Sign up, mark the email verified (no inbox in tests), sign in. */
-  async signUp(name = "Test User") {
-    const email = `${name.toLowerCase().replace(/\W+/g, ".")}.${unique()}@example.test`
+  async signUp(name = "Test User", fixedEmail?: string) {
+    const email =
+      fixedEmail ??
+      `${name.toLowerCase().replace(/\W+/g, ".")}.${unique()}@example.test`
     const password = "integration-password-123"
     const up = await this.post("/api/auth/sign-up/email", {
       name,

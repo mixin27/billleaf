@@ -1,6 +1,8 @@
 import { Module } from "@nestjs/common"
 import { AuthModule as BetterAuthModule } from "@thallesp/nestjs-better-auth"
 
+import { AdminAccessModule } from "../admin/admin-access.module.js"
+import { AdminAccessService } from "../admin/admin-access.service.js"
 import { ENV, type Env } from "../core/config/env.js"
 import { DB, type Database } from "../core/database/database.module.js"
 import { IamModule } from "../iam/iam.module.js"
@@ -17,14 +19,21 @@ import { createAuth } from "./auth.js"
 @Module({
   imports: [
     BetterAuthModule.forRootAsync({
-      imports: [IamModule, MailModule],
-      inject: [ENV, DB, MailService, WorkspaceBootstrapService],
+      imports: [IamModule, MailModule, AdminAccessModule],
+      inject: [
+        ENV,
+        DB,
+        MailService,
+        WorkspaceBootstrapService,
+        AdminAccessService,
+      ],
       disableGlobalAuthGuard: true,
       useFactory: (
         env: Env,
         db: Database,
         mail: MailService,
-        bootstrap: WorkspaceBootstrapService
+        bootstrap: WorkspaceBootstrapService,
+        adminAccess: AdminAccessService
       ) => ({
         // Keep req.rawBody for webhook signature verification (billing).
         bodyParser: { rawBody: true },
@@ -38,6 +47,8 @@ import { createAuth } from "./auth.js"
             bootstrap.onMemberAdded(ws, member, role),
           onInvitationAccepted: (ws, member, invitationId) =>
             bootstrap.onInvitationAccepted(ws, member, invitationId),
+          allowImpersonation: (adminUserId, targetUserId) =>
+            adminAccess.consumeImpersonation(adminUserId, targetUserId),
         }),
       }),
     }),

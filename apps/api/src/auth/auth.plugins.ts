@@ -72,7 +72,9 @@ export function buildAuthPlugins(deps: AuthPluginDeps) {
       sendMagicLink: async ({ email, url }) =>
         deps.sendEmail(magicLinkEmail({ to: email, url })),
     }),
-    admin(),
+    // Platform admins (user.role = "admin"). Only impersonation is reachable
+    // over HTTP; everything else goes through /v1/admin (2FA + audit).
+    admin({ impersonationSessionDuration: 60 * 60 }),
     openAPI(),
   ]
 }

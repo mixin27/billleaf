@@ -7,6 +7,9 @@ export interface RequestContextStore extends ClsStore {
   workspaceId?: string
   memberId?: string
   permissions?: ReadonlySet<Permission>
+  /** Request origin, recorded on audit entries. */
+  ip?: string
+  userAgent?: string
   /** Client-portal requests: the signed-in client (set by PortalGuard). */
   portalClientId?: string
   portalEmail?: string
