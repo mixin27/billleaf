@@ -37,6 +37,7 @@ import { DocumentSheet, toParty } from "@/components/documents/document-sheet"
 import { SendDialog } from "@/components/documents/send-dialog"
 import { usePermissions } from "@/components/permissions/can"
 import { useClient } from "@/features/clients"
+import { InvoicePayments, RecordPaymentDialog } from "@/features/payments"
 import { useWorkspaceProfile, useWorkspaceStore } from "@/features/workspace"
 import { errorMessage } from "@/lib/api"
 import { openPdf } from "@/lib/download"
@@ -80,7 +81,7 @@ function InvoiceDetailView({ invoice }: { invoice: Invoice }) {
   const voidInvoice = useVoidInvoice(invoice.id)
   const remove = useDeleteInvoice(invoice.id)
   const [dialog, setDialog] = React.useState<
-    "issue" | "delete" | "void" | "send" | null
+    "issue" | "delete" | "void" | "send" | "pay" | null
   >(null)
   const [voidReason, setVoidReason] = React.useState("")
   const locale = profile.data?.locale
@@ -164,6 +165,11 @@ function InvoiceDetailView({ invoice }: { invoice: Invoice }) {
               Issue invoice
             </Button>
           ) : null}
+          {issued && invoice.amountDue > 0 && can("payment.record") ? (
+            <Button variant="outline" onClick={() => setDialog("pay")}>
+              Record payment
+            </Button>
+          ) : null}
           {issued && can("invoice.send") ? (
             <Button onClick={() => setDialog("send")}>
               {invoice.lastSentAt ? "Send again" : "Send"}
@@ -188,7 +194,7 @@ function InvoiceDetailView({ invoice }: { invoice: Invoice }) {
                   Duplicate
                 </DropdownMenuItem>
               ) : null}
-              {issued && can("invoice.void") ? (
+              {issued && invoice.amountPaid === 0 && can("invoice.void") ? (
                 <DropdownMenuItem
                   variant="destructive"
                   onClick={() => setDialog("void")}
@@ -247,6 +253,21 @@ function InvoiceDetailView({ invoice }: { invoice: Invoice }) {
         notes={invoice.notes}
         terms={invoice.terms}
         footer={profile.data?.documentFooter}
+      />
+
+      {invoice.status !== "draft" ? (
+        <InvoicePayments
+          invoiceId={invoice.id}
+          locale={locale}
+          defaultEmail={primaryEmail}
+        />
+      ) : null}
+
+      <RecordPaymentDialog
+        open={dialog === "pay"}
+        onOpenChange={(o) => setDialog(o ? "pay" : null)}
+        invoice={invoice}
+        locale={locale}
       />
 
       <SendDialog

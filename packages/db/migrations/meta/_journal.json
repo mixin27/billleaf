@@ -36,6 +36,20 @@
       "when": 1794714237202,
       "tag": "0004_good_firelord",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794715171868,
+      "tag": "0005_nostalgic_shotgun",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794715492072,
+      "tag": "0006_loose_kree",
+      "breakpoints": true
     }
   ]
 }

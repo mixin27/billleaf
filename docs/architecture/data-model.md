@@ -80,9 +80,18 @@ Payment/display state is **derived**, never stored: `invoiceState()` in `@worksp
 
 PDFs (quotes and invoices) are rendered on demand by `renderDocumentPdf` (pdfkit, `GET /v1/{quotes|invoices}/:id/pdf`) and emailed as attachments through the BullMQ email queue.
 
+### Payments & receipts (`payments.ts`) — Phase 1
+
+| Table      | Notes                                                                                                                                                                                                                                                                          |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `payments` | `workspace_id`, `invoice_id` / `client_id` (restrict), `amount` (minor units, invoice currency), `paid_on`, `method` (bank_transfer, card, cash, cheque, online, other), `reference`, `notes`, `status` (completed / refunded), `refunded_at` + `refund_reason`, `recorded_by` |
+| `receipts` | One per payment (unique `payment_id`), `number` (`RCT-0001`, gap-free per workspace), frozen client/issuer snapshots, **`balance_after`** (invoice balance right after the payment), `voided_at` (set on refund), `last_sent_at` / `last_sent_to`                              |
+
+Recording a payment locks the invoice row (`SELECT … FOR UPDATE`), rejects overpayment (`overpayment`) and payments on non-issued or fully paid invoices, inserts the payment, increments `invoices.amount_paid` and issues the receipt — all in one transaction. A refund (recording that money was returned; Billleaf moves no money) marks the payment refunded, decrements `amount_paid` and voids the receipt. Invoices with `amount_paid > 0` cannot be voided.
+
 ## Planned business tables (Phase 1+)
 
-`tax_rates`, `payments`, `receipts`, `files`, `notifications`, then `projects`, `tasks`, `time_entries`, `contracts`, `contract_templates`.
+`tax_rates`, `files`, `notifications`, then `projects`, `tasks`, `time_entries`, `contracts`, `contract_templates`.
 
 ```mermaid
 erDiagram
@@ -103,6 +112,7 @@ erDiagram
   invoices ||--o{ invoice_lines : contains
   invoices ||--o{ payments : settled_by
   payments ||--|| receipts : produces
+  clients ||--o{ payments : pays
 ```
 
 ## Migrations

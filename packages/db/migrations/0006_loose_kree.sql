@@ -1,0 +1,1 @@
+ALTER TABLE "receipts" ADD COLUMN "balance_after" integer DEFAULT 0 NOT NULL;

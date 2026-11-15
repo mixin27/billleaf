@@ -564,6 +564,102 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  "/v1/payments": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["PaymentsController_list_v1"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/payments/{id}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["PaymentsController_get_v1"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/invoices/{invoiceId}/payments": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["PaymentsController_record_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/payments/{id}/refund": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["PaymentsController_refund_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/payments/{id}/receipt/pdf": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["PaymentsController_receiptPdf_v1"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/payments/{id}/receipt/send": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["PaymentsController_sendReceipt_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
 }
 export type webhooks = Record<string, never>
 export interface components {
@@ -1347,6 +1443,82 @@ export interface components {
     }
     VoidInvoiceDto: {
       reason: string
+    }
+    PaymentListDto_Output: {
+      items: {
+        id: string
+        invoiceId: string
+        invoiceNumber: string | null
+        clientId: string
+        clientName: string
+        amount: number
+        currency: string
+        /** Format: date */
+        paidOn: string
+        /** @enum {string} */
+        method:
+          "bank_transfer" | "card" | "cash" | "cheque" | "online" | "other"
+        reference: string | null
+        notes: string | null
+        /** @enum {string} */
+        status: "completed" | "refunded"
+        /** Format: date-time */
+        refundedAt: string | null
+        refundReason: string | null
+        receiptId: string | null
+        receiptNumber: string | null
+        /** Format: date-time */
+        receiptLastSentAt: string | null
+        /** Format: date-time */
+        createdAt: string
+      }[]
+      nextCursor: string | null
+    }
+    PaymentDto_Output: {
+      id: string
+      invoiceId: string
+      invoiceNumber: string | null
+      clientId: string
+      clientName: string
+      amount: number
+      currency: string
+      /** Format: date */
+      paidOn: string
+      /** @enum {string} */
+      method: "bank_transfer" | "card" | "cash" | "cheque" | "online" | "other"
+      reference: string | null
+      notes: string | null
+      /** @enum {string} */
+      status: "completed" | "refunded"
+      /** Format: date-time */
+      refundedAt: string | null
+      refundReason: string | null
+      receiptId: string | null
+      receiptNumber: string | null
+      /** Format: date-time */
+      receiptLastSentAt: string | null
+      /** Format: date-time */
+      createdAt: string
+    }
+    RecordPaymentDto: {
+      amount: number
+      /** Format: date */
+      paidOn?: string
+      /**
+       * @default bank_transfer
+       * @enum {string}
+       */
+      method: "bank_transfer" | "card" | "cash" | "cheque" | "online" | "other"
+      reference?: string | null
+      notes?: string | null
+    }
+    RefundPaymentDto: {
+      reason: string
+    }
+    SendReceiptDto: {
+      /** Format: email */
+      to?: string
+      message?: string | null
     }
   }
   responses: never
@@ -2560,6 +2732,147 @@ export interface operations {
         }
         content: {
           "application/json": components["schemas"]["InvoiceDto_Output"]
+        }
+      }
+    }
+  }
+  PaymentsController_list_v1: {
+    parameters: {
+      query?: {
+        cursor?: string
+        limit?: number
+        invoiceId?: string
+        clientId?: string
+        status?: "completed" | "refunded"
+        q?: string
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["PaymentListDto_Output"]
+        }
+      }
+    }
+  }
+  PaymentsController_get_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["PaymentDto_Output"]
+        }
+      }
+    }
+  }
+  PaymentsController_record_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        invoiceId: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RecordPaymentDto"]
+      }
+    }
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["PaymentDto_Output"]
+        }
+      }
+    }
+  }
+  PaymentsController_refund_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RefundPaymentDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["PaymentDto_Output"]
+        }
+      }
+    }
+  }
+  PaymentsController_receiptPdf_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  PaymentsController_sendReceipt_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SendReceiptDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["PaymentDto_Output"]
         }
       }
     }

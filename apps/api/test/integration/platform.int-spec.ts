@@ -310,3 +310,126 @@ describe("invoices", () => {
     ).toBe("INV-0002")
   })
 })
+
+describe("payments & receipts", () => {
+  it("prevents overpayment under concurrency, issues receipts, refunds, and blocks void while paid", async () => {
+    const owner = new Client(t)
+    await owner.signUp("Collector")
+    await owner.createWorkspace("Collections")
+    const client = (
+      await owner.post("/v1/clients", {
+        name: "Debtor",
+        email: "ap@debtor.test",
+      })
+    ).body
+    const draft = (
+      await owner.post("/v1/invoices", {
+        clientId: client.id,
+        lines: [{ description: "Work", quantity: 1, unitPrice: 10_000 }],
+      })
+    ).body
+    expect(
+      (await owner.post(`/v1/invoices/${draft.id}/payments`, { amount: 100 }))
+        .status
+    ).toBe(409) // draft
+    await owner.post(`/v1/invoices/${draft.id}/issue`)
+
+    // Three concurrent 4,000 payments on a 10,000 invoice: only two fit.
+    const attempts = await Promise.all(
+      [1, 2, 3].map(() =>
+        owner.post(`/v1/invoices/${draft.id}/payments`, {
+          amount: 4_000,
+          method: "card",
+        })
+      )
+    )
+    expect(attempts.map((r) => r.status).sort()).toEqual([201, 201, 400])
+    expect(attempts.find((r) => r.status === 400)!.body.code).toBe(
+      "overpayment"
+    )
+    const receipts = attempts
+      .filter((r) => r.status === 201)
+      .map((r) => r.body.receiptNumber)
+      .sort()
+    expect(receipts).toEqual(["RCT-0001", "RCT-0002"])
+
+    let inv = (await owner.get(`/v1/invoices/${draft.id}`)).body
+    expect(inv).toMatchObject({
+      amountPaid: 8_000,
+      amountDue: 2_000,
+      displayStatus: "partially_paid",
+    })
+    expect(
+      (await owner.get("/v1/invoices?status=partially_paid")).body.items
+    ).toHaveLength(1)
+
+    const final = await owner.post(`/v1/invoices/${draft.id}/payments`, {
+      amount: 2_000,
+    })
+    expect(final.status).toBe(201)
+    expect(final.body.receiptNumber).toBe("RCT-0003")
+    inv = (await owner.get(`/v1/invoices/${draft.id}`)).body
+    expect(inv).toMatchObject({
+      amountDue: 0,
+      paymentStatus: "paid",
+      displayStatus: "paid",
+    })
+    expect(
+      (await owner.post(`/v1/invoices/${draft.id}/payments`, { amount: 1 }))
+        .body.code
+    ).toBe("invoice_paid")
+
+    // Can't void a paid invoice.
+    expect(
+      (
+        await owner.post(`/v1/invoices/${draft.id}/void`, {
+          reason: "nope nope",
+        })
+      ).body.code
+    ).toBe("invoice_has_payments")
+
+    // Receipt PDF + email.
+    const pdf = await t.app.inject({
+      method: "GET",
+      url: `/v1/payments/${final.body.id}/receipt/pdf`,
+      headers: owner.headers(),
+    })
+    expect(pdf.statusCode).toBe(200)
+    expect(pdf.rawPayload.subarray(0, 4).toString()).toBe("%PDF")
+    expect(
+      (await owner.post(`/v1/payments/${final.body.id}/receipt/send`, {}))
+        .status
+    ).toBe(200)
+
+    // Refund the final payment: balance reopens, receipt voided, can't refund twice.
+    const refunded = await owner.post(`/v1/payments/${final.body.id}/refund`, {
+      reason: "Paid twice by mistake",
+    })
+    expect(refunded.body).toMatchObject({
+      status: "refunded",
+      refundReason: "Paid twice by mistake",
+    })
+    expect(
+      (
+        await owner.post(`/v1/payments/${final.body.id}/refund`, {
+          reason: "again!",
+        })
+      ).status
+    ).toBe(409)
+    inv = (await owner.get(`/v1/invoices/${draft.id}`)).body
+    expect(inv).toMatchObject({
+      amountPaid: 8_000,
+      displayStatus: "partially_paid",
+    })
+
+    const list = (await owner.get(`/v1/payments?invoiceId=${draft.id}`)).body
+      .items
+    expect(list).toHaveLength(3)
+    expect(
+      list.filter((p: { status: string }) => p.status === "refunded")
+    ).toHaveLength(1)
+    expect(
+      (await owner.get("/v1/payments?q=RCT-0003")).body.items
+    ).toHaveLength(1)
+  })
+})
