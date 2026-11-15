@@ -58,6 +58,15 @@ export const envSchema = z.object({
     .default("true")
     .transform((v) => v === "true"),
 
+  // SaaS billing. "test" is a built-in provider for local development and
+  // CI; it is refused in production until a real provider adapter exists.
+  BILLING_PROVIDER: z.enum(["test"]).default("test"),
+  /** Shared secret for webhook signatures (min 32 chars outside development). */
+  BILLING_WEBHOOK_SECRET: z
+    .string()
+    .min(16)
+    .default("dev-only-billing-webhook-secret"),
+
   SMTP_URL: z.string().default("smtp://localhost:1025"),
   EMAIL_FROM: z.string().default("Billleaf <no-reply@billleaf.local>"),
 })

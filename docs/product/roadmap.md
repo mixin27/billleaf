@@ -30,7 +30,8 @@ Phases are scope buckets, not dates. Each phase ends with a production deploy.
 - ✅ Time tracking (global timer, week timesheet, manual entries) → billable time to invoice lines.
 - ✅ Contracts (templates with merge fields, from a quote, PDF + email, recorded signatures; e-sign later).
 - ✅ Recurring invoices (weekly → yearly, draft or auto-send, idempotent hourly generation, Pro/Team).
-- **SaaS billing live** (MoR provider, entitlements enforced).
+- ✅ SaaS billing core: plans, enforced limits, subscription lifecycle, signed webhooks, Settings → Billing, test provider ([ADR-0011](../adr/0011-billing-core-with-test-provider.md)).
+- **SaaS billing live**: Paddle or Lemon Squeezy adapter once the company's jurisdiction is settled.
 
 ## Phase 3 — Teams & growth
 

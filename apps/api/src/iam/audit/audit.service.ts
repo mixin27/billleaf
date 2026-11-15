@@ -6,6 +6,8 @@ import type { RequestContextStore } from "../../common/context/request-context.j
 import { InjectDb, type Database } from "../../core/database/database.module.js"
 
 export interface AuditEntry {
+  /** Override for system contexts without a request workspace (e.g. webhooks). */
+  workspaceId?: string
   resourceType?: string
   resourceId?: string
   metadata?: Record<string, unknown>
@@ -25,9 +27,9 @@ export class AuditService {
     try {
       await this.db.insert(auditLogs).values({
         action,
-        workspaceId: this.cls.get("workspaceId") ?? null,
         actorUserId: this.cls.get("userId") ?? null,
         ...entry,
+        workspaceId: entry.workspaceId ?? this.cls.get("workspaceId") ?? null,
       })
     } catch (err) {
       // Never break the user's action because the audit insert failed.

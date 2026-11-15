@@ -50,9 +50,6 @@ export async function unwrap<
 /** Human message for toasts, with friendlier copy for known codes. */
 export function errorMessage(error: unknown): string {
   if (error instanceof ApiError) {
-    if (error.code === "plan_limit_reached") {
-      return "You've reached your plan's limit. Upgrade to add more."
-    }
     if (error.status === 422) {
       const first = error.problem?.errors?.[0]
       return first

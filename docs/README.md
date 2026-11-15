@@ -48,18 +48,19 @@ Billleaf is an all-in-one business workspace for freelancers — **Client → Qu
 
 ## Architecture Decision Records
 
-| ADR                                               | Decision                                                        | Status   |
-| ------------------------------------------------- | --------------------------------------------------------------- | -------- |
-| [0001](adr/0001-monorepo-pnpm-turborepo.md)       | Monorepo with pnpm workspaces and Turborepo                     | Accepted |
-| [0002](adr/0002-nestjs-fastify-api.md)            | NestJS with the Fastify adapter for the API                     | Accepted |
-| [0003](adr/0003-postgres-drizzle.md)              | PostgreSQL with Drizzle ORM                                     | Accepted |
-| [0004](adr/0004-better-auth.md)                   | Better Auth for authentication and workspaces                   | Accepted |
-| [0005](adr/0005-dynamic-rbac-tables.md)           | Dynamic, workspace-scoped RBAC in our own tables                | Accepted |
-| [0006](adr/0006-shared-schema-multi-tenancy.md)   | Shared-schema multi-tenancy with `workspace_id`                 | Accepted |
-| [0007](adr/0007-self-hosted-vps-dokploy.md)       | Self-hosted VPS with Dokploy; Vercel only for static sites      | Accepted |
-| [0008](adr/0008-rest-openapi-generated-client.md) | REST + OpenAPI with a generated typed client                    | Accepted |
-| [0009](adr/0009-tanstack-query-zustand.md)        | TanStack Query for server state, Zustand for client state       | Accepted |
-| [0010](adr/0010-merchant-of-record-billing.md)    | Merchant of Record for SaaS billing behind a provider interface | Accepted |
+| ADR                                                 | Decision                                                        | Status   |
+| --------------------------------------------------- | --------------------------------------------------------------- | -------- |
+| [0001](adr/0001-monorepo-pnpm-turborepo.md)         | Monorepo with pnpm workspaces and Turborepo                     | Accepted |
+| [0002](adr/0002-nestjs-fastify-api.md)              | NestJS with the Fastify adapter for the API                     | Accepted |
+| [0003](adr/0003-postgres-drizzle.md)                | PostgreSQL with Drizzle ORM                                     | Accepted |
+| [0004](adr/0004-better-auth.md)                     | Better Auth for authentication and workspaces                   | Accepted |
+| [0005](adr/0005-dynamic-rbac-tables.md)             | Dynamic, workspace-scoped RBAC in our own tables                | Accepted |
+| [0006](adr/0006-shared-schema-multi-tenancy.md)     | Shared-schema multi-tenancy with `workspace_id`                 | Accepted |
+| [0007](adr/0007-self-hosted-vps-dokploy.md)         | Self-hosted VPS with Dokploy; Vercel only for static sites      | Accepted |
+| [0008](adr/0008-rest-openapi-generated-client.md)   | REST + OpenAPI with a generated typed client                    | Accepted |
+| [0009](adr/0009-tanstack-query-zustand.md)          | TanStack Query for server state, Zustand for client state       | Accepted |
+| [0010](adr/0010-merchant-of-record-billing.md)      | Merchant of Record for SaaS billing behind a provider interface | Accepted |
+| [0011](adr/0011-billing-core-with-test-provider.md) | Billing core with a built-in test provider; MoR adapter later   | Accepted |
 
 New ADR: copy [the template](adr/template.md).
 

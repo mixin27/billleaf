@@ -26,6 +26,8 @@ import { createAuth } from "./auth.js"
         mail: MailService,
         bootstrap: WorkspaceBootstrapService
       ) => ({
+        // Keep req.rawBody for webhook signature verification (billing).
+        bodyParser: { rawBody: true },
         auth: createAuth({
           env,
           db,

@@ -1,5 +1,7 @@
 import { z } from "zod"
 
+import { planKeySchema } from "../billing/plans.js"
+
 import { ALL_PERMISSION_KEYS, type Permission } from "./permissions.js"
 
 export const permissionKeySchema = z.enum(
@@ -59,5 +61,15 @@ export const meSchema = z.object({
     .object({ id: z.string(), name: z.string(), slug: z.string() })
     .nullable(),
   permissions: z.array(permissionKeySchema),
+  /** The workspace's effective plan and what it unlocks (for UI hints). */
+  plan: z.object({
+    key: planKeySchema,
+    features: z.object({
+      customBranding: z.boolean(),
+      recurringInvoices: z.boolean(),
+      timeTracking: z.boolean(),
+      customRoles: z.boolean(),
+    }),
+  }),
 })
 export type Me = z.infer<typeof meSchema>

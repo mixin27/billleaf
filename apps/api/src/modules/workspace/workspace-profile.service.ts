@@ -4,6 +4,7 @@ import type {
   WorkspaceProfile,
 } from "@workspace/contracts"
 
+import { EntitlementsService } from "../../billing/entitlements.service.js"
 import { AuditService } from "../../iam/audit/audit.service.js"
 import { FilesService } from "../files/files.service.js"
 
@@ -58,7 +59,8 @@ export class WorkspaceProfileService {
   constructor(
     private readonly repo: WorkspaceProfileRepository,
     private readonly files: FilesService,
-    private readonly audit: AuditService
+    private readonly audit: AuditService,
+    private readonly entitlements: EntitlementsService
   ) {}
 
   async get(): Promise<WorkspaceProfile> {
@@ -67,6 +69,32 @@ export class WorkspaceProfileService {
   }
 
   /** Raw logo bytes for documents (PDFs), or null. */
+  /**
+   * Logo, colour and footer for PDFs. Without the custom branding
+   * entitlement, documents use the default look and a Billleaf credit.
+   */
+  async documentBranding(): Promise<{
+    brandColor: string | null
+    logo: Buffer | null
+    footer: string | null
+  }> {
+    const profile = await this.get()
+    if (await this.entitlements.hasFeature("customBranding")) {
+      return {
+        brandColor: profile.brandColor,
+        logo: await this.logoImage(),
+        footer: profile.documentFooter,
+      }
+    }
+    return {
+      brandColor: null,
+      logo: null,
+      footer: [profile.documentFooter, "Made with Billleaf"]
+        .filter(Boolean)
+        .join("  ·  "),
+    }
+  }
+
   async logoImage(): Promise<Buffer | null> {
     const row = await this.repo.getOrCreate()
     if (!row.logoFileId) return null

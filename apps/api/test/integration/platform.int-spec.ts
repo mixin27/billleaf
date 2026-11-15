@@ -1,6 +1,7 @@
 import zlib from "node:zlib"
 
 import {
+  billingEvents,
   rolePermissions,
   roles,
   syncPermissions,
@@ -10,6 +11,8 @@ import { and, eq } from "drizzle-orm"
 import { ClsService } from "nestjs-cls"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
+import { BILLING_PROVIDER } from "../../src/billing/providers/billing-provider.js"
+import type { TestBillingProvider } from "../../src/billing/providers/test-billing.provider.js"
 import { RecurringService } from "../../src/modules/recurring/recurring.service.js"
 import { Client, startApp, type TestApp } from "./harness.js"
 
@@ -616,7 +619,7 @@ describe("workspace logo", () => {
   it("uploads to object storage, serves a presigned URL, embeds it in PDFs, and validates type", async () => {
     const owner = new Client(t)
     await owner.signUp("Brand")
-    await owner.createWorkspace("Branding")
+    const brandingWs = await owner.createWorkspace("Branding")
     const upload = async (filename: string, body: Buffer, type: string) => {
       const m = multipart(filename, body, type)
       const res = await t.app.inject({
@@ -653,12 +656,21 @@ describe("workspace logo", () => {
         lines: [{ description: "ออกแบบ", quantity: 1, unitPrice: 100 }],
       })
     ).body
-    const pdf = await t.app.inject({
-      method: "GET",
-      url: `/v1/invoices/${inv.id}/pdf`,
-      headers: owner.headers(),
-    })
-    const text = pdf.rawPayload.toString("latin1")
+    const pdfText = async () =>
+      (
+        await t.app.inject({
+          method: "GET",
+          url: `/v1/invoices/${inv.id}/pdf`,
+          headers: owner.headers(),
+        })
+      ).rawPayload.toString("latin1")
+    // Free plan: default look, no logo (custom branding is a paid feature).
+    expect(await pdfText()).not.toContain("/Subtype /Image")
+    await t.db
+      .update(workspaceSubscriptions)
+      .set({ planKey: "pro" })
+      .where(eq(workspaceSubscriptions.workspaceId, brandingWs.id))
+    const text = await pdfText()
     expect(text).toContain("/Subtype /Image")
     expect(text).toContain("NotoSansMyanmar")
 
@@ -1410,5 +1422,201 @@ describe("permission catalog sync", () => {
     const ids = granted.map((g) => g.roleId)
     expect(ids).toContain(ownerRole.id)
     expect(ids).not.toContain(memberRole.id)
+  })
+})
+
+describe("SaaS billing", () => {
+  it("enforces Free limits, upgrades through the test checkout, switches plans and follows the subscription lifecycle", async () => {
+    const owner = new Client(t)
+    await owner.signUp("Subscriber")
+    const ws = await owner.createWorkspace("Paying")
+    const start = (await owner.get("/v1/billing")).body
+    expect(start).toMatchObject({
+      planKey: "free",
+      effectivePlanKey: "free",
+      provider: "test",
+      checkoutAvailable: true,
+      canManage: false,
+      usage: { members: 1, clients: 0, invoicesPerMonth: 0 },
+    })
+
+    // Free: custom roles are a Team feature; 10 issued invoices per month.
+    const role = await owner.post("/v1/roles", {
+      name: "Bookkeeper",
+      permissions: ["invoice.read"],
+    })
+    expect(role.status).toBe(403)
+    expect(role.body.code).toBe("feature_not_in_plan")
+    const client = (await owner.post("/v1/clients", { name: "Busy Co" })).body
+    const draft = () =>
+      owner.post("/v1/invoices", {
+        clientId: client.id,
+        lines: [{ description: "Work", quantity: 1, unitPrice: 1_000 }],
+      })
+    for (let i = 0; i < 10; i++) {
+      const inv = (await draft()).body
+      expect((await owner.post(`/v1/invoices/${inv.id}/issue`)).status).toBe(
+        200
+      )
+    }
+    const eleventh = (await draft()).body // drafts are never limited
+    const blocked = await owner.post(`/v1/invoices/${eleventh.id}/issue`)
+    expect(blocked.status).toBe(403)
+    expect(blocked.body.code).toBe("plan_limit_reached")
+    expect(blocked.body.detail).toMatch(/Free plan includes up to 10/)
+
+    // Upgrade via the test provider's hosted checkout.
+    const checkout = (
+      await owner.post("/v1/billing/checkout", {
+        planKey: "pro",
+        interval: "month",
+      })
+    ).body
+    expect(checkout.url).toMatch(/\/settings\/billing\/test\?session=/)
+    const session = new URL(checkout.url).searchParams.get("session")!
+    expect(
+      (await owner.get(`/v1/billing/test/session?session=${session}`)).body
+    ).toMatchObject({ kind: "checkout", planKey: "pro", interval: "month" })
+
+    // A session can't be used from another workspace.
+    const outsider = new Client(t)
+    await outsider.signUp("Outsider")
+    await outsider.createWorkspace("Not mine")
+    expect(
+      (await outsider.post("/v1/billing/test/checkout", { session })).status
+    ).toBe(403)
+
+    const pro = (await owner.post("/v1/billing/test/checkout", { session }))
+      .body
+    expect(pro).toMatchObject({
+      planKey: "pro",
+      effectivePlanKey: "pro",
+      status: "active",
+      interval: "month",
+      canManage: true,
+    })
+    expect((await owner.post(`/v1/invoices/${eleventh.id}/issue`)).status).toBe(
+      200
+    )
+    expect(
+      (
+        await owner.post("/v1/billing/checkout", {
+          planKey: "team",
+          interval: "year",
+        })
+      ).body.code
+    ).toBe("already_subscribed")
+
+    // Switch to Team (yearly): custom roles unlock.
+    const team = (
+      await owner.post("/v1/billing/change-plan", {
+        planKey: "team",
+        interval: "year",
+      })
+    ).body
+    expect(team).toMatchObject({ effectivePlanKey: "team", interval: "year" })
+    expect(
+      (
+        await owner.post("/v1/roles", {
+          name: "Bookkeeper",
+          permissions: ["invoice.read"],
+        })
+      ).status
+    ).toBe(201)
+
+    // Portal lifecycle.
+    const portal = (await owner.post("/v1/billing/portal")).body
+    const portalSession = new URL(portal.url).searchParams.get("session")!
+    const act = async (action: string) =>
+      (
+        await owner.post("/v1/billing/test/portal", {
+          session: portalSession,
+          action,
+        })
+      ).body
+    expect(await act("cancel")).toMatchObject({
+      cancelAtPeriodEnd: true,
+      effectivePlanKey: "team",
+    })
+    expect(await act("resume")).toMatchObject({ cancelAtPeriodEnd: false })
+    expect(await act("payment_failed")).toMatchObject({
+      status: "past_due",
+      effectivePlanKey: "team", // grace period
+    })
+    expect(await act("payment_recovered")).toMatchObject({ status: "active" })
+    const ended = await act("end_now")
+    expect(ended).toMatchObject({
+      status: "canceled",
+      effectivePlanKey: "free",
+      planKey: "team",
+    })
+    // Data is kept; creating more is limited again.
+    expect(
+      (await owner.post("/v1/roles", { name: "Another", permissions: [] }))
+        .status
+    ).toBe(403)
+
+    // Webhooks: idempotent, ordered, signed, and failures are stored.
+    const provider = t.app.get<TestBillingProvider>(BILLING_PROVIDER)
+    const deliver = (d: { rawBody: Buffer; headers: Record<string, string> }) =>
+      t.app.inject({
+        method: "POST",
+        url: "/v1/billing/webhooks/test",
+        headers: { "content-type": "application/json", ...d.headers },
+        payload: d.rawBody,
+      })
+    const data = {
+      workspace_id: ws.id,
+      customer_id: "cus_x",
+      subscription_id: "sub_x",
+      plan: "pro" as const,
+      interval: "month" as const,
+      status: "active" as const,
+      current_period_end: new Date(Date.now() + 86_400_000).toISOString(),
+      cancel_at_period_end: false,
+    }
+    const reactivate = provider.delivery({
+      type: "subscription.activated",
+      data,
+    })
+    const first = await deliver(reactivate)
+    expect(JSON.parse(first.body)).toMatchObject({ duplicate: false })
+    const again = await deliver(reactivate)
+    expect(JSON.parse(again.body)).toMatchObject({ duplicate: true })
+    expect((await owner.get("/v1/billing")).body.effectivePlanKey).toBe("pro")
+
+    // An older event delivered late is stored but doesn't override newer state.
+    const stale = provider.delivery(
+      { type: "subscription.canceled", data },
+      new Date("2000-01-01T00:00:00Z")
+    )
+    expect((await deliver(stale)).statusCode).toBe(200)
+    expect((await owner.get("/v1/billing")).body.effectivePlanKey).toBe("pro")
+    // Tampering with a signed body is rejected.
+    const tampered = Buffer.from(
+      reactivate.rawBody.toString().replace('"pro"', '"team"')
+    )
+    expect(
+      (await deliver({ rawBody: tampered, headers: reactivate.headers }))
+        .statusCode
+    ).toBe(401)
+    const forged = await deliver({
+      rawBody: reactivate.rawBody,
+      headers: { "x-billleaf-signature": "forged" },
+    })
+    expect(forged.statusCode).toBe(401)
+
+    const orphan = provider.delivery({
+      type: "subscription.activated",
+      data: { ...data, workspace_id: "00000000-0000-4000-8000-000000000000" },
+    })
+    expect((await deliver(orphan)).statusCode).toBe(200)
+    const orphanId = JSON.parse(orphan.rawBody.toString()).id
+    const [row] = await t.db
+      .select()
+      .from(billingEvents)
+      .where(eq(billingEvents.eventId, orphanId))
+    expect(row!.processedAt).toBeNull()
+    expect(row!.error).toMatch(/Unknown workspace/)
   })
 })

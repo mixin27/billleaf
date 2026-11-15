@@ -1,3 +1,5 @@
+import { EntitlementsService } from "../../billing/entitlements.service.js"
+import { UsageService } from "../../billing/usage.service.js"
 import { randomUUID } from "node:crypto"
 
 import {
@@ -47,7 +49,9 @@ export class FilesService {
   constructor(
     @InjectDb() private readonly db: Database,
     private readonly storage: StorageService,
-    private readonly ctx: RequestContext
+    private readonly ctx: RequestContext,
+    private readonly usage: UsageService,
+    private readonly entitlements: EntitlementsService
   ) {}
 
   async uploadImage(
@@ -70,6 +74,11 @@ export class FilesService {
         code: "unsupported_file_type",
       })
     }
+    await this.entitlements.assertWithinLimit(
+      "storageMb",
+      await this.usage.storageMb(),
+      body.length / 1_048_576
+    )
     const workspaceId = this.ctx.workspaceId
     const key = `${workspaceId}/${purpose}/${randomUUID()}.${type.ext}`
     await this.storage.put(key, body, type.contentType)

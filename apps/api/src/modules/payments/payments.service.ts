@@ -231,9 +231,7 @@ export class PaymentsService {
         payment.status === "refunded"
           ? `Refunded: ${payment.refundReason ?? ""}`
           : payment.notes,
-      footer: profile.documentFooter,
-      brandColor: profile.brandColor,
-      logo: await this.profile.logoImage(),
+      ...(await this.profile.documentBranding()),
     })
     return { filename: `${receipt.number}.pdf`, content }
   }

@@ -1,7 +1,6 @@
 import {
   BadRequestException,
   ConflictException,
-  ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
@@ -88,12 +87,7 @@ export class RecurringService {
   ) {}
 
   private async assertPlan() {
-    if (!(await this.entitlements.hasFeature("recurringInvoices"))) {
-      throw new ForbiddenException({
-        message: "Recurring invoices are available on Pro and Team plans",
-        code: "feature_not_in_plan",
-      })
-    }
+    await this.entitlements.assertFeature("recurringInvoices")
   }
 
   async list(): Promise<RecurringInvoice[]> {

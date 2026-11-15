@@ -17,6 +17,7 @@ const items: { title: string; href: string; permission: Permission }[] = [
     href: "/settings/roles",
     permission: "role.read",
   },
+  { title: "Billing", href: "/settings/billing", permission: "billing.read" },
 ]
 
 export function SettingsNav() {
@@ -24,7 +25,7 @@ export function SettingsNav() {
   const pathname = usePathname()
   const { can } = usePermissions()
   return (
-    <nav className="flex gap-1 border-b">
+    <nav className="flex gap-1 overflow-x-auto border-b">
       {items
         .filter((i) => can(i.permission))
         .map((i) => {
@@ -34,7 +35,7 @@ export function SettingsNav() {
               key={i.href}
               href={href}
               className={cn(
-                "-mb-px border-b-2 border-transparent px-3 py-2 text-sm",
+                "-mb-px shrink-0 border-b-2 border-transparent px-3 py-2 text-sm whitespace-nowrap",
                 pathname.startsWith(href)
                   ? "border-foreground font-medium"
                   : "text-muted-foreground hover:text-foreground"
