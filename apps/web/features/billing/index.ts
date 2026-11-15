@@ -3,3 +3,8 @@ export { PlanEndingBanner } from "./components/plan-ending-banner"
 export { SubscriptionPay } from "./components/subscription-pay"
 export { TestBilling } from "./components/test-billing"
 export { billingKeys } from "./api/keys"
+export {
+  IntervalTabs,
+  pickInterval,
+  priceIntervals,
+} from "./components/manual-billing"

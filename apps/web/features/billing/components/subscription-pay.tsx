@@ -33,7 +33,12 @@ import { formatDate, money } from "@/lib/format"
 
 import { useSubmitSubscriptionPayment } from "../api/mutations"
 import { useManualBillingOptions } from "../api/queries"
-import { periodLabel, priceCurrencies } from "./manual-billing"
+import {
+  periodLabel,
+  pickInterval,
+  priceCurrencies,
+  priceIntervals,
+} from "./manual-billing"
 
 const MAX_BYTES = 2 * 1024 * 1024
 const NONE = "__none__"
@@ -53,7 +58,7 @@ export function SubscriptionPay() {
     "plan",
     parseAsStringLiteral(["pro", "team"] as const).withDefault("pro")
   )
-  const [interval, setInterval] = useQueryState(
+  const [wantedInterval, setInterval] = useQueryState(
     "interval",
     parseAsStringLiteral(["month", "year"] as const).withDefault("month")
   )
@@ -76,6 +81,12 @@ export function SubscriptionPay() {
     currencyParam && currencies.includes(currencyParam)
       ? currencyParam
       : currencies[0]
+  // Only periods this plan is sold for in this currency.
+  const intervals = priceIntervals(
+    prices.filter((p) => p.planKey === plan),
+    currency
+  )
+  const interval = pickInterval(intervals, wantedInterval)
   const price = prices.find(
     (p) =>
       p.planKey === plan && p.interval === interval && p.currency === currency
@@ -145,24 +156,29 @@ export function SubscriptionPay() {
               </SelectContent>
             </Select>
           </Field>
-          <Field label="Billing period" htmlFor="pay-interval">
-            <Select
-              items={{ month: "Monthly", year: "Yearly" }}
-              value={interval}
-              onValueChange={(v) => {
-                void setInterval(v as BillingInterval)
-                setPeriods(1)
-              }}
-            >
-              <SelectTrigger id="pay-interval" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="month">Monthly</SelectItem>
-                <SelectItem value="year">Yearly</SelectItem>
-              </SelectContent>
-            </Select>
-          </Field>
+          {intervals.length > 1 ? (
+            <Field label="Billing period" htmlFor="pay-interval">
+              <Select
+                items={{ month: "Monthly", year: "Yearly" }}
+                value={interval}
+                onValueChange={(v) => {
+                  void setInterval(v as BillingInterval)
+                  setPeriods(1)
+                }}
+              >
+                <SelectTrigger id="pay-interval" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {intervals.map((i) => (
+                    <SelectItem key={i} value={i}>
+                      {i === "year" ? "Yearly" : "Monthly"}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+          ) : null}
           <Field label="How many" htmlFor="pay-periods">
             <Select
               items={Object.fromEntries(

@@ -16,7 +16,12 @@ import { cn } from "@workspace/ui/lib/utils"
 import Link from "next/link"
 import * as React from "react"
 
-import { limitText } from "@/features/billing"
+import {
+  IntervalTabs,
+  limitText,
+  pickInterval,
+  priceIntervals,
+} from "@/features/billing"
 import { api, unwrap } from "@/lib/api"
 import { money } from "@/lib/format"
 
@@ -47,32 +52,85 @@ const FAQ: { q: string; a: string }[] = [
   },
 ]
 
+type PriceRow = {
+  planKey: "pro" | "team"
+  interval: BillingInterval
+  currency: string
+  amount: number
+}
+
+function PlanPrice({
+  planKey,
+  price,
+  interval,
+  loading,
+  soldOtherwise,
+}: {
+  planKey: PlanKey
+  price: PriceRow | null
+  interval: BillingInterval
+  loading: boolean
+  /** The plan has prices, just not for this period. */
+  soldOtherwise: boolean
+}) {
+  if (planKey === "free") return <p className="text-2xl font-semibold">Free</p>
+  if (loading) return <Skeleton className="h-8 w-32" />
+  if (!price)
+    return (
+      <p className="text-sm text-muted-foreground">
+        {soldOtherwise
+          ? `Not offered ${interval === "year" ? "yearly" : "monthly"}.`
+          : "Price shown in Settings → Billing after you sign up."}
+      </p>
+    )
+  return (
+    <p className="text-2xl font-semibold tabular-nums">
+      {money(price.amount, price.currency)}
+      <span className="text-sm font-normal text-muted-foreground">
+        {` / ${interval}`}
+      </span>
+    </p>
+  )
+}
+
 /** Plan cards for the public pricing page. Prices come from the API. */
 export function Pricing() {
   const pricing = useQuery({
     queryKey: ["public-pricing"],
     queryFn: () => unwrap(api.GET("/v1/billing/pricing")),
     staleTime: 5 * 60_000,
+    retry: 1,
   })
-  const [interval, setInterval] = React.useState<BillingInterval>("month")
-  const prices = pricing.data?.prices ?? []
-  const manual = pricing.data?.provider === "manual"
-  const currencies = [...new Set(prices.map((p) => p.currency))]
+  const [wanted, setInterval] = React.useState<BillingInterval>("month")
   const [currency, setCurrency] = React.useState<string | null>(null)
-  const cur = currency ?? currencies[0] ?? null
+  const manual = pricing.data?.provider === "manual"
+  // Manual billing: the admin-set prices. Other providers: the catalog's USD
+  // prices. If prices can't be loaded, none are shown (never a guess).
+  const prices: PriceRow[] = !pricing.data
+    ? []
+    : manual
+      ? pricing.data.prices
+      : (["pro", "team"] as const).flatMap((planKey) =>
+          (["month", "year"] as const).flatMap((i) => {
+            const amount = PLANS[planKey].prices?.[i]
+            return amount
+              ? [{ planKey, interval: i, currency: "USD", amount }]
+              : []
+          })
+        )
+  const currencies = [...new Set(prices.map((p) => p.currency))]
+  const cur =
+    currency && currencies.includes(currency)
+      ? currency
+      : (currencies[0] ?? null)
+  const intervals = priceIntervals(prices, cur)
+  const interval = pickInterval(intervals, wanted)
+  const loading = pricing.isPending
 
-  const priceOf = (key: PlanKey) => {
-    if (key === "free") return "Free"
-    if (manual) {
-      const p = prices.find(
-        (x) =>
-          x.planKey === key && x.interval === interval && x.currency === cur
-      )
-      return p ? money(p.amount, p.currency) : "—"
-    }
-    const usd = PLANS[key].prices?.[interval]
-    return usd ? money(usd, "USD", "en-US") : "—"
-  }
+  const priceOf = (key: PlanKey) =>
+    prices.find(
+      (x) => x.planKey === key && x.interval === interval && x.currency === cur
+    ) ?? null
 
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-10 px-4 py-14 sm:px-6">
@@ -87,7 +145,7 @@ export function Pricing() {
       </div>
 
       <div className="flex flex-wrap gap-2">
-        {manual && currencies.length > 1 ? (
+        {currencies.length > 1 ? (
           <Tabs value={cur ?? ""} onValueChange={(v) => setCurrency(v)}>
             <TabsList>
               {currencies.map((c) => (
@@ -98,15 +156,11 @@ export function Pricing() {
             </TabsList>
           </Tabs>
         ) : null}
-        <Tabs
+        <IntervalTabs
+          intervals={intervals}
           value={interval}
-          onValueChange={(v) => setInterval(v as BillingInterval)}
-        >
-          <TabsList>
-            <TabsTrigger value="month">Monthly</TabsTrigger>
-            <TabsTrigger value="year">Yearly</TabsTrigger>
-          </TabsList>
-        </Tabs>
+          onChange={setInterval}
+        />
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
@@ -126,18 +180,15 @@ export function Pricing() {
                   {plan.description}
                 </p>
               </div>
-              {pricing.isPending && key !== "free" ? (
-                <Skeleton className="h-8 w-32" />
-              ) : (
-                <p className="text-2xl font-semibold tabular-nums">
-                  {priceOf(key)}
-                  {key !== "free" && priceOf(key) !== "—" ? (
-                    <span className="text-sm font-normal text-muted-foreground">
-                      {` / ${interval}`}
-                    </span>
-                  ) : null}
-                </p>
-              )}
+              <PlanPrice
+                planKey={key}
+                price={priceOf(key)}
+                interval={interval}
+                loading={loading}
+                soldOtherwise={prices.some(
+                  (x) => x.planKey === key && x.currency === cur
+                )}
+              />
               <ul className="flex flex-1 flex-col gap-1.5 text-sm">
                 {LIMITS.map((k) => (
                   <li key={k}>{limitText(k, plan.limits[k])}</li>
