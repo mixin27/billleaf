@@ -1412,6 +1412,214 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  "/v1/portal/session": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["PortalController_session_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/portal/sign-out": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["PortalController_signOut_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/portal/{slug}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["PortalController_workspace_v1"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/portal/{slug}/sign-in": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["PortalController_signIn_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/portal/{slug}/me": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["PortalController_me_v1"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/portal/{slug}/quotes": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["PortalController_quotes_v1"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/portal/{slug}/quotes/{id}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["PortalController_quote_v1"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/portal/{slug}/invoices": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["PortalController_invoices_v1"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/portal/{slug}/invoices/{id}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["PortalController_invoice_v1"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/portal/{slug}/contracts": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["PortalController_contracts_v1"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/portal/{slug}/contracts/{id}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["PortalController_contract_v1"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/portal/{slug}/receipts": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["PortalController_receipts_v1"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/portal/{slug}/{kind}/{id}/pdf": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["PortalController_pdf_v1"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   "/v1/dashboard": {
     parameters: {
       query?: never
@@ -3246,6 +3454,259 @@ export interface components {
         email: string | null
         matched: boolean
         entries: number
+      }[]
+    }
+    PortalSessionCreateDto: {
+      token: string
+    }
+    PortalSessionDto_Output: {
+      workspaceSlug: string
+    }
+    PortalWorkspaceDto_Output: {
+      name: string
+      slug: string
+      logoUrl: string | null
+      brandColor: string | null
+      showBadge: boolean
+      email: string | null
+    }
+    PortalSignInDto: {
+      /** Format: email */
+      email: string
+    }
+    PortalMeDto_Output: {
+      workspace: {
+        name: string
+        slug: string
+        logoUrl: string | null
+        brandColor: string | null
+        showBadge: boolean
+        email: string | null
+      }
+      client: {
+        id: string
+        name: string
+      }
+      email: string
+      summary: {
+        openInvoices: number
+        amountDue: {
+          currency: string
+          amount: number
+        }[]
+        overdueInvoices: number
+        quotesAwaitingReply: number
+        contractsAwaitingSignature: number
+      }
+    }
+    PortalQuoteListDto_Output: {
+      items: {
+        id: string
+        number: string
+        title: string | null
+        /** @enum {string} */
+        status: "sent" | "accepted" | "declined" | "expired"
+        /** Format: date */
+        issueDate: string
+        /** Format: date */
+        validUntil: string | null
+        currency: string
+        total: number
+      }[]
+    }
+    PortalQuoteDto_Output: {
+      id: string
+      number: string
+      title: string | null
+      /** @enum {string} */
+      status: "sent" | "accepted" | "declined" | "expired"
+      /** Format: date */
+      issueDate: string
+      /** Format: date */
+      validUntil: string | null
+      currency: string
+      total: number
+      notes: string | null
+      terms: string | null
+      lines: {
+        id: string
+        position: number
+        description: string
+        quantity: number
+        unitPrice: number
+        taxRateBps: number
+        amount: number
+        taxAmount: number
+      }[]
+      subtotal: number
+      taxTotal: number
+      issuer: {
+        name: string
+        legalName?: string | null
+        email?: string | null
+        phone?: string | null
+        taxId?: string | null
+        addressLines: string[]
+      } | null
+      client: {
+        name: string
+        legalName?: string | null
+        email?: string | null
+        phone?: string | null
+        taxId?: string | null
+        addressLines: string[]
+      } | null
+      /** Format: date-time */
+      acceptedAt: string | null
+      /** Format: date-time */
+      declinedAt: string | null
+    }
+    PortalInvoiceListDto_Output: {
+      items: {
+        id: string
+        number: string
+        title: string | null
+        /** @enum {string} */
+        status: "open" | "overdue" | "partially_paid" | "paid" | "void"
+        /** Format: date */
+        issueDate: string
+        /** Format: date */
+        dueDate: string | null
+        currency: string
+        total: number
+        amountPaid: number
+        amountDue: number
+      }[]
+    }
+    PortalInvoiceDto_Output: {
+      id: string
+      number: string
+      title: string | null
+      /** @enum {string} */
+      status: "open" | "overdue" | "partially_paid" | "paid" | "void"
+      /** Format: date */
+      issueDate: string
+      /** Format: date */
+      dueDate: string | null
+      currency: string
+      total: number
+      amountPaid: number
+      amountDue: number
+      notes: string | null
+      terms: string | null
+      lines: {
+        id: string
+        position: number
+        description: string
+        quantity: number
+        unitPrice: number
+        taxRateBps: number
+        amount: number
+        taxAmount: number
+      }[]
+      subtotal: number
+      taxTotal: number
+      issuer: {
+        name: string
+        legalName?: string | null
+        email?: string | null
+        phone?: string | null
+        taxId?: string | null
+        addressLines: string[]
+      } | null
+      client: {
+        name: string
+        legalName?: string | null
+        email?: string | null
+        phone?: string | null
+        taxId?: string | null
+        addressLines: string[]
+      } | null
+      receipts: {
+        id: string
+        receiptNumber: string
+        invoiceId: string
+        invoiceNumber: string | null
+        amount: number
+        currency: string
+        /** Format: date */
+        paidOn: string
+        /** @enum {string} */
+        method:
+          "bank_transfer" | "card" | "cash" | "cheque" | "online" | "other"
+        /** @enum {string} */
+        status: "completed" | "refunded"
+      }[]
+    }
+    PortalContractListDto_Output: {
+      items: {
+        id: string
+        number: string
+        title: string
+        /** @enum {string} */
+        status: "sent" | "signed" | "declined" | "void"
+        /** Format: date */
+        effectiveDate: string | null
+        /** Format: date */
+        endDate: string | null
+        /** Format: date-time */
+        sentAt: string | null
+        /** Format: date */
+        signedAt: string | null
+      }[]
+    }
+    PortalContractDto_Output: {
+      id: string
+      number: string
+      title: string
+      /** @enum {string} */
+      status: "sent" | "signed" | "declined" | "void"
+      /** Format: date */
+      effectiveDate: string | null
+      /** Format: date */
+      endDate: string | null
+      /** Format: date-time */
+      sentAt: string | null
+      /** Format: date */
+      signedAt: string | null
+      body: string
+      signedByName: string | null
+      /** Format: date-time */
+      declinedAt: string | null
+      /** Format: date-time */
+      voidedAt: string | null
+      issuer: {
+        name: string
+        legalName?: string | null
+        email?: string | null
+        phone?: string | null
+        taxId?: string | null
+        addressLines: string[]
+      } | null
+      client: {
+        name: string
+        legalName?: string | null
+        email?: string | null
+        phone?: string | null
+        taxId?: string | null
+        addressLines: string[]
+      } | null
+    }
+    PortalReceiptListDto_Output: {
+      items: {
+        id: string
+        receiptNumber: string
+        invoiceId: string
+        invoiceNumber: string | null
+        amount: number
+        currency: string
+        /** Format: date */
+        paidOn: string
+        /** @enum {string} */
+        method:
+          "bank_transfer" | "card" | "cash" | "cheque" | "online" | "other"
+        /** @enum {string} */
+        status: "completed" | "refunded"
       }[]
     }
     DashboardDto_Output: {
@@ -6188,6 +6649,282 @@ export interface operations {
         content: {
           "application/json": components["schemas"]["ClockifyImportResultDto_Output"]
         }
+      }
+    }
+  }
+  PortalController_session_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PortalSessionCreateDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["PortalSessionDto_Output"]
+        }
+      }
+    }
+  }
+  PortalController_signOut_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  PortalController_workspace_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        slug: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["PortalWorkspaceDto_Output"]
+        }
+      }
+    }
+  }
+  PortalController_signIn_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        slug: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PortalSignInDto"]
+      }
+    }
+    responses: {
+      202: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  PortalController_me_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        slug: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["PortalMeDto_Output"]
+        }
+      }
+    }
+  }
+  PortalController_quotes_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        slug: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["PortalQuoteListDto_Output"]
+        }
+      }
+    }
+  }
+  PortalController_quote_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+        slug: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["PortalQuoteDto_Output"]
+        }
+      }
+    }
+  }
+  PortalController_invoices_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        slug: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["PortalInvoiceListDto_Output"]
+        }
+      }
+    }
+  }
+  PortalController_invoice_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+        slug: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["PortalInvoiceDto_Output"]
+        }
+      }
+    }
+  }
+  PortalController_contracts_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        slug: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["PortalContractListDto_Output"]
+        }
+      }
+    }
+  }
+  PortalController_contract_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+        slug: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["PortalContractDto_Output"]
+        }
+      }
+    }
+  }
+  PortalController_receipts_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        slug: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["PortalReceiptListDto_Output"]
+        }
+      }
+    }
+  }
+  PortalController_pdf_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        kind: string
+        id: string
+        slug: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
       }
     }
   }

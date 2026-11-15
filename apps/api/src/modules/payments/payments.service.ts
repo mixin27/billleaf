@@ -18,6 +18,7 @@ import { type PageArgs } from "../../common/pagination.js"
 import { RequestContext } from "../../common/context/request-context.js"
 import { AuditService } from "../../iam/audit/audit.service.js"
 import { MailService } from "../../mail/mail.service.js"
+import { PortalLinksService } from "../portal/portal-links.service.js"
 import { ClientsRepository } from "../clients/clients.repository.js"
 import { DocumentNumberingService } from "../documents/document-numbering.service.js"
 import { renderDocumentPdf } from "../documents/document-pdf.js"
@@ -72,6 +73,7 @@ export class PaymentsService {
     private readonly numbering: DocumentNumberingService,
     private readonly ctx: RequestContext,
     private readonly mail: MailService,
+    private readonly portalLinks: PortalLinksService,
     private readonly audit: AuditService
   ) {}
 
@@ -275,6 +277,11 @@ export class PaymentsService {
     await this.mail.send(
       documentEmail({
         to,
+        portalUrl: await this.portalLinks.documentLink(
+          payment.clientId,
+          to,
+          `/invoices/${payment.invoiceId}`
+        ),
         kind: "Receipt",
         number: payment.receipt.number,
         workspaceName: profile.name,

@@ -113,7 +113,8 @@ function setup(
     profile,
     numbering,
     audit,
-    mail
+    mail,
+    { documentLink: vi.fn().mockResolvedValue("http://portal.test") } as never
   )
   return { service, repo, numbering, tx }
 }

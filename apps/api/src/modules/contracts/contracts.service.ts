@@ -26,6 +26,7 @@ import { documentEmail } from "@workspace/emails"
 import { type PageArgs } from "../../common/pagination.js"
 import { AuditService } from "../../iam/audit/audit.service.js"
 import { MailService } from "../../mail/mail.service.js"
+import { PortalLinksService } from "../portal/portal-links.service.js"
 import { ClientsRepository } from "../clients/clients.repository.js"
 import { renderContractPdf } from "../documents/contract-pdf.js"
 import { DocumentNumberingService } from "../documents/document-numbering.service.js"
@@ -81,7 +82,8 @@ export class ContractsService {
     private readonly profile: WorkspaceProfileService,
     private readonly numbering: DocumentNumberingService,
     private readonly audit: AuditService,
-    private readonly mail: MailService
+    private readonly mail: MailService,
+    private readonly portalLinks: PortalLinksService
   ) {}
 
   // ── Templates ──────────────────────────────────────────────────────────
@@ -369,6 +371,11 @@ export class ContractsService {
     await this.mail.send(
       documentEmail({
         to,
+        portalUrl: await this.portalLinks.documentLink(
+          c.clientId,
+          to,
+          `/contracts/${id}`
+        ),
         kind: "Contract",
         number: c.number!,
         workspaceName: profile.name,
