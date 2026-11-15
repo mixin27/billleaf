@@ -23,6 +23,7 @@ import { BILLING_PROVIDER } from "../../src/billing/providers/billing-provider.j
 import { REDIS } from "../../src/core/cache/redis.module.js"
 import { WORKER_HEARTBEAT_KEY } from "../../src/jobs/worker-heartbeat.js"
 import { addInterval } from "../../src/billing/period.js"
+import { DataExportService } from "../../src/modules/data-export/data-export.service.js"
 import { InvoiceRemindersService } from "../../src/modules/invoices/invoice-reminders.service.js"
 import { SubscriptionRemindersService } from "../../src/billing/manual/subscription-reminders.service.js"
 import { MailService } from "../../src/mail/mail.service.js"
@@ -3232,6 +3233,7 @@ describe("platform admin portal", () => {
       "email",
       "recurring",
       "billing",
+      "exports",
     ])
   })
 })
@@ -3835,5 +3837,67 @@ describe("account deletion", () => {
       .where(eq(timeEntries.id, timer.body.id))
     expect(kept).toMatchObject({ memberId: null })
     expect(kept!.endedAt).not.toBeNull()
+  })
+})
+
+describe("full export with PDFs", () => {
+  it("queues for owners, builds a ZIP with every document PDF and emails a link", async () => {
+    const mail = t.app.get(MailService)
+    const sent: any[] = []
+    const spy = vi
+      .spyOn(mail, "send")
+      .mockImplementation(async (m) => void sent.push(m))
+    try {
+      const owner = new Client(t)
+      const { email: ownerEmail } = await owner.signUp("Exporting Owner")
+      const ws = await owner.createWorkspace("Export Studio")
+      const ownerId = (await owner.get("/v1/me")).body.user.id
+      const client = (
+        await owner.post("/v1/clients", {
+          name: "Export Client",
+          email: "export@client.test",
+        })
+      ).body
+      const line = { description: "Work", quantity: 1, unitPrice: 20_000 }
+      const invoice = (
+        await owner.post("/v1/invoices", { clientId: client.id, lines: [line] })
+      ).body
+      await owner.post(`/v1/invoices/${invoice.id}/issue`)
+      await owner.post(`/v1/invoices/${invoice.id}/payments`, {
+        amount: 20_000,
+      })
+      await owner.post("/v1/invoices", { clientId: client.id, lines: [line] }) // draft: left out
+
+      const queued = await owner.post("/v1/workspace/export/full")
+      expect(queued.status).toBe(202)
+      expect(queued.body).toEqual({ queued: true })
+
+      sent.length = 0
+      const cls = t.app.get(ClsService)
+      const result = await cls.run(async () => {
+        cls.set("workspaceId", ws.id)
+        cls.set("userId", ownerId)
+        return t.app
+          .get(DataExportService)
+          .build({ workspaceId: ws.id, userId: ownerId })
+      })
+      expect(result).toMatchObject({ documents: 2, errors: 0 }) // invoice + receipt
+
+      const email = sent.find((m) => m.to === ownerEmail)
+      expect(email.subject).toContain("export is ready")
+      const url = /Download: (\S+)/.exec(email.text)![1]!
+      const res = await fetch(url)
+      expect(res.status).toBe(200)
+      const zip = unzipSync(new Uint8Array(await res.arrayBuffer()))
+      const names = Object.keys(zip)
+      expect(names).toContain("invoices.csv")
+      const pdfs = names.filter((n) => n.startsWith("pdfs/"))
+      expect(pdfs).toHaveLength(2)
+      expect(pdfs.some((n) => n.startsWith("pdfs/invoices/"))).toBe(true)
+      expect(pdfs.some((n) => n.startsWith("pdfs/receipts/"))).toBe(true)
+      expect(strFromU8(zip[pdfs[0]!]!.slice(0, 5))).toBe("%PDF-")
+    } finally {
+      spy.mockRestore()
+    }
   })
 })

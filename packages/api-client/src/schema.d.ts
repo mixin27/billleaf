@@ -452,6 +452,230 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  "/v1/workspace/export/full": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["DataExportController_request_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/invoices": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["InvoicesController_list_v1"]
+    put?: never
+    post: operations["InvoicesController_create_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/invoices/{id}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["InvoicesController_get_v1"]
+    put?: never
+    post?: never
+    delete: operations["InvoicesController_remove_v1"]
+    options?: never
+    head?: never
+    patch: operations["InvoicesController_update_v1"]
+    trace?: never
+  }
+  "/v1/invoices/{id}/pdf": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["InvoicesController_pdf_v1"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/invoices/from-quote/{quoteId}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["InvoicesController_fromQuote_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/invoices/{id}/issue": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["InvoicesController_issue_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/invoices/{id}/send": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["InvoicesController_send_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/invoices/{id}/reminders": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put: operations["InvoicesController_setReminders_v1"]
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/invoices/{id}/void": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["InvoicesController_void_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/invoices/{id}/duplicate": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["InvoicesController_duplicate_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/payment-accounts": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["PaymentAccountsController_list_v1"]
+    put?: never
+    post: operations["PaymentAccountsController_create_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/payment-accounts/order": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put: operations["PaymentAccountsController_reorder_v1"]
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/payment-accounts/{id}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    delete: operations["PaymentAccountsController_remove_v1"]
+    options?: never
+    head?: never
+    patch: operations["PaymentAccountsController_update_v1"]
+    trace?: never
+  }
+  "/v1/payment-accounts/{id}/qr": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put: operations["PaymentAccountsController_setQr_v1"]
+    post?: never
+    delete: operations["PaymentAccountsController_removeQr_v1"]
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   "/v1/clients": {
     parameters: {
       query?: never
@@ -676,438 +900,6 @@ export interface paths {
     patch?: never
     trace?: never
   }
-  "/v1/contract-templates": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["ContractTemplatesController_list_v1"]
-    put?: never
-    post: operations["ContractTemplatesController_create_v1"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/v1/contract-templates/{id}": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["ContractTemplatesController_get_v1"]
-    put?: never
-    post?: never
-    delete: operations["ContractTemplatesController_remove_v1"]
-    options?: never
-    head?: never
-    patch: operations["ContractTemplatesController_update_v1"]
-    trace?: never
-  }
-  "/v1/contracts": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["ContractsController_list_v1"]
-    put?: never
-    post: operations["ContractsController_create_v1"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/v1/contracts/{id}": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["ContractsController_get_v1"]
-    put?: never
-    post?: never
-    delete: operations["ContractsController_remove_v1"]
-    options?: never
-    head?: never
-    patch: operations["ContractsController_update_v1"]
-    trace?: never
-  }
-  "/v1/contracts/{id}/send": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["ContractsController_send_v1"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/v1/contracts/{id}/sign": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["ContractsController_sign_v1"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/v1/contracts/{id}/decline": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["ContractsController_decline_v1"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/v1/contracts/{id}/void": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["ContractsController_void_v1"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/v1/contracts/{id}/pdf": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["ContractsController_pdf_v1"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/v1/contracts/{id}/email": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["ContractsController_email_v1"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/v1/invoices": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["InvoicesController_list_v1"]
-    put?: never
-    post: operations["InvoicesController_create_v1"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/v1/invoices/{id}": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["InvoicesController_get_v1"]
-    put?: never
-    post?: never
-    delete: operations["InvoicesController_remove_v1"]
-    options?: never
-    head?: never
-    patch: operations["InvoicesController_update_v1"]
-    trace?: never
-  }
-  "/v1/invoices/{id}/pdf": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["InvoicesController_pdf_v1"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/v1/invoices/from-quote/{quoteId}": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["InvoicesController_fromQuote_v1"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/v1/invoices/{id}/issue": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["InvoicesController_issue_v1"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/v1/invoices/{id}/send": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["InvoicesController_send_v1"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/v1/invoices/{id}/reminders": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put: operations["InvoicesController_setReminders_v1"]
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/v1/invoices/{id}/void": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["InvoicesController_void_v1"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/v1/invoices/{id}/duplicate": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["InvoicesController_duplicate_v1"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/v1/payment-accounts": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["PaymentAccountsController_list_v1"]
-    put?: never
-    post: operations["PaymentAccountsController_create_v1"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/v1/payment-accounts/order": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put: operations["PaymentAccountsController_reorder_v1"]
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/v1/payment-accounts/{id}": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post?: never
-    delete: operations["PaymentAccountsController_remove_v1"]
-    options?: never
-    head?: never
-    patch: operations["PaymentAccountsController_update_v1"]
-    trace?: never
-  }
-  "/v1/payment-accounts/{id}/qr": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put: operations["PaymentAccountsController_setQr_v1"]
-    post?: never
-    delete: operations["PaymentAccountsController_removeQr_v1"]
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/v1/recurring-invoices": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["RecurringController_list_v1"]
-    put?: never
-    post: operations["RecurringController_create_v1"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/v1/recurring-invoices/{id}": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["RecurringController_get_v1"]
-    put?: never
-    post?: never
-    delete: operations["RecurringController_remove_v1"]
-    options?: never
-    head?: never
-    patch: operations["RecurringController_update_v1"]
-    trace?: never
-  }
-  "/v1/recurring-invoices/{id}/invoices": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["RecurringController_history_v1"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/v1/recurring-invoices/{id}/run": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["RecurringController_run_v1"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
   "/v1/payments": {
     parameters: {
       query?: never
@@ -1278,6 +1070,230 @@ export interface paths {
     get?: never
     put?: never
     post: operations["PaymentProofsController_reject_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/contract-templates": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["ContractTemplatesController_list_v1"]
+    put?: never
+    post: operations["ContractTemplatesController_create_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/contract-templates/{id}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["ContractTemplatesController_get_v1"]
+    put?: never
+    post?: never
+    delete: operations["ContractTemplatesController_remove_v1"]
+    options?: never
+    head?: never
+    patch: operations["ContractTemplatesController_update_v1"]
+    trace?: never
+  }
+  "/v1/contracts": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["ContractsController_list_v1"]
+    put?: never
+    post: operations["ContractsController_create_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/contracts/{id}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["ContractsController_get_v1"]
+    put?: never
+    post?: never
+    delete: operations["ContractsController_remove_v1"]
+    options?: never
+    head?: never
+    patch: operations["ContractsController_update_v1"]
+    trace?: never
+  }
+  "/v1/contracts/{id}/send": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["ContractsController_send_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/contracts/{id}/sign": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["ContractsController_sign_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/contracts/{id}/decline": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["ContractsController_decline_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/contracts/{id}/void": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["ContractsController_void_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/contracts/{id}/pdf": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["ContractsController_pdf_v1"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/contracts/{id}/email": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["ContractsController_email_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/recurring-invoices": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["RecurringController_list_v1"]
+    put?: never
+    post: operations["RecurringController_create_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/recurring-invoices/{id}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["RecurringController_get_v1"]
+    put?: never
+    post?: never
+    delete: operations["RecurringController_remove_v1"]
+    options?: never
+    head?: never
+    patch: operations["RecurringController_update_v1"]
+    trace?: never
+  }
+  "/v1/recurring-invoices/{id}/invoices": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["RecurringController_history_v1"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/recurring-invoices/{id}/run": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["RecurringController_run_v1"]
     delete?: never
     options?: never
     head?: never
@@ -2955,6 +2971,222 @@ export interface components {
     DeleteWorkspaceDto: {
       confirmSlug: string
     }
+    ExportQueuedDto_Output: {
+      /** @enum {boolean} */
+      queued: true
+    }
+    InvoiceListDto_Output: {
+      items: {
+        id: string
+        number: string | null
+        /** @enum {string} */
+        status: "draft" | "issued" | "void"
+        /** @enum {string} */
+        paymentStatus: "unpaid" | "partially_paid" | "paid"
+        /** @enum {string} */
+        displayStatus:
+          "draft" | "open" | "overdue" | "partially_paid" | "paid" | "void"
+        isOverdue: boolean
+        title: string | null
+        clientId: string
+        clientName: string
+        quoteId: string | null
+        currency: string
+        /** Format: date */
+        issueDate: string
+        /** Format: date */
+        dueDate: string | null
+        subtotal: number
+        taxTotal: number
+        total: number
+        amountPaid: number
+        amountDue: number
+        /** Format: date-time */
+        createdAt: string
+        /** Format: date-time */
+        updatedAt: string
+      }[]
+      total: number
+      page: number
+      pageSize: number
+    }
+    InvoiceDto_Output: {
+      id: string
+      number: string | null
+      /** @enum {string} */
+      status: "draft" | "issued" | "void"
+      /** @enum {string} */
+      paymentStatus: "unpaid" | "partially_paid" | "paid"
+      /** @enum {string} */
+      displayStatus:
+        "draft" | "open" | "overdue" | "partially_paid" | "paid" | "void"
+      isOverdue: boolean
+      title: string | null
+      clientId: string
+      clientName: string
+      quoteId: string | null
+      currency: string
+      /** Format: date */
+      issueDate: string
+      /** Format: date */
+      dueDate: string | null
+      subtotal: number
+      taxTotal: number
+      total: number
+      amountPaid: number
+      amountDue: number
+      /** Format: date-time */
+      createdAt: string
+      /** Format: date-time */
+      updatedAt: string
+      quoteNumber: string | null
+      recurringId: string | null
+      recurringPeriod: string | null
+      notes: string | null
+      terms: string | null
+      lines: {
+        id: string
+        position: number
+        description: string
+        quantity: number
+        unitPrice: number
+        taxRateBps: number
+        amount: number
+        taxAmount: number
+      }[]
+      /** Format: date-time */
+      issuedAt: string | null
+      /** Format: date-time */
+      voidedAt: string | null
+      voidReason: string | null
+      /** Format: date-time */
+      lastSentAt: string | null
+      lastSentTo: string | null
+      remindersPaused: boolean
+      reminders: {
+        offsetDays: number
+        sentTo: string
+        /** Format: date-time */
+        sentAt: string
+      }[]
+      clientSnapshot: {
+        name: string
+        legalName?: string | null
+        email?: string | null
+        phone?: string | null
+        taxId?: string | null
+        addressLines: string[]
+      } | null
+      issuerSnapshot: {
+        name: string
+        legalName?: string | null
+        email?: string | null
+        phone?: string | null
+        taxId?: string | null
+        addressLines: string[]
+      } | null
+    }
+    CreateInvoiceDto: {
+      /** Format: uuid */
+      clientId: string
+      title?: string | null
+      currency?: string
+      /** Format: date */
+      issueDate?: string
+      /** Format: date */
+      dueDate?: string | null
+      notes?: string | null
+      terms?: string | null
+      /** @default [] */
+      lines: {
+        description: string
+        quantity: number
+        unitPrice: number
+        /** @default 0 */
+        taxRateBps: number
+      }[]
+    }
+    UpdateInvoiceDto: {
+      /** Format: uuid */
+      clientId?: string
+      title?: string | null
+      currency?: string
+      /** Format: date */
+      issueDate?: string
+      /** Format: date */
+      dueDate?: string | null
+      notes?: string | null
+      terms?: string | null
+      lines?: {
+        description: string
+        quantity: number
+        unitPrice: number
+        /** @default 0 */
+        taxRateBps: number
+      }[]
+    }
+    SendDocumentDto: {
+      /** Format: email */
+      to?: string
+      message?: string | null
+    }
+    InvoiceRemindersDto: {
+      paused: boolean
+    }
+    VoidInvoiceDto: {
+      reason: string
+    }
+    PaymentAccountListDto_Output: {
+      items: {
+        id: string
+        /** @enum {string} */
+        kind: "bank" | "mobile_wallet" | "other"
+        label: string
+        accountName: string | null
+        accountNumber: string | null
+        instructions: string | null
+        qrUrl: string | null
+        currencies: string[]
+        position: number
+        active: boolean
+      }[]
+    }
+    CreatePaymentAccountDto: {
+      /** @enum {string} */
+      kind: "bank" | "mobile_wallet" | "other"
+      label: string
+      accountName?: string | null
+      accountNumber?: string | null
+      instructions?: string | null
+      currencies?: string[]
+      active?: boolean
+    }
+    PaymentAccountDto_Output: {
+      id: string
+      /** @enum {string} */
+      kind: "bank" | "mobile_wallet" | "other"
+      label: string
+      accountName: string | null
+      accountNumber: string | null
+      instructions: string | null
+      qrUrl: string | null
+      currencies: string[]
+      position: number
+      active: boolean
+    }
+    ReorderPaymentAccountsDto: {
+      ids: string[]
+    }
+    UpdatePaymentAccountDto: {
+      /** @enum {string} */
+      kind?: "bank" | "mobile_wallet" | "other"
+      label?: string
+      accountName?: string | null
+      accountNumber?: string | null
+      instructions?: string | null
+      currencies?: string[]
+      active?: boolean
+    }
     ClientListDto_Output: {
       items: {
         id: string
@@ -3248,10 +3480,184 @@ export interface components {
         taxRateBps: number
       }[]
     }
-    SendDocumentDto: {
+    PaymentListDto_Output: {
+      items: {
+        id: string
+        invoiceId: string
+        invoiceNumber: string | null
+        clientId: string
+        clientName: string
+        amount: number
+        currency: string
+        /** Format: date */
+        paidOn: string
+        /** @enum {string} */
+        method:
+          | "bank_transfer"
+          | "mobile_wallet"
+          | "card"
+          | "cash"
+          | "cheque"
+          | "online"
+          | "other"
+        reference: string | null
+        notes: string | null
+        /** @enum {string} */
+        status: "completed" | "refunded"
+        /** Format: date-time */
+        refundedAt: string | null
+        refundReason: string | null
+        receiptId: string | null
+        receiptNumber: string | null
+        /** Format: date-time */
+        receiptLastSentAt: string | null
+        /** Format: date-time */
+        createdAt: string
+      }[]
+      total: number
+      page: number
+      pageSize: number
+    }
+    PaymentDto_Output: {
+      id: string
+      invoiceId: string
+      invoiceNumber: string | null
+      clientId: string
+      clientName: string
+      amount: number
+      currency: string
+      /** Format: date */
+      paidOn: string
+      /** @enum {string} */
+      method:
+        | "bank_transfer"
+        | "mobile_wallet"
+        | "card"
+        | "cash"
+        | "cheque"
+        | "online"
+        | "other"
+      reference: string | null
+      notes: string | null
+      /** @enum {string} */
+      status: "completed" | "refunded"
+      /** Format: date-time */
+      refundedAt: string | null
+      refundReason: string | null
+      receiptId: string | null
+      receiptNumber: string | null
+      /** Format: date-time */
+      receiptLastSentAt: string | null
+      /** Format: date-time */
+      createdAt: string
+    }
+    RecordPaymentDto: {
+      amount: number
+      /** Format: date */
+      paidOn?: string
+      /**
+       * @default bank_transfer
+       * @enum {string}
+       */
+      method:
+        | "bank_transfer"
+        | "mobile_wallet"
+        | "card"
+        | "cash"
+        | "cheque"
+        | "online"
+        | "other"
+      reference?: string | null
+      notes?: string | null
+    }
+    RefundPaymentDto: {
+      reason: string
+    }
+    SendReceiptDto: {
       /** Format: email */
       to?: string
       message?: string | null
+    }
+    PaymentProofListDto_Output: {
+      items: {
+        id: string
+        invoiceId: string
+        invoiceNumber: string | null
+        clientId: string
+        clientName: string
+        amount: number
+        currency: string
+        /** Format: date */
+        paidOn: string
+        paymentAccountId: string | null
+        paymentAccountLabel: string | null
+        /** @enum {string|null} */
+        paymentAccountKind: "bank" | "mobile_wallet" | "other" | null
+        reference: string | null
+        note: string | null
+        hasFile: boolean
+        fileUrl: string | null
+        /** @enum {string} */
+        status: "pending" | "confirmed" | "rejected"
+        rejectionReason: string | null
+        paymentId: string | null
+        /** Format: date-time */
+        reviewedAt: string | null
+        submittedEmail: string
+        /** Format: date-time */
+        createdAt: string
+      }[]
+      total: number
+      page: number
+      pageSize: number
+    }
+    PaymentProofDto_Output: {
+      id: string
+      invoiceId: string
+      invoiceNumber: string | null
+      clientId: string
+      clientName: string
+      amount: number
+      currency: string
+      /** Format: date */
+      paidOn: string
+      paymentAccountId: string | null
+      paymentAccountLabel: string | null
+      /** @enum {string|null} */
+      paymentAccountKind: "bank" | "mobile_wallet" | "other" | null
+      reference: string | null
+      note: string | null
+      hasFile: boolean
+      fileUrl: string | null
+      /** @enum {string} */
+      status: "pending" | "confirmed" | "rejected"
+      rejectionReason: string | null
+      paymentId: string | null
+      /** Format: date-time */
+      reviewedAt: string | null
+      submittedEmail: string
+      /** Format: date-time */
+      createdAt: string
+    }
+    ConfirmPaymentProofDto: {
+      amount?: number
+      /** Format: date */
+      paidOn?: string
+      /** @enum {string} */
+      method?:
+        | "bank_transfer"
+        | "mobile_wallet"
+        | "card"
+        | "cash"
+        | "cheque"
+        | "online"
+        | "other"
+      reference?: string | null
+      /** @default true */
+      sendReceipt: boolean
+    }
+    RejectPaymentProofDto: {
+      reason: string
     }
     TemplateDto_Output: {
       id: string
@@ -3385,213 +3791,6 @@ export interface components {
     }
     VoidContractDto: {
       reason?: string | null
-    }
-    InvoiceListDto_Output: {
-      items: {
-        id: string
-        number: string | null
-        /** @enum {string} */
-        status: "draft" | "issued" | "void"
-        /** @enum {string} */
-        paymentStatus: "unpaid" | "partially_paid" | "paid"
-        /** @enum {string} */
-        displayStatus:
-          "draft" | "open" | "overdue" | "partially_paid" | "paid" | "void"
-        isOverdue: boolean
-        title: string | null
-        clientId: string
-        clientName: string
-        quoteId: string | null
-        currency: string
-        /** Format: date */
-        issueDate: string
-        /** Format: date */
-        dueDate: string | null
-        subtotal: number
-        taxTotal: number
-        total: number
-        amountPaid: number
-        amountDue: number
-        /** Format: date-time */
-        createdAt: string
-        /** Format: date-time */
-        updatedAt: string
-      }[]
-      total: number
-      page: number
-      pageSize: number
-    }
-    InvoiceDto_Output: {
-      id: string
-      number: string | null
-      /** @enum {string} */
-      status: "draft" | "issued" | "void"
-      /** @enum {string} */
-      paymentStatus: "unpaid" | "partially_paid" | "paid"
-      /** @enum {string} */
-      displayStatus:
-        "draft" | "open" | "overdue" | "partially_paid" | "paid" | "void"
-      isOverdue: boolean
-      title: string | null
-      clientId: string
-      clientName: string
-      quoteId: string | null
-      currency: string
-      /** Format: date */
-      issueDate: string
-      /** Format: date */
-      dueDate: string | null
-      subtotal: number
-      taxTotal: number
-      total: number
-      amountPaid: number
-      amountDue: number
-      /** Format: date-time */
-      createdAt: string
-      /** Format: date-time */
-      updatedAt: string
-      quoteNumber: string | null
-      recurringId: string | null
-      recurringPeriod: string | null
-      notes: string | null
-      terms: string | null
-      lines: {
-        id: string
-        position: number
-        description: string
-        quantity: number
-        unitPrice: number
-        taxRateBps: number
-        amount: number
-        taxAmount: number
-      }[]
-      /** Format: date-time */
-      issuedAt: string | null
-      /** Format: date-time */
-      voidedAt: string | null
-      voidReason: string | null
-      /** Format: date-time */
-      lastSentAt: string | null
-      lastSentTo: string | null
-      remindersPaused: boolean
-      reminders: {
-        offsetDays: number
-        sentTo: string
-        /** Format: date-time */
-        sentAt: string
-      }[]
-      clientSnapshot: {
-        name: string
-        legalName?: string | null
-        email?: string | null
-        phone?: string | null
-        taxId?: string | null
-        addressLines: string[]
-      } | null
-      issuerSnapshot: {
-        name: string
-        legalName?: string | null
-        email?: string | null
-        phone?: string | null
-        taxId?: string | null
-        addressLines: string[]
-      } | null
-    }
-    CreateInvoiceDto: {
-      /** Format: uuid */
-      clientId: string
-      title?: string | null
-      currency?: string
-      /** Format: date */
-      issueDate?: string
-      /** Format: date */
-      dueDate?: string | null
-      notes?: string | null
-      terms?: string | null
-      /** @default [] */
-      lines: {
-        description: string
-        quantity: number
-        unitPrice: number
-        /** @default 0 */
-        taxRateBps: number
-      }[]
-    }
-    UpdateInvoiceDto: {
-      /** Format: uuid */
-      clientId?: string
-      title?: string | null
-      currency?: string
-      /** Format: date */
-      issueDate?: string
-      /** Format: date */
-      dueDate?: string | null
-      notes?: string | null
-      terms?: string | null
-      lines?: {
-        description: string
-        quantity: number
-        unitPrice: number
-        /** @default 0 */
-        taxRateBps: number
-      }[]
-    }
-    InvoiceRemindersDto: {
-      paused: boolean
-    }
-    VoidInvoiceDto: {
-      reason: string
-    }
-    PaymentAccountListDto_Output: {
-      items: {
-        id: string
-        /** @enum {string} */
-        kind: "bank" | "mobile_wallet" | "other"
-        label: string
-        accountName: string | null
-        accountNumber: string | null
-        instructions: string | null
-        qrUrl: string | null
-        currencies: string[]
-        position: number
-        active: boolean
-      }[]
-    }
-    CreatePaymentAccountDto: {
-      /** @enum {string} */
-      kind: "bank" | "mobile_wallet" | "other"
-      label: string
-      accountName?: string | null
-      accountNumber?: string | null
-      instructions?: string | null
-      currencies?: string[]
-      active?: boolean
-    }
-    PaymentAccountDto_Output: {
-      id: string
-      /** @enum {string} */
-      kind: "bank" | "mobile_wallet" | "other"
-      label: string
-      accountName: string | null
-      accountNumber: string | null
-      instructions: string | null
-      qrUrl: string | null
-      currencies: string[]
-      position: number
-      active: boolean
-    }
-    ReorderPaymentAccountsDto: {
-      ids: string[]
-    }
-    UpdatePaymentAccountDto: {
-      /** @enum {string} */
-      kind?: "bank" | "mobile_wallet" | "other"
-      label?: string
-      accountName?: string | null
-      accountNumber?: string | null
-      instructions?: string | null
-      currencies?: string[]
-      active?: boolean
     }
     RecurringListDto_Output: {
       items: {
@@ -3780,185 +3979,6 @@ export interface components {
       invoiceId: string | null
       invoiceNumber: string | null
       sent: boolean
-    }
-    PaymentListDto_Output: {
-      items: {
-        id: string
-        invoiceId: string
-        invoiceNumber: string | null
-        clientId: string
-        clientName: string
-        amount: number
-        currency: string
-        /** Format: date */
-        paidOn: string
-        /** @enum {string} */
-        method:
-          | "bank_transfer"
-          | "mobile_wallet"
-          | "card"
-          | "cash"
-          | "cheque"
-          | "online"
-          | "other"
-        reference: string | null
-        notes: string | null
-        /** @enum {string} */
-        status: "completed" | "refunded"
-        /** Format: date-time */
-        refundedAt: string | null
-        refundReason: string | null
-        receiptId: string | null
-        receiptNumber: string | null
-        /** Format: date-time */
-        receiptLastSentAt: string | null
-        /** Format: date-time */
-        createdAt: string
-      }[]
-      total: number
-      page: number
-      pageSize: number
-    }
-    PaymentDto_Output: {
-      id: string
-      invoiceId: string
-      invoiceNumber: string | null
-      clientId: string
-      clientName: string
-      amount: number
-      currency: string
-      /** Format: date */
-      paidOn: string
-      /** @enum {string} */
-      method:
-        | "bank_transfer"
-        | "mobile_wallet"
-        | "card"
-        | "cash"
-        | "cheque"
-        | "online"
-        | "other"
-      reference: string | null
-      notes: string | null
-      /** @enum {string} */
-      status: "completed" | "refunded"
-      /** Format: date-time */
-      refundedAt: string | null
-      refundReason: string | null
-      receiptId: string | null
-      receiptNumber: string | null
-      /** Format: date-time */
-      receiptLastSentAt: string | null
-      /** Format: date-time */
-      createdAt: string
-    }
-    RecordPaymentDto: {
-      amount: number
-      /** Format: date */
-      paidOn?: string
-      /**
-       * @default bank_transfer
-       * @enum {string}
-       */
-      method:
-        | "bank_transfer"
-        | "mobile_wallet"
-        | "card"
-        | "cash"
-        | "cheque"
-        | "online"
-        | "other"
-      reference?: string | null
-      notes?: string | null
-    }
-    RefundPaymentDto: {
-      reason: string
-    }
-    SendReceiptDto: {
-      /** Format: email */
-      to?: string
-      message?: string | null
-    }
-    PaymentProofListDto_Output: {
-      items: {
-        id: string
-        invoiceId: string
-        invoiceNumber: string | null
-        clientId: string
-        clientName: string
-        amount: number
-        currency: string
-        /** Format: date */
-        paidOn: string
-        paymentAccountId: string | null
-        paymentAccountLabel: string | null
-        /** @enum {string|null} */
-        paymentAccountKind: "bank" | "mobile_wallet" | "other" | null
-        reference: string | null
-        note: string | null
-        hasFile: boolean
-        fileUrl: string | null
-        /** @enum {string} */
-        status: "pending" | "confirmed" | "rejected"
-        rejectionReason: string | null
-        paymentId: string | null
-        /** Format: date-time */
-        reviewedAt: string | null
-        submittedEmail: string
-        /** Format: date-time */
-        createdAt: string
-      }[]
-      total: number
-      page: number
-      pageSize: number
-    }
-    PaymentProofDto_Output: {
-      id: string
-      invoiceId: string
-      invoiceNumber: string | null
-      clientId: string
-      clientName: string
-      amount: number
-      currency: string
-      /** Format: date */
-      paidOn: string
-      paymentAccountId: string | null
-      paymentAccountLabel: string | null
-      /** @enum {string|null} */
-      paymentAccountKind: "bank" | "mobile_wallet" | "other" | null
-      reference: string | null
-      note: string | null
-      hasFile: boolean
-      fileUrl: string | null
-      /** @enum {string} */
-      status: "pending" | "confirmed" | "rejected"
-      rejectionReason: string | null
-      paymentId: string | null
-      /** Format: date-time */
-      reviewedAt: string | null
-      submittedEmail: string
-      /** Format: date-time */
-      createdAt: string
-    }
-    ConfirmPaymentProofDto: {
-      amount?: number
-      /** Format: date */
-      paidOn?: string
-      /** @enum {string} */
-      method?:
-        | "bank_transfer"
-        | "mobile_wallet"
-        | "card"
-        | "cash"
-        | "cheque"
-        | "online"
-        | "other"
-      reference?: string | null
-      /** @default true */
-      sendReceipt: boolean
-    }
-    RejectPaymentProofDto: {
-      reason: string
     }
     ProjectListDto_Output: {
       items: {
@@ -4936,6 +4956,25 @@ export interface components {
         processedAt: string | null
         error: string | null
       }[]
+      subscriptionPayments: {
+        id: string
+        /** @enum {string} */
+        planKey: "free" | "pro" | "team"
+        /** @enum {string} */
+        interval: "month" | "year"
+        periods: number
+        amount: number
+        currency: string
+        /** @enum {string} */
+        status: "pending" | "approved" | "rejected"
+        /** Format: date */
+        paidOn: string
+        reference: string | null
+        /** Format: date-time */
+        createdAt: string
+        /** Format: date-time */
+        periodEnd: string | null
+      }[]
     }
     AdminSetPlanDto: {
       /** @enum {string} */
@@ -5021,7 +5060,7 @@ export interface components {
       items: {
         id: string
         /** @enum {string} */
-        queue: "email" | "recurring" | "billing"
+        queue: "email" | "recurring" | "billing" | "exports"
         name: string
         attemptsMade: number
         failedReason: string | null
@@ -5033,7 +5072,7 @@ export interface components {
       }[]
       counts: {
         /** @enum {string} */
-        queue: "email" | "recurring" | "billing"
+        queue: "email" | "recurring" | "billing" | "exports"
         failed: number
         waiting: number
         active: number
@@ -6198,6 +6237,448 @@ export interface operations {
       }
     }
   }
+  DataExportController_request_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      202: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["ExportQueuedDto_Output"]
+        }
+      }
+    }
+  }
+  InvoicesController_list_v1: {
+    parameters: {
+      query?: {
+        page?: number
+        pageSize?: number
+        sort?: string
+        status?:
+          "draft" | "open" | "overdue" | "partially_paid" | "paid" | "void"
+        clientId?: string
+        q?: string
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["InvoiceListDto_Output"]
+        }
+      }
+    }
+  }
+  InvoicesController_create_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateInvoiceDto"]
+      }
+    }
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["InvoiceDto_Output"]
+        }
+      }
+    }
+  }
+  InvoicesController_get_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["InvoiceDto_Output"]
+        }
+      }
+    }
+  }
+  InvoicesController_remove_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  InvoicesController_update_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateInvoiceDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["InvoiceDto_Output"]
+        }
+      }
+    }
+  }
+  InvoicesController_pdf_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  InvoicesController_fromQuote_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        quoteId: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["InvoiceDto_Output"]
+        }
+      }
+    }
+  }
+  InvoicesController_issue_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["InvoiceDto_Output"]
+        }
+      }
+    }
+  }
+  InvoicesController_send_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SendDocumentDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["InvoiceDto_Output"]
+        }
+      }
+    }
+  }
+  InvoicesController_setReminders_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["InvoiceRemindersDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["InvoiceDto_Output"]
+        }
+      }
+    }
+  }
+  InvoicesController_void_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["VoidInvoiceDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["InvoiceDto_Output"]
+        }
+      }
+    }
+  }
+  InvoicesController_duplicate_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["InvoiceDto_Output"]
+        }
+      }
+    }
+  }
+  PaymentAccountsController_list_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["PaymentAccountListDto_Output"]
+        }
+      }
+    }
+  }
+  PaymentAccountsController_create_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreatePaymentAccountDto"]
+      }
+    }
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["PaymentAccountDto_Output"]
+        }
+      }
+    }
+  }
+  PaymentAccountsController_reorder_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ReorderPaymentAccountsDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["PaymentAccountListDto_Output"]
+        }
+      }
+    }
+  }
+  PaymentAccountsController_remove_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  PaymentAccountsController_update_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdatePaymentAccountDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["PaymentAccountDto_Output"]
+        }
+      }
+    }
+  }
+  PaymentAccountsController_setQr_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["PaymentAccountDto_Output"]
+        }
+      }
+    }
+  }
+  PaymentAccountsController_removeQr_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["PaymentAccountDto_Output"]
+        }
+      }
+    }
+  }
   ClientsController_list_v1: {
     parameters: {
       query?: {
@@ -6666,6 +7147,263 @@ export interface operations {
       }
     }
   }
+  PaymentsController_list_v1: {
+    parameters: {
+      query?: {
+        page?: number
+        pageSize?: number
+        sort?: string
+        invoiceId?: string
+        clientId?: string
+        status?: "completed" | "refunded"
+        q?: string
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["PaymentListDto_Output"]
+        }
+      }
+    }
+  }
+  PaymentsController_get_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["PaymentDto_Output"]
+        }
+      }
+    }
+  }
+  PaymentsController_record_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        invoiceId: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RecordPaymentDto"]
+      }
+    }
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["PaymentDto_Output"]
+        }
+      }
+    }
+  }
+  PaymentsController_refund_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RefundPaymentDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["PaymentDto_Output"]
+        }
+      }
+    }
+  }
+  PaymentsController_receiptPdf_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  PaymentsController_sendReceipt_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SendReceiptDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["PaymentDto_Output"]
+        }
+      }
+    }
+  }
+  PaymentProofsController_list_v1: {
+    parameters: {
+      query?: {
+        page?: number
+        pageSize?: number
+        sort?: string
+        status?: "pending" | "confirmed" | "rejected"
+        invoiceId?: string
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["PaymentProofListDto_Output"]
+        }
+      }
+    }
+  }
+  PaymentProofsController_get_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["PaymentProofDto_Output"]
+        }
+      }
+    }
+  }
+  PaymentProofsController_file_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  PaymentProofsController_confirm_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ConfirmPaymentProofDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["PaymentProofDto_Output"]
+        }
+      }
+    }
+  }
+  PaymentProofsController_reject_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RejectPaymentProofDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["PaymentProofDto_Output"]
+        }
+      }
+    }
+  }
   ContractTemplatesController_list_v1: {
     parameters: {
       query?: never
@@ -7023,429 +7761,6 @@ export interface operations {
       }
     }
   }
-  InvoicesController_list_v1: {
-    parameters: {
-      query?: {
-        page?: number
-        pageSize?: number
-        sort?: string
-        status?:
-          "draft" | "open" | "overdue" | "partially_paid" | "paid" | "void"
-        clientId?: string
-        q?: string
-      }
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": components["schemas"]["InvoiceListDto_Output"]
-        }
-      }
-    }
-  }
-  InvoicesController_create_v1: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["CreateInvoiceDto"]
-      }
-    }
-    responses: {
-      201: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": components["schemas"]["InvoiceDto_Output"]
-        }
-      }
-    }
-  }
-  InvoicesController_get_v1: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": components["schemas"]["InvoiceDto_Output"]
-        }
-      }
-    }
-  }
-  InvoicesController_remove_v1: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      204: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  InvoicesController_update_v1: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["UpdateInvoiceDto"]
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": components["schemas"]["InvoiceDto_Output"]
-        }
-      }
-    }
-  }
-  InvoicesController_pdf_v1: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  InvoicesController_fromQuote_v1: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        quoteId: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      201: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": components["schemas"]["InvoiceDto_Output"]
-        }
-      }
-    }
-  }
-  InvoicesController_issue_v1: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": components["schemas"]["InvoiceDto_Output"]
-        }
-      }
-    }
-  }
-  InvoicesController_send_v1: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["SendDocumentDto"]
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": components["schemas"]["InvoiceDto_Output"]
-        }
-      }
-    }
-  }
-  InvoicesController_setReminders_v1: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["InvoiceRemindersDto"]
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": components["schemas"]["InvoiceDto_Output"]
-        }
-      }
-    }
-  }
-  InvoicesController_void_v1: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["VoidInvoiceDto"]
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": components["schemas"]["InvoiceDto_Output"]
-        }
-      }
-    }
-  }
-  InvoicesController_duplicate_v1: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      201: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": components["schemas"]["InvoiceDto_Output"]
-        }
-      }
-    }
-  }
-  PaymentAccountsController_list_v1: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": components["schemas"]["PaymentAccountListDto_Output"]
-        }
-      }
-    }
-  }
-  PaymentAccountsController_create_v1: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["CreatePaymentAccountDto"]
-      }
-    }
-    responses: {
-      201: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": components["schemas"]["PaymentAccountDto_Output"]
-        }
-      }
-    }
-  }
-  PaymentAccountsController_reorder_v1: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["ReorderPaymentAccountsDto"]
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": components["schemas"]["PaymentAccountListDto_Output"]
-        }
-      }
-    }
-  }
-  PaymentAccountsController_remove_v1: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      204: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  PaymentAccountsController_update_v1: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["UpdatePaymentAccountDto"]
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": components["schemas"]["PaymentAccountDto_Output"]
-        }
-      }
-    }
-  }
-  PaymentAccountsController_setQr_v1: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": components["schemas"]["PaymentAccountDto_Output"]
-        }
-      }
-    }
-  }
-  PaymentAccountsController_removeQr_v1: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": components["schemas"]["PaymentAccountDto_Output"]
-        }
-      }
-    }
-  }
   RecurringController_list_v1: {
     parameters: {
       query?: {
@@ -7597,263 +7912,6 @@ export interface operations {
         }
         content: {
           "application/json": components["schemas"]["RunResultDto_Output"]
-        }
-      }
-    }
-  }
-  PaymentsController_list_v1: {
-    parameters: {
-      query?: {
-        page?: number
-        pageSize?: number
-        sort?: string
-        invoiceId?: string
-        clientId?: string
-        status?: "completed" | "refunded"
-        q?: string
-      }
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": components["schemas"]["PaymentListDto_Output"]
-        }
-      }
-    }
-  }
-  PaymentsController_get_v1: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": components["schemas"]["PaymentDto_Output"]
-        }
-      }
-    }
-  }
-  PaymentsController_record_v1: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        invoiceId: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["RecordPaymentDto"]
-      }
-    }
-    responses: {
-      201: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": components["schemas"]["PaymentDto_Output"]
-        }
-      }
-    }
-  }
-  PaymentsController_refund_v1: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["RefundPaymentDto"]
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": components["schemas"]["PaymentDto_Output"]
-        }
-      }
-    }
-  }
-  PaymentsController_receiptPdf_v1: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  PaymentsController_sendReceipt_v1: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["SendReceiptDto"]
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": components["schemas"]["PaymentDto_Output"]
-        }
-      }
-    }
-  }
-  PaymentProofsController_list_v1: {
-    parameters: {
-      query?: {
-        page?: number
-        pageSize?: number
-        sort?: string
-        status?: "pending" | "confirmed" | "rejected"
-        invoiceId?: string
-      }
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": components["schemas"]["PaymentProofListDto_Output"]
-        }
-      }
-    }
-  }
-  PaymentProofsController_get_v1: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": components["schemas"]["PaymentProofDto_Output"]
-        }
-      }
-    }
-  }
-  PaymentProofsController_file_v1: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  PaymentProofsController_confirm_v1: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["ConfirmPaymentProofDto"]
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": components["schemas"]["PaymentProofDto_Output"]
-        }
-      }
-    }
-  }
-  PaymentProofsController_reject_v1: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["RejectPaymentProofDto"]
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": components["schemas"]["PaymentProofDto_Output"]
         }
       }
     }
@@ -9317,7 +9375,7 @@ export interface operations {
   AdminController_jobs_v1: {
     parameters: {
       query?: {
-        queue?: "email" | "recurring" | "billing"
+        queue?: "email" | "recurring" | "billing" | "exports"
         state?: "failed" | "delayed" | "waiting" | "active" | "completed"
       }
       header?: never

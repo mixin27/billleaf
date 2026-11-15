@@ -13,6 +13,7 @@ Work we've agreed to do later, with enough detail to pick up without re-research
 - **Launch readiness:** public home and pricing pages, Terms and Privacy pages, data export (ZIP of CSVs) and workspace deletion.
 - **Payment reminders:** clients are emailed about unpaid invoices on the days the workspace picks (before, on and after the due date), each once; paused per invoice.
 - **Account deletion:** users delete their own login once they aren't the only owner of a workspace.
+- **Export with PDFs:** owners get a ZIP of every record plus all document PDFs by email; admins see each workspace's plan payments.
 - **Deploy readiness:** production compose stack, pinned images, approval gate, smoke test, [Dokploy runbook](../infrastructure/dokploy-runbook.md).
 
 ## Next, in order
@@ -52,6 +53,4 @@ When a provider serves the operating country (a Merchant of Record for subscript
 | Item                    | Notes                                                                       | Size |
 | ----------------------- | --------------------------------------------------------------------------- | ---- |
 | CJK PDF fonts           | Noto Sans SC/JP/KR subsets on demand; keep the image size in check          | S    |
-| Export includes PDFs    | Optional "with PDFs" export as a background job, emailed as a link          | M    |
-| Admin plan history      | Show `subscription_payments` on the admin workspace page                    | S    |
 | Past-due banner (other) | For a future online provider's `past_due` status (manual plans have theirs) | S    |

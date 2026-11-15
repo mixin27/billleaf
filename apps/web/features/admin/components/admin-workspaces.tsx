@@ -48,7 +48,7 @@ import {
 import { Field } from "@/components/form/field"
 import { PageHeader } from "@/components/page-header"
 import { errorMessage } from "@/lib/api"
-import { formatDate } from "@/lib/format"
+import { formatDate, money } from "@/lib/format"
 
 import {
   useAdminWorkspace,
@@ -255,6 +255,53 @@ export function AdminWorkspaceDetail({ id }: { id: string }) {
               </Badge>
             </Link>
           ))}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Plan payments</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col divide-y text-sm">
+          {w.subscriptionPayments.length === 0 ? (
+            <p className="text-muted-foreground">None yet.</p>
+          ) : (
+            w.subscriptionPayments.map((p) => (
+              <div
+                key={p.id}
+                className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2"
+              >
+                <span className="font-medium">
+                  {planLabel(p.planKey)} · {p.periods} {p.interval}
+                  {p.periods === 1 ? "" : "s"}
+                </span>
+                <span className="tabular-nums">
+                  {money(p.amount, p.currency)}
+                </span>
+                <Badge
+                  variant={
+                    p.status === "approved"
+                      ? "default"
+                      : p.status === "rejected"
+                        ? "destructive"
+                        : "secondary"
+                  }
+                >
+                  {p.status === "pending" ? "To review" : p.status}
+                </Badge>
+                <span className="text-muted-foreground">
+                  paid {date(p.paidOn)}
+                  {p.reference ? ` · ref ${p.reference}` : ""}
+                  {p.periodEnd ? ` · until ${date(p.periodEnd)}` : ""}
+                </span>
+                {p.status === "pending" ? (
+                  <Link href="/admin/approvals" className="ml-auto underline">
+                    Review
+                  </Link>
+                ) : null}
+              </div>
+            ))
+          )}
         </CardContent>
       </Card>
 

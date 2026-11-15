@@ -430,3 +430,26 @@ export function invoiceReminderEmail(p: {
     replyTo: p.replyTo ?? undefined,
   }
 }
+
+/** The full data export (CSVs + PDFs) is ready to download. */
+export function dataExportReadyEmail(p: {
+  to: string
+  workspaceName: string
+  url: string
+  /** Formatted date the link stops working. */
+  expires: string
+  documents: number
+}): EmailMessage {
+  const line = `Your export of ${p.workspaceName} is ready: all records as spreadsheets, plus ${p.documents} document PDF${p.documents === 1 ? "" : "s"}.`
+  const note = `The link works until ${p.expires}. Anyone with it can download the file, so don't forward this email.`
+  return {
+    to: p.to,
+    subject: `Your ${p.workspaceName} export is ready`,
+    html: layout(
+      "Your export is ready",
+      `<p>${esc(line)}</p><p style="font-size:13px;color:#5b6b6b">${esc(note)}</p>`,
+      { label: "Download ZIP", url: p.url }
+    ),
+    text: `${line}\n\nDownload: ${p.url}\n\n${note}`,
+  }
+}
