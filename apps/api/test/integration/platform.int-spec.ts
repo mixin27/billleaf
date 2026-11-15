@@ -664,3 +664,120 @@ describe("workspace logo", () => {
     expect((await fetch(ok.body.logoUrl)).status).toBe(404)
   })
 })
+
+describe("projects & tasks", () => {
+  it("creates projects (incl. from an accepted quote) and orders tasks across columns", async () => {
+    const owner = new Client(t)
+    await owner.signUp("Planner")
+    await owner.createWorkspace("Projects")
+    const client = (
+      await owner.post("/v1/clients", { name: "Acme", currency: "EUR" })
+    ).body
+
+    const p = await owner.post("/v1/projects", {
+      name: "Retainer",
+      clientId: client.id,
+      hourlyRate: 9_000,
+    })
+    expect(p.status).toBe(201)
+    expect(p.body).toMatchObject({
+      currency: "EUR",
+      billing: "hourly",
+      hourlyRate: 9_000,
+      budgetAmount: null,
+      clientName: "Acme",
+    })
+    const bad = await owner.post("/v1/projects", {
+      name: "x",
+      startDate: "2026-12-01",
+      dueDate: "2026-11-01",
+    })
+    expect(bad.status).toBe(422)
+
+    const internal = (
+      await owner.post("/v1/projects", {
+        name: "Internal",
+        billing: "non_billable",
+      })
+    ).body
+    expect(internal.clientId).toBeNull()
+
+    // Accepted quote → fixed-price project (once).
+    const quote = (
+      await owner.post("/v1/quotes", {
+        clientId: client.id,
+        title: "Website",
+        lines: [{ description: "Build", quantity: 1, unitPrice: 500_000 }],
+      })
+    ).body
+    expect(
+      (await owner.post(`/v1/projects/from-quote/${quote.id}`)).status
+    ).toBe(409)
+    await owner.post(`/v1/quotes/${quote.id}/send`)
+    await owner.post(`/v1/quotes/${quote.id}/accept`)
+    const fromQuote = await owner.post(`/v1/projects/from-quote/${quote.id}`)
+    expect(fromQuote.body).toMatchObject({
+      name: "Website",
+      billing: "fixed",
+      budgetAmount: 500_000,
+      quoteNumber: "QUO-0001",
+    })
+    expect(
+      (await owner.post(`/v1/projects/from-quote/${quote.id}`)).body.code
+    ).toBe("quote_has_project")
+
+    // Tasks: create three, move "c" to the top, then move "a" to done.
+    const pid = p.body.id
+    const ids: Record<string, string> = {}
+    for (const title of ["a", "b", "c"])
+      ids[title] = (
+        await owner.post(`/v1/projects/${pid}/tasks`, { title })
+      ).body.id
+    await owner.patch(`/v1/projects/${pid}/tasks/${ids.c}`, {
+      afterTaskId: null,
+    })
+    let tasks = (await owner.get(`/v1/projects/${pid}/tasks`)).body
+    expect(
+      tasks
+        .filter((x: { status: string }) => x.status === "todo")
+        .map((x: { title: string }) => x.title)
+    ).toEqual(["c", "a", "b"])
+
+    const done = await owner.patch(`/v1/projects/${pid}/tasks/${ids.a}`, {
+      status: "done",
+    })
+    expect(done.body.completedAt).not.toBeNull()
+    tasks = (await owner.get(`/v1/projects/${pid}/tasks`)).body
+    expect(
+      tasks
+        .filter((x: { status: string }) => x.status === "todo")
+        .map((x: { title: string }) => x.title)
+    ).toEqual(["c", "b"])
+
+    const me = (await owner.get("/v1/members")).body[0]
+    expect(
+      (
+        await owner.patch(`/v1/projects/${pid}/tasks/${ids.b}`, {
+          assigneeMemberId: me.id,
+        })
+      ).body.assigneeName
+    ).toBe(me.name)
+    expect(
+      (
+        await owner.patch(`/v1/projects/${pid}/tasks/${ids.b}`, {
+          assigneeMemberId: "00000000-0000-4000-8000-000000000000",
+        })
+      ).status
+    ).toBe(400)
+
+    expect((await owner.get(`/v1/projects/${pid}`)).body.taskCounts).toEqual({
+      todo: 2,
+      in_progress: 0,
+      done: 1,
+    })
+    // Clients with projects can't be deleted.
+    expect((await owner.del(`/v1/clients/${client.id}`)).body.code).toBe(
+      "client_has_documents"
+    )
+  })
+})

@@ -24,9 +24,9 @@ Phases are scope buckets, not dates. Each phase ends with a production deploy.
 
 **Exit:** a freelancer can run their invoicing on Billleaf end-to-end. Remaining before calling Phase 1 shipped: production deploy (VPS + Dokploy + R2 bucket). PDFs embed Noto Sans (Latin/Greek/Cyrillic/Vietnamese), Noto Sans Thai and Noto Sans Myanmar; CJK fonts are a follow-up.
 
-## Phase 2 — Connected work
+## Phase 2 — Connected work _(in progress)_
 
-- Projects & tasks.
+- ✅ Projects & tasks (task board, assignees, start a project from an accepted quote).
 - Time tracking → billable time to invoice lines.
 - Contracts (templates; e-sign later).
 - Recurring invoices.

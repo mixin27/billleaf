@@ -28,6 +28,7 @@ import { DocumentSheet, toParty } from "@/components/documents/document-sheet"
 import { SendDialog } from "@/components/documents/send-dialog"
 import { usePermissions } from "@/components/permissions/can"
 import { useClient } from "@/features/clients"
+import { useProjectFromQuote } from "@/features/projects"
 import { useWorkspaceProfile, useWorkspaceStore } from "@/features/workspace"
 import { errorMessage } from "@/lib/api"
 import { openPdf } from "@/lib/download"
@@ -77,6 +78,7 @@ function QuoteDetailView({ quote }: { quote: Quote }) {
   const remove = useDeleteQuote(quote.id)
   const email = useEmailQuote(quote.id)
   const convert = useConvertQuote(quote.id)
+  const startProject = useProjectFromQuote(quote.id)
   const [confirm, setConfirm] = React.useState<"send" | "delete" | null>(null)
   const [emailing, setEmailing] = React.useState(false)
   const locale = profile.data?.locale
@@ -185,6 +187,21 @@ function QuoteDetailView({ quote }: { quote: Quote }) {
               render={<Button variant="outline">More</Button>}
             />
             <DropdownMenuContent align="end">
+              {quote.status === "accepted" && can("project.create") ? (
+                <DropdownMenuItem
+                  onClick={() =>
+                    startProject.mutate(undefined, {
+                      onSuccess: (p) => {
+                        toast.success("Project started from quote")
+                        router.push(`/${slug}/projects/${p.id}`)
+                      },
+                      onError: (e) => toast.error(errorMessage(e)),
+                    })
+                  }
+                >
+                  Start project
+                </DropdownMenuItem>
+              ) : null}
               <DropdownMenuItem
                 onClick={() =>
                   openPdf(`/v1/quotes/${quote.id}/pdf`).catch((e) =>

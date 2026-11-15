@@ -3,6 +3,7 @@ import {
   clientContacts,
   clients,
   invoices,
+  projects,
   quotes,
   type Transaction,
 } from "@workspace/db"
@@ -95,7 +96,7 @@ export class ClientsRepository {
   /** True when quotes (and later invoices) reference this client. */
   async hasDocuments(id: string): Promise<boolean> {
     const ws = this.ctx.workspaceId
-    const [[quote], [invoice]] = await Promise.all([
+    const [[quote], [invoice], [project]] = await Promise.all([
       this.db
         .select({ id: quotes.id })
         .from(quotes)
@@ -106,8 +107,13 @@ export class ClientsRepository {
         .from(invoices)
         .where(and(eq(invoices.workspaceId, ws), eq(invoices.clientId, id)))
         .limit(1),
+      this.db
+        .select({ id: projects.id })
+        .from(projects)
+        .where(and(eq(projects.workspaceId, ws), eq(projects.clientId, id)))
+        .limit(1),
     ])
-    return Boolean(quote ?? invoice)
+    return Boolean(quote ?? invoice ?? project)
   }
 
   async findById(id: string): Promise<ClientRow | null> {

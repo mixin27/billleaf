@@ -57,6 +57,13 @@
       "when": 1794718164571,
       "tag": "0007_aromatic_the_anarchist",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1794719352389,
+      "tag": "0008_moaning_landau",
+      "breakpoints": true
     }
   ]
 }
