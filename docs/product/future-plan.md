@@ -19,6 +19,7 @@ Work we've agreed to do later, with enough detail to pick up without re-research
 - **Developer API:** workspace API keys (Settings → API keys) that act as their creator with chosen permissions, a public API reference at `/docs/api`, per-key rate limits and audit; Pro and Team ([ADR-0015](../adr/0015-workspace-api-keys.md)).
 - **Outgoing webhooks:** signed event deliveries to other apps (clients, quotes, contracts, invoices, payments, proofs) with retries, a delivery log with resend, test events, secret rotation, and auto-off after repeated failures; Pro and Team ([ADR-0014](../adr/0014-outgoing-webhooks.md)).
 - **Export with PDFs:** owners get a ZIP of every record plus all document PDFs by email; admins see each workspace's plan payments.
+- **Docs site and brand:** a public help center and developer docs (Fumadocs, static, with search and a generated API reference) linked from the app; the unfurling-leaf logo with icons for web, email and mobile ([ADR-0016](../adr/0016-docs-site.md), [brand](brand.md)).
 - **Deploy readiness:** production compose stack, pinned images, approval gate, smoke test, [Dokploy runbook](../infrastructure/dokploy-runbook.md).
 
 ## Next, in order

@@ -23,6 +23,17 @@ export interface EmailMessage {
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`)
 
+/**
+ * The logo image is served by the web app (`/brand/email-logo.png`). Without
+ * a web URL (tests, local tools) the header falls back to the plain name.
+ */
+function brandHeader() {
+  const web = process.env.WEB_URL?.replace(/\/$/, "")
+  const name = `<p style="font-weight:600;font-size:18px;margin:0 0 24px">billleaf</p>`
+  if (!web) return name
+  return `<p style="margin:0 0 24px"><img src="${esc(web)}/brand/email-logo.png" width="160" height="42" alt="billleaf" style="display:block;border:0;height:42px;width:160px;font-weight:600;font-size:18px;color:#142B2B"></p>`
+}
+
 function layout(
   title: string,
   body: string,
@@ -33,7 +44,7 @@ function layout(
     : ""
   return `<!doctype html><html><body style="margin:0;background:#F8FAF8;font-family:Inter,Arial,sans-serif;color:#142B2B">
 <div style="max-width:520px;margin:0 auto;padding:32px 24px">
-<p style="font-weight:600;font-size:18px;margin:0 0 24px">billleaf</p>
+${brandHeader()}
 <h1 style="font-size:20px;margin:0 0 12px">${esc(title)}</h1>
 ${body}${button}
 <p style="font-size:12px;color:#5b6b6b;margin-top:32px">Your work. Your business. One place.</p>

@@ -2,6 +2,7 @@
 
 import {
   ComputerIcon,
+  HelpCircleIcon,
   Logout01Icon,
   Shield01Icon,
   UserIcon,
@@ -36,6 +37,7 @@ import Link from "next/link"
 import { useTheme } from "next-themes"
 
 import { useSignOut } from "@/features/auth"
+import { docsUrl } from "@/lib/docs"
 import { useMe, useWorkspaceStore } from "@/features/workspace"
 
 import { initials } from "./initials"
@@ -117,6 +119,12 @@ export function NavUser() {
             <DropdownMenuItem render={<Link href={`/${slug}/account`} />}>
               <HugeiconsIcon icon={UserIcon} className="size-4" />
               Your account
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              render={<a href={docsUrl()} target="_blank" rel="noreferrer" />}
+            >
+              <HugeiconsIcon icon={HelpCircleIcon} className="size-4" />
+              Help & docs
             </DropdownMenuItem>
             {user?.isPlatformAdmin ? (
               <DropdownMenuItem render={<Link href="/admin" />}>

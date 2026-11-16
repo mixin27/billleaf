@@ -28,6 +28,7 @@ import { Field } from "@/components/form/field"
 import { SecretDialog } from "@/components/secret-dialog"
 import { useWorkspaceStore } from "@/features/workspace"
 import { errorMessage } from "@/lib/api"
+import { docsUrl } from "@/lib/docs"
 
 import { useCreateWebhook, useUpdateWebhook, useWebhooks } from "../api/queries"
 
@@ -63,7 +64,15 @@ export function WebhooksSettings() {
           <p>
             Send events, like an invoice being paid, to another app as they
             happen. Each request is a signed JSON POST; failed deliveries are
-            retried for about 2 hours.
+            retried for about 2 hours.{" "}
+            <a
+              className="underline"
+              href={docsUrl("/docs/developers/webhooks")}
+              target="_blank"
+              rel="noreferrer"
+            >
+              How to receive and verify them
+            </a>
           </p>
         </div>
         {available ? (

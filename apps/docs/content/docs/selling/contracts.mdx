@@ -1,0 +1,34 @@
+---
+title: Contracts
+description: Write agreements from templates and get them signed online.
+---
+
+## Templates
+
+**Contracts → Templates** holds reusable agreement text. A standard services agreement is included to start from. Use **merge fields** in double braces — they're filled in when you draft a contract:
+
+| Field | Becomes |
+| --- | --- |
+| `{{client.name}}`, `{{client.legal_name}}`, `{{client.address}}`, `{{client.tax_id}}` | The client's details |
+| `{{business.name}}`, `{{business.legal_name}}`, `{{business.address}}` | Your details |
+| `{{quote.number}}`, `{{quote.title}}`, `{{quote.total}}` | The linked quote |
+| `{{contract.effective_date}}`, `{{contract.end_date}}`, `{{contract.number}}` | The contract's dates and number |
+| `{{project.name}}`, `{{today}}` | The linked project, the date it's sent |
+
+Simple formatting works: `**bold**`, `## headings` and lists.
+
+## Sending and signing
+
+<Steps>
+<Step>
+Draft a contract from a template (or from an accepted quote) and review the text. Fields that couldn't be filled are highlighted — you can't send until they're resolved.
+</Step>
+<Step>
+**Send** it. Your client gets an email and a link to read and sign it in the client portal.
+</Step>
+<Step>
+They sign by typing their name. Billleaf records the name, time, email, IP address and browser as evidence, and adds a signature certificate page to the PDF.
+</Step>
+</Steps>
+
+If a client signs on paper, use **Record signature** instead. Signed contracts can't be changed; void one and draft a new version if needed.

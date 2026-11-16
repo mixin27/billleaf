@@ -1,5 +1,6 @@
 "use client"
 
+import { LogoMark } from "@workspace/brand/logo"
 import type { PortalWorkspace } from "@workspace/contracts"
 import { Button } from "@workspace/ui/components/button"
 import { Skeleton } from "@workspace/ui/components/skeleton"
@@ -55,8 +56,12 @@ export function PortalFooter({ workspace }: { workspace?: PortalWorkspace }) {
         ) : null}
       </span>
       {workspace?.showBadge ? (
-        <a href="https://billleaf.com" className="hover:text-foreground">
-          Made with <span className="font-semibold">billleaf</span>
+        <a
+          href="https://billleaf.com"
+          className="inline-flex items-center gap-1.5 hover:text-foreground"
+        >
+          Made with <LogoMark size={16} title="" />
+          <span className="font-semibold">billleaf</span>
         </a>
       ) : null}
     </footer>

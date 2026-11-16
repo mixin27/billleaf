@@ -21,6 +21,7 @@ import { cn } from "@workspace/ui/lib/utils"
 import { parseAsString, parseAsStringLiteral, useQueryState } from "nuqs"
 
 import { PageHeader } from "@/components/page-header"
+import { docsUrl } from "@/lib/docs"
 import { useWorkspaceProfile } from "@/features/workspace"
 import { money } from "@/lib/format"
 
@@ -104,7 +105,20 @@ export function ProfitLossReport() {
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Reports"
-        description="Profit & loss: money received minus money spent. Amounts aren't converted between currencies."
+        description={
+          <>
+            Profit & loss: money received minus money spent. Amounts aren&apos;t
+            converted between currencies.{" "}
+            <a
+              className="underline"
+              href={docsUrl("/docs/books/reports")}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Learn more
+            </a>
+          </>
+        }
         actions={
           data && data.months.length ? (
             <Button

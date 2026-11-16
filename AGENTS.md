@@ -16,18 +16,20 @@ Read `docs/README.md` (product + architecture + ADRs) before non-trivial work.
 
 ## Repo map
 
-| Path                               | What                                                                                     |
-| ---------------------------------- | ---------------------------------------------------------------------------------------- |
-| `apps/web`                         | Next.js 16 product app (App Router, feature folders). See `apps/web/AGENTS.md`           |
-| `apps/api`                         | NestJS 12 (Fastify, ESM) REST API + BullMQ worker. See `apps/api/AGENTS.md`              |
-| `apps/mobile`                      | _Reserved_ — Expo app (Phase 4), reuses `contracts` + `api-client`                       |
-| `packages/db`                      | Drizzle schema, migrations, client. See `packages/db/AGENTS.md`                          |
-| `packages/contracts`               | Zod schemas, shared types, **permission catalog**                                        |
-| `packages/api-client`              | Typed client generated from the API's OpenAPI                                            |
-| `packages/ui`                      | shadcn/ui (Base UI) primitives — generic only                                            |
-| `packages/env` · `packages/emails` | Env validation · transactional email templates                                           |
-| `infra/`                           | Docker Compose (dev + prod reference), backups                                           |
-| `.claude/skills/`                  | Repo workflows: new-api-module, new-web-feature, db-migration, add-permission, write-adr |
+| Path                               | What                                                                                          |
+| ---------------------------------- | --------------------------------------------------------------------------------------------- |
+| `apps/web`                         | Next.js 16 product app (App Router, feature folders). See `apps/web/AGENTS.md`                |
+| `apps/api`                         | NestJS 12 (Fastify, ESM) REST API + BullMQ worker. See `apps/api/AGENTS.md`                   |
+| `apps/docs`                        | Public docs site (Fumadocs, static export): help pages + developer docs + API reference       |
+| `apps/mobile`                      | _Reserved_ — Expo app (Phase 4), reuses `contracts` + `api-client`                            |
+| `packages/db`                      | Drizzle schema, migrations, client. See `packages/db/AGENTS.md`                               |
+| `packages/contracts`               | Zod schemas, shared types, **permission catalog**                                             |
+| `packages/api-client`              | Typed client generated from the API's OpenAPI                                                 |
+| `packages/brand`                   | Logo SVGs, `Logo`/`LogoMark` React, generated icons (`pnpm --filter @workspace/brand assets`) |
+| `packages/ui`                      | shadcn/ui (Base UI) primitives — generic only                                                 |
+| `packages/env` · `packages/emails` | Env validation · transactional email templates                                                |
+| `infra/`                           | Docker Compose (dev + prod reference), backups                                                |
+| `.claude/skills/`                  | Repo workflows: new-api-module, new-web-feature, db-migration, add-permission, write-adr      |
 
 ## Commands
 
@@ -65,4 +67,7 @@ Local tools: Mailpit http://localhost:8025 · API docs http://localhost:4000/doc
 - New business capability → API module in `apps/api/src/modules/<feature>` +
   web feature in `apps/web/features/<feature>` (use the skills).
 - Cross-feature imports in web go through `features/<name>/index.ts` only.
+- Changed a feature's UI or behaviour → update its help page in
+  `apps/docs/content/docs` in the same PR. Changed API routes → also
+  `pnpm --filter docs gen:api` after `pnpm gen:api-client`.
 - Architecture decisions → ADR in `docs/adr/` (skill: `write-adr`).

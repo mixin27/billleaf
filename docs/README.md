@@ -13,6 +13,9 @@ Billleaf is an all-in-one business workspace for freelancers — **Client → Qu
 | [Business model](product/business-model.md) | Freemium tiers, MoR billing, entitlements |
 | [Roadmap](product/roadmap.md)               | Phases 0–4                                |
 | [Future plan](product/future-plan.md)       | Next concrete items, in order, for later  |
+| [Brand](product/brand.md)                   | Logo, colours, usage, asset files         |
+
+Customer and developer help pages are **not** here: they live in `apps/docs/content/docs` and are published as the public docs site ([ADR-0016](adr/0016-docs-site.md)). This folder is internal.
 
 ## Architecture
 
@@ -69,6 +72,7 @@ Billleaf is an all-in-one business workspace for freelancers — **Client → Qu
 | [0013](adr/0013-manual-payments-for-subscriptions.md) | Manual subscription payments, approved by platform admins       | Accepted |
 | [0014](adr/0014-outgoing-webhooks.md)                 | Outgoing webhooks delivered by the worker, with an SSRF guard   | Accepted |
 | [0015](adr/0015-workspace-api-keys.md)                | Workspace API keys that act as their creator, scoped            | Accepted |
+| [0016](adr/0016-docs-site.md)                         | Public docs site with Fumadocs, statically exported             | Accepted |
 
 New ADR: copy [the template](adr/template.md).
 

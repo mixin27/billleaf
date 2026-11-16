@@ -1,0 +1,21 @@
+{
+  "title": "Contracts",
+  "pages": [
+    "contract-templates-list",
+    "contract-templates-create",
+    "contract-templates-get",
+    "contract-templates-update",
+    "contract-templates-remove",
+    "contracts-list",
+    "contracts-create",
+    "contracts-get",
+    "contracts-update",
+    "contracts-remove",
+    "contracts-send",
+    "contracts-sign",
+    "contracts-decline",
+    "contracts-void",
+    "contracts-pdf",
+    "contracts-email"
+  ]
+}

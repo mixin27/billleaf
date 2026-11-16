@@ -12,8 +12,11 @@ export const env = z
   .object({
     NEXT_PUBLIC_API_URL: url("http://localhost:4000"),
     NEXT_PUBLIC_APP_URL: url("http://localhost:3000"),
+    /** The help & developer docs site (apps/docs). */
+    NEXT_PUBLIC_DOCS_URL: url("http://localhost:3001"),
   })
   .parse({
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
+    NEXT_PUBLIC_DOCS_URL: process.env.NEXT_PUBLIC_DOCS_URL,
   })

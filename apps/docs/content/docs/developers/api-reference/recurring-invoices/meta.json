@@ -1,0 +1,12 @@
+{
+  "title": "Recurring invoices",
+  "pages": [
+    "recurring-list",
+    "recurring-create",
+    "recurring-get",
+    "recurring-update",
+    "recurring-remove",
+    "recurring-history",
+    "recurring-run"
+  ]
+}

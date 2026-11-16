@@ -1,0 +1,16 @@
+{
+  "title": "Payments",
+  "pages": [
+    "payments-list",
+    "payments-get",
+    "payments-record",
+    "payments-refund",
+    "payments-receipt-pdf",
+    "payments-send-receipt",
+    "payment-proofs-list",
+    "payment-proofs-get",
+    "payment-proofs-file",
+    "payment-proofs-confirm",
+    "payment-proofs-reject"
+  ]
+}

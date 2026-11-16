@@ -1,0 +1,69 @@
+---
+title: Webhooks
+description: Receive events from Billleaf as they happen.
+---
+
+In **Settings → Webhooks** (Pro and Team), add an endpoint URL and choose which events it receives. Billleaf then sends an HTTPS `POST` for each event. Use **Send test event** to try it, and the delivery log to see every request and response.
+
+## Events
+
+| Event | When | `data.object` |
+| --- | --- | --- |
+| `client.created` | A client is added | Client |
+| `quote.accepted` | A quote is accepted (in the app or the portal) | Quote |
+| `quote.declined` | A quote is declined | Quote |
+| `contract.signed` | A contract is signed | Contract |
+| `invoice.issued` | An invoice is issued | Invoice |
+| `invoice.sent` | An invoice is emailed | Invoice |
+| `invoice.paid` | A payment settles the invoice in full | Invoice |
+| `invoice.voided` | An invoice is voided | Invoice |
+| `credit_note.issued` | A credit note is issued | Credit note |
+| `payment.recorded` | A payment is recorded (or a proof confirmed) | Payment |
+| `payment_proof.submitted` | A client uploads a payment proof | Proof summary |
+| `ping` | **Send test event** | `{ message }` |
+
+Objects have the same shape as the [API reference](/docs/developers/api-reference) responses, as they were when the event happened.
+
+## The request
+
+```http
+POST /your/endpoint
+Content-Type: application/json
+User-Agent: Billleaf-Webhooks/1.0
+Billleaf-Event: invoice.paid
+Billleaf-Delivery: 0193…
+Billleaf-Signature: t=1763300000,v1=5f2b…
+
+{"id":"evt_…","type":"invoice.paid","createdAt":"2026-11-16T10:00:00.000Z","workspaceId":"…","data":{"object":{…}}}
+```
+
+Reply with any `2xx` status within **10 seconds**. Anything else — another status, a timeout or a redirect — is retried 7 more times, starting after 1 minute and doubling (about 2 hours in all). After 10 events in a row fail, the webhook is turned off and workspace owners are emailed.
+
+Delivery is **at least once** and **not ordered**: use the event `id` to ignore duplicates (a manual **Resend** keeps the same id).
+
+## Verifying the signature
+
+`v1` is the hex HMAC-SHA256 of `"<t>.<raw body>"` using your webhook's signing secret (shown when you create the webhook, or rotate its secret). Check it before trusting a request, and reject old timestamps:
+
+```js
+import { createHmac, timingSafeEqual } from "node:crypto"
+
+export function verify(rawBody, header, secret, toleranceSeconds = 300) {
+  const parts = Object.fromEntries(header.split(",").map((p) => p.split("=")))
+  const expected = createHmac("sha256", secret)
+    .update(`${parts.t}.${rawBody}`)
+    .digest("hex")
+  const fresh = Math.abs(Date.now() / 1000 - Number(parts.t)) <= toleranceSeconds
+  return (
+    fresh &&
+    expected.length === parts.v1?.length &&
+    timingSafeEqual(Buffer.from(expected), Buffer.from(parts.v1))
+  )
+}
+```
+
+Use the body exactly as received, before parsing it as JSON.
+
+## Security
+
+Webhook URLs must use `https://` and point to a public address. Billleaf doesn't follow redirects.

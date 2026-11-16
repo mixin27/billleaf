@@ -49,6 +49,7 @@ import { usePermissions } from "@/components/permissions/can"
 import { CopyButton, SecretDialog } from "@/components/secret-dialog"
 import { useWorkspaceStore } from "@/features/workspace"
 import { errorMessage } from "@/lib/api"
+import { docsUrl } from "@/lib/docs"
 import { env } from "@/lib/env"
 import { formatDate } from "@/lib/format"
 
@@ -123,7 +124,7 @@ export function ApiKeysSettings() {
             workspace only.{" "}
             <a
               className="underline"
-              href={`${apiUrl}/docs/api`}
+              href={docsUrl("/docs/developers/api-reference")}
               target="_blank"
               rel="noreferrer"
             >

@@ -1,0 +1,31 @@
+{
+  "title": "Time",
+  "pages": [
+    "time-list",
+    "time-create",
+    "time-running",
+    "time-update-running",
+    "time-start",
+    "time-suggestions",
+    "time-bulk-update",
+    "time-bulk-delete",
+    "time-continue",
+    "time-duplicate",
+    "time-stop",
+    "time-update",
+    "time-remove",
+    "time-tags",
+    "time-create-tag",
+    "time-update-tag",
+    "time-delete-tag",
+    "time-summary",
+    "time-budgets",
+    "time-invoice-from-time",
+    "time-reports-timesheet",
+    "time-reports-set-cell",
+    "time-reports-summary",
+    "time-reports-detailed",
+    "time-reports-detailed-csv",
+    "time-reports-import-clockify"
+  ]
+}

@@ -83,12 +83,14 @@ Every service in the production compose has:
 
 The app images run as a **non-root** user. Valkey uses `noeviction`, so BullMQ jobs are never dropped under memory pressure. The worker gets 60 seconds to finish in-flight jobs on deploy.
 
-## Vercel (docs)
+## Docs site
 
-Only if the docs stay on Vercel: commercial use needs the Pro plan ($20/month). Cloudflare Pages or the VPS are free alternatives.
+`apps/docs` is a static site ([ADR-0016](../adr/0016-docs-site.md)); it needs no server, database or secrets.
 
-- Project root `apps/docs`, build via `turbo build --filter=docs`, ignored build step when `apps/docs` unchanged.
-- Custom domain `docs.billleaf.com` via Cloudflare DNS (DNS-only, not proxied).
+- **Build:** `pnpm turbo build --filter=docs` → `apps/docs/out`. Set `NEXT_PUBLIC_APP_URL` (links back to the app) at build time.
+- **Host:** Cloudflare Pages (free, commercial use allowed): build command above, output directory `apps/docs/out`. Vercel works too, but commercial use needs the Pro plan ($20/month).
+- **Domain:** e.g. `docs.<your-domain>` via Cloudflare DNS. Then set the `DOCS_URL` GitHub variable so the web app's Help and Docs links point there (`NEXT_PUBLIC_DOCS_URL`, baked in at build).
+- **API reference:** after API route changes, run `pnpm gen:api-client && pnpm --filter docs gen:api` and commit the result.
 
 ## First-time setup
 
