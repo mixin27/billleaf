@@ -23,7 +23,7 @@ We will store our own **workspace API keys** (`api_keys`) and authenticate them 
 
 - Integrations can use the existing REST API unchanged, with existing permission checks and tenant scoping.
 - Keys inherit a person's identity: if that person leaves, integrations break and need a new key from someone else. We say so in the UI.
-- Throttling is per process (in-memory store); moving the throttler to Redis is needed before running several API instances.
+- Rate-limit counters live in Valkey (`RedisThrottlerStorage`, one atomic Lua step per hit), so they hold across API instances. If Valkey is unreachable, requests are allowed rather than failed.
 - Follow-up: OAuth applications (third-party apps with consent) can reuse scopes, guard and audit pieces; Zapier/Make templates.
 
 ## Alternatives considered

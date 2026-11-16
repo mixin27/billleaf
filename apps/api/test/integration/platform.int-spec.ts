@@ -25,6 +25,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
 
 import { BILLING_PROVIDER } from "../../src/billing/providers/billing-provider.js"
 import { REDIS } from "../../src/core/cache/redis.module.js"
+import { RedisThrottlerStorage } from "../../src/core/cache/redis-throttler.storage.js"
 import { WORKER_HEARTBEAT_KEY } from "../../src/jobs/worker-heartbeat.js"
 import { addInterval } from "../../src/billing/period.js"
 import { DataExportService } from "../../src/modules/data-export/data-export.service.js"
@@ -4539,5 +4540,53 @@ describe("developer API keys", () => {
     )
     expect((await owner.del(`/v1/members/${devMember.id}`)).status).toBe(204)
     expect((await withKey(devKey, "GET", "/v1/clients")).status).toBe(401)
+  })
+})
+
+describe("rate limits in Redis", () => {
+  it("shares counters across instances, blocks past the limit, then recovers", async () => {
+    const redis = t.app.get(REDIS)
+    const prefix = `throttle-test-${Date.now()}`
+    // Two "instances" with their own storage objects, one Redis.
+    const a = new RedisThrottlerStorage(redis, prefix)
+    const b = new RedisThrottlerStorage(redis, prefix)
+    const hit = (s: RedisThrottlerStorage) =>
+      s.increment("k", 1_000, 2, 1_000, "default")
+    expect(await hit(a)).toMatchObject({ totalHits: 1, isBlocked: false })
+    expect(await hit(b)).toMatchObject({ totalHits: 2, isBlocked: false })
+    const third = await hit(a)
+    expect(third).toMatchObject({ totalHits: 3, isBlocked: true })
+    expect(third.timeToBlockExpire).toBeGreaterThan(0)
+    expect((await hit(b)).isBlocked).toBe(true)
+    await new Promise((r) => setTimeout(r, 1_100))
+    expect(await hit(b)).toMatchObject({ totalHits: 1, isBlocked: false })
+  })
+
+  it("limits one API key to 120 requests a minute", async () => {
+    const owner = new Client(t)
+    await owner.signUp("Busy Integrator")
+    const ws = await owner.createWorkspace("Busy Studio")
+    await t.db
+      .update(workspaceSubscriptions)
+      .set({ planKey: "pro" })
+      .where(eq(workspaceSubscriptions.workspaceId, ws.id))
+    const { key } = (
+      await owner.post("/v1/api-keys", {
+        name: "Busy",
+        scopes: ["client.read"],
+      })
+    ).body
+    const call = () =>
+      t.app.inject({
+        method: "GET",
+        url: "/v1/clients",
+        headers: { authorization: `Bearer ${key}` },
+      })
+    const statuses: number[] = []
+    for (let i = 0; i < 121; i++) statuses.push((await call()).statusCode)
+    expect(statuses.slice(0, 120).every((s) => s === 200)).toBe(true)
+    expect(statuses[120]).toBe(429)
+    // The browser session (tracked by IP) isn't affected by the key's limit.
+    expect((await owner.get("/v1/clients")).status).toBe(200)
   })
 })

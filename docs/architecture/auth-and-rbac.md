@@ -41,7 +41,7 @@ member_roles       workspace_id, member_id, role_id   (member = Better Auth orga
 create(@Body() dto: CreateInvoiceDto) { … }   // workspace comes from RequestContext
 ```
 
-Global guard order (`app.module.ts`): `ThrottlerGuard → AuthGuard → WorkspaceGuard`.
+Global guard order (`app.module.ts`): `AppThrottlerGuard → AppAuthGuard → WorkspaceGuard`. Rate-limit counters are kept in Valkey (`RedisThrottlerStorage`), shared by all API instances: 300 requests a minute per route per IP, 120 per API key.
 
 1. `AuthGuard` (Better Auth) requires a session unless the route is `@AllowAnonymous()`.
 2. `WorkspaceGuard` (for routes with `@RequirePermission` / `@RequireWorkspace`) resolves the workspace from the `X-Workspace-Id` header or the session's active organization, verifies membership (403 otherwise) and loads the member's permission set via `PermissionResolver` (Valkey, falling back to DB). It fills `RequestContext` (`userId`, `workspaceId`, `memberId`, `permissions`).

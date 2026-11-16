@@ -42,3 +42,4 @@ Problem+JSON with a `code`:
 
 - `api_keys` (hash, prefix, scopes, creator member, expiry, last use, revoked) and `audit_logs.api_key_id`; see [data model](data-model.md).
 - `AppAuthGuard` (bearer → key, else Better Auth session) → `WorkspaceGuard` key branch → `AppThrottlerGuard` (per-key limit). `@SessionOnly()` marks routes keys may never use.
+- Rate-limit counters are kept in Valkey, so the 120/minute per key holds across API instances.

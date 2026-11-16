@@ -37,7 +37,7 @@ Review before first production launch and quarterly after.
 ## API keys
 
 - [ ] Keys are stored only as SHA-256 hashes, shown once, sent as `Authorization: Bearer` only, pinned to one workspace, and limited to business scopes (never billing, members, roles, settings, admin) — [ADR-0015](../adr/0015-workspace-api-keys.md)
-- [ ] The throttler moves to Redis before running more than one API instance (per-key limits are in memory)
+- [ ] Rate limits are stored in Valkey (shared by every API instance); keep Valkey private to the server network
 
 ## Outgoing requests
 
