@@ -12,6 +12,6 @@ import { ProjectsService } from "./projects.service.js"
   imports: [IamModule, ClientsModule, QuotesModule, WorkspaceProfileModule],
   controllers: [ProjectsController],
   providers: [ProjectsRepository, ProjectsService],
-  exports: [ProjectsService],
+  exports: [ProjectsService, ProjectsRepository],
 })
 export class ProjectsModule {}

@@ -30,7 +30,7 @@ import { useDashboard } from "../api"
 import { BarList, ColumnChart } from "./bar-charts"
 import { StatTile } from "./stat-tile"
 import { PageHeader } from "@/components/page-header"
-import { WeekTimeCard } from "@/features/time"
+import { ProjectBudgetsCard, WeekTimeCard } from "@/features/time"
 
 type Amounts = { currency: string; amount: number }[]
 
@@ -182,6 +182,10 @@ export function Dashboard() {
 
       <Can permission="time.track">
         <WeekTimeCard today={d.today} />
+      </Can>
+
+      <Can permission="project.read">
+        <ProjectBudgetsCard locale={locale} />
       </Can>
 
       {d.receivables && d.receivables.draftCount > 0 ? (

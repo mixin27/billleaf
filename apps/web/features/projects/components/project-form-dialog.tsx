@@ -67,6 +67,8 @@ export function ProjectFormDialog({
   const [billing, setBilling] = React.useState<ProjectBilling>("hourly")
   const [currency, setCurrency] = React.useState<string | null>(null)
   const [amount, setAmount] = React.useState("")
+  const [estimateHours, setEstimateHours] = React.useState("")
+  const [estimateAmount, setEstimateAmount] = React.useState("")
   const [startDate, setStartDate] = React.useState("")
   const [dueDate, setDueDate] = React.useState("")
   const [description, setDescription] = React.useState("")
@@ -82,6 +84,14 @@ export function ProjectFormDialog({
     setAmount(
       minor != null && project ? fromMinorUnits(minor, project.currency) : ""
     )
+    setEstimateHours(
+      project?.estimateMinutes ? String(project.estimateMinutes / 60) : ""
+    )
+    setEstimateAmount(
+      project?.estimateAmount != null
+        ? fromMinorUnits(project.estimateAmount, project.currency)
+        : ""
+    )
     setStartDate(project?.startDate ?? "")
     setDueDate(project?.dueDate ?? "")
     setDescription(project?.description ?? "")
@@ -92,6 +102,20 @@ export function ProjectFormDialog({
     currency ?? client?.currency ?? profile.data?.defaultCurrency ?? "USD"
   const minor = amount ? toMinorUnits(amount, effectiveCurrency) : null
   const amountInvalid = Boolean(amount) && (minor === null || minor < 0)
+  const estMinutes = estimateHours
+    ? Math.round(Number(estimateHours.replace(",", ".")) * 60)
+    : null
+  const estHoursInvalid =
+    estMinutes !== null && !(Number.isFinite(estMinutes) && estMinutes >= 1)
+  const estMinor =
+    estimateAmount && billing === "hourly"
+      ? toMinorUnits(estimateAmount, effectiveCurrency)
+      : null
+  const estAmountInvalid =
+    Boolean(estimateAmount) &&
+    billing === "hourly" &&
+    (estMinor === null || estMinor < 1)
+  const invalid = amountInvalid || estHoursInvalid || estAmountInvalid
   const pending = create.isPending || update.isPending
 
   const submit = () => {
@@ -103,6 +127,8 @@ export function ProjectFormDialog({
       currency: effectiveCurrency,
       budgetAmount: billing === "fixed" ? minor : null,
       hourlyRate: billing === "hourly" ? minor : null,
+      estimateMinutes: estMinutes,
+      estimateAmount: billing === "hourly" ? estMinor : null,
       startDate: startDate || null,
       dueDate: dueDate || null,
     }
@@ -137,7 +163,7 @@ export function ProjectFormDialog({
           className="grid gap-4 sm:grid-cols-2"
           onSubmit={(e) => {
             e.preventDefault()
-            if (!name.trim() || amountInvalid) return
+            if (!name.trim() || invalid) return
             submit()
           }}
         >
@@ -205,6 +231,9 @@ export function ProjectFormDialog({
                   id="project-amount"
                   inputMode="decimal"
                   value={amount}
+                  placeholder={
+                    billing === "hourly" ? "Member or default rate" : undefined
+                  }
                   onChange={(e) => setAmount(e.target.value)}
                 />
               </Field>
@@ -217,6 +246,36 @@ export function ProjectFormDialog({
               </Field>
             </>
           ) : null}
+          <Field
+            label="Time estimate (hours)"
+            htmlFor="project-est-hours"
+            hint="Alerts at 80% and 100%."
+            error={estHoursInvalid ? "Enter hours, e.g. 40" : undefined}
+          >
+            <Input
+              id="project-est-hours"
+              inputMode="decimal"
+              value={estimateHours}
+              onChange={(e) => setEstimateHours(e.target.value)}
+            />
+          </Field>
+          {billing === "hourly" ? (
+            <Field
+              label={`Budget (${effectiveCurrency})`}
+              htmlFor="project-est-amount"
+              hint="Billable amount of tracked time."
+              error={estAmountInvalid ? "Enter a valid amount" : undefined}
+            >
+              <Input
+                id="project-est-amount"
+                inputMode="decimal"
+                value={estimateAmount}
+                onChange={(e) => setEstimateAmount(e.target.value)}
+              />
+            </Field>
+          ) : (
+            <div className="hidden sm:block" />
+          )}
           <Field label="Start date" htmlFor="project-start">
             <Input
               id="project-start"
@@ -265,7 +324,7 @@ export function ProjectFormDialog({
           <Button
             type="submit"
             form="project-form"
-            disabled={pending || !name.trim() || amountInvalid}
+            disabled={pending || !name.trim() || invalid}
           >
             {pending ? "Saving…" : project ? "Save" : "Create project"}
           </Button>

@@ -10,6 +10,7 @@ import { ExportProcessor } from "./jobs/export.processor.js"
 import { DataExportModule } from "./modules/data-export/data-export.module.js"
 import { InvoicesModule } from "./modules/invoices/invoices.module.js"
 import { RecurringModule } from "./modules/recurring/recurring.module.js"
+import { TimeModule } from "./modules/time/time.module.js"
 
 /** Background worker: same codebase, no HTTP. Register queue processors here. */
 @Module({
@@ -19,6 +20,7 @@ import { RecurringModule } from "./modules/recurring/recurring.module.js"
     RecurringModule,
     InvoicesModule,
     DataExportModule,
+    TimeModule,
   ],
   providers: [
     EmailProcessor,

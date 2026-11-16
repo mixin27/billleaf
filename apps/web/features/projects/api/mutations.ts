@@ -17,7 +17,12 @@ import { projectKeys } from "./keys"
 function useInvalidate() {
   const qc = useQueryClient()
   const workspaceId = useWorkspaceStore((s) => s.workspace?.id)
-  return () => qc.invalidateQueries({ queryKey: projectKeys.all(workspaceId) })
+  // Rates and estimates change what tracked time is worth: refresh time too.
+  return () =>
+    Promise.all([
+      qc.invalidateQueries({ queryKey: projectKeys.all(workspaceId) }),
+      qc.invalidateQueries({ queryKey: ["time", workspaceId] }),
+    ])
 }
 
 export function useCreateProject() {
@@ -105,7 +110,11 @@ export function useUpdateTask(projectId: string) {
     onError: (_e, _v, ctx) =>
       ctx?.previous && qc.setQueryData(key, ctx.previous),
     onSettled: () =>
-      qc.invalidateQueries({ queryKey: projectKeys.all(workspaceId) }),
+      Promise.all([
+        qc.invalidateQueries({ queryKey: projectKeys.all(workspaceId) }),
+        // A task's rate changes what its time is worth.
+        qc.invalidateQueries({ queryKey: ["time", workspaceId] }),
+      ]),
   })
 }
 

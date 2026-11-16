@@ -13,16 +13,29 @@ Work we've agreed to do later, with enough detail to pick up without re-research
 - **Launch readiness:** public home and pricing pages, Terms and Privacy pages, data export (ZIP of CSVs) and workspace deletion.
 - **Payment reminders:** clients are emailed about unpaid invoices on the days the workspace picks (before, on and after the due date), each once; paused per invoice.
 - **Account deletion:** users delete their own login once they aren't the only owner of a workspace.
+- **Rates and budgets:** billable rates per task, project, member and workspace default (the most specific wins; invoiced time keeps its rate), member cost rates with cost and profit on projects and reports, time and money estimates with progress bars, a dashboard card, and owner alerts at 80% / 100%.
 - **Export with PDFs:** owners get a ZIP of every record plus all document PDFs by email; admins see each workspace's plan payments.
 - **Deploy readiness:** production compose stack, pinned images, approval gate, smoke test, [Dokploy runbook](../infrastructure/dokploy-runbook.md).
 
 ## Next, in order
 
-1. **Production deploy.** The repo is ready. What's left is the deploy session (server, Dokploy, DNS, R2, email) with the runbook. After it:
-   - set prices and Billleaf's payment methods in `/admin/pricing`;
-   - set `SUPPORT_EMAIL`;
-   - have the Terms and Privacy pages reviewed for the operating country.
-2. **Small follow-ups** (table below).
+Production deploy is on hold until there's budget for it (see [On hold](#on-hold)). Until then, build in this order:
+
+1. **Outgoing webhooks.** Let a workspace send events to other tools:
+   - **Settings → Webhooks:** endpoint URL, which events, a signing secret (HMAC-SHA256 header with a timestamp), enable/disable.
+   - **Events:** client created, quote accepted/declined, contract signed, invoice issued/sent/paid/voided, payment recorded, payment proof submitted.
+   - **Delivery:** a `webhooks` BullMQ queue with exponential retries; a delivery log with status, response code and a "Resend" button; disable an endpoint after repeated failures and email the owner.
+   - **Safety:** HTTPS only in production, no private/internal addresses, short timeouts. Pro/Team plan feature.
+   - Later: Zapier/Make templates on top.
+2. **Small follow-ups** (table below), when someone needs them.
+
+## On hold
+
+- **Production deploy.** The repo is ready (production compose stack, smoke test, [Dokploy runbook](../infrastructure/dokploy-runbook.md)). It can share the existing server with another app; the only new costs are a domain and possibly more server memory. When there's budget:
+  - run the deploy session (Dokploy, DNS, R2, email, secrets) with the runbook;
+  - set prices and Billleaf's payment methods in `/admin/pricing`;
+  - set `SUPPORT_EMAIL`;
+  - have the Terms and Privacy pages reviewed for the operating country.
 
 ## Later
 
@@ -35,14 +48,12 @@ When a provider serves the operating country (a Merchant of Record for subscript
 
 ### Product
 
-- **Outgoing webhooks and integrations:** signed event deliveries (invoice issued, payment recorded, …) with retries and a delivery log; Zapier/Make templates.
 - **Teams/agencies:** per-seat pricing, timesheet approvals.
 - **i18n:** translated UI, emails and PDFs, if a market needs it.
 
 ### Time tracking, later tier
 
 - **Calendar:** a view where you drag to create and resize entries.
-- **Rates and budgets:** a billable rate hierarchy (workspace → member → project → task) with cost rates; project estimates with budget alerts.
 - **Faster entry:** favourites; keyboard shortcuts.
 - **Rules:** rounding rules; locked periods.
 - **Reminders:** idle detection and reminders (needs a browser extension or desktop app).

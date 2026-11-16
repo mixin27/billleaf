@@ -163,3 +163,45 @@ export function useDeleteTag() {
     onSuccess: invalidate,
   })
 }
+
+/** Rates price all time, so a change refreshes time, projects and reports. */
+function useInvalidateRates() {
+  const qc = useQueryClient()
+  const ws = useWorkspaceStore((s) => s.workspace?.id)
+  return () =>
+    Promise.all([
+      qc.invalidateQueries({ queryKey: ["rates", ws] }),
+      qc.invalidateQueries({ queryKey: timeKeys.all(ws) }),
+      qc.invalidateQueries({ queryKey: ["projects", ws] }),
+    ])
+}
+
+export function useSetDefaultRate() {
+  const invalidate = useInvalidateRates()
+  return useMutation({
+    mutationFn: (hourlyRate: number | null) =>
+      unwrap(api.PUT("/v1/rates/default", { body: { hourlyRate } })),
+    onSuccess: invalidate,
+  })
+}
+
+export function useSetMemberRate() {
+  const invalidate = useInvalidateRates()
+  return useMutation({
+    mutationFn: ({
+      memberId,
+      ...body
+    }: {
+      memberId: string
+      hourlyRate: number | null
+      costRate: number | null
+    }) =>
+      unwrap(
+        api.PUT("/v1/rates/members/{memberId}", {
+          params: { path: { memberId } },
+          body,
+        })
+      ),
+    onSuccess: invalidate,
+  })
+}

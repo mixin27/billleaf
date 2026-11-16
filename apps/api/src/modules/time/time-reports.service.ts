@@ -4,7 +4,9 @@ import {
   Injectable,
 } from "@nestjs/common"
 import {
+  amountForSeconds,
   type DetailedReport,
+  fromMinorUnits,
   type ReportGroup,
   type ReportGroupRow,
   secondsToHours,
@@ -16,13 +18,13 @@ import {
 import { RequestContext } from "../../common/context/request-context.js"
 import { localParts } from "../../common/time-zone.js"
 import { addDays } from "../documents/party-snapshot.js"
+import { RateBook, RatesService } from "../rates/rates.service.js"
 import { WorkspaceProfileService } from "../workspace/workspace-profile.service.js"
 import {
   type ReportFilter,
   TimeRepository,
   type TimeEntryWithRefs,
 } from "./time.repository.js"
-import { unbilledAmountFor } from "./time.service.js"
 
 export interface ReportQuery {
   from: string
@@ -41,15 +43,39 @@ const MAX_DAYS = 366
 /**
  * Time reports (Clockify's Summary / Detailed / Weekly). Without `time.read`
  * a member only ever sees their own time. Amounts are billable hours × the
- * project's hourly rate, per currency.
+ * resolved hourly rate (invoiced time at its invoiced rate), per currency;
+ * costs (tracked hours × member cost rates) need `rate.read`.
  */
 @Injectable()
 export class TimeReportsService {
   constructor(
     private readonly repo: TimeRepository,
     private readonly profile: WorkspaceProfileService,
-    private readonly ctx: RequestContext
+    private readonly ctx: RequestContext,
+    private readonly rates: RatesService
   ) {}
+
+  /** Billable rate and cost rate of one report row. */
+  private price(r: Row, book: RateBook, withCost: boolean) {
+    const rate =
+      !r.billable || !r.currency || r.projectBilling !== "hourly"
+        ? null
+        : r.invoiced && r.billedRate !== null
+          ? r.billedRate
+          : book.rate({
+              billing: r.projectBilling,
+              currency: r.currency,
+              projectRate: r.hourlyRate,
+              taskRate: r.taskRate,
+              memberId: r.memberId,
+            })
+    const cost =
+      withCost && r.currency ? book.cost(r.memberId, r.currency) : null
+    return {
+      rate: rate === null ? null : { currency: r.currency!, rate },
+      cost: cost === null ? null : { currency: r.currency!, rate: cost },
+    }
+  }
 
   private filter(q: ReportQuery): ReportFilter {
     if (q.from > q.to)
@@ -84,7 +110,11 @@ export class TimeReportsService {
       addDays(f.from, i)
     )
     const dayIndex = new Map(days.map((d, i) => [d, i]))
-    const rows = await this.repo.reportRows(f)
+    const [rows, book] = await Promise.all([
+      this.repo.reportRows(f),
+      this.rates.book(),
+    ])
+    const withCost = this.ctx.permissions.has("rate.read")
     const tagsByEntry = new Map<string, Tag[]>()
     if (groupBy === "tag") {
       for (const { entryId, ...t } of await this.repo.tagLinks(
@@ -102,15 +132,12 @@ export class TimeReportsService {
     for (const r of rows) {
       const seconds = r.seconds ?? 0
       const i = dayIndex.get(r.entryDate) ?? 0
-      const rate =
-        r.billable && r.projectBilling === "hourly" && r.hourlyRate !== null
-          ? { currency: r.currency!, rate: r.hourlyRate }
-          : null
-      total.add(seconds, r.billable, i, rate)
+      const { rate, cost } = this.price(r, book, withCost)
+      total.add(seconds, r.billable, i, rate, cost)
       for (const meta of groupMetas(groupBy, r, tagsByEntry.get(r.id))) {
         const k = String(meta.key)
         const g = groups.get(k) ?? { row: new Acc(days.length), meta }
-        g.row.add(seconds, r.billable, i, rate)
+        g.row.add(seconds, r.billable, i, rate, cost)
         groups.set(k, g)
       }
     }
@@ -123,6 +150,7 @@ export class TimeReportsService {
         seconds: row.seconds,
         billableSeconds: row.billable,
         amounts: row.amounts(),
+        costs: row.costs(),
         byDay: row.byDay,
       })
     )
@@ -138,6 +166,7 @@ export class TimeReportsService {
       totalSeconds: total.seconds,
       billableSeconds: total.billable,
       amounts: total.amounts(),
+      costs: total.costs(),
       byDay: days.map((date, i) => ({
         date,
         seconds: total.byDay[i]!,
@@ -165,8 +194,12 @@ export class TimeReportsService {
   async detailedCsv(q: ReportQuery & { sort?: string }): Promise<string> {
     const { timezone } = await this.profile.get()
     const r = await this.repo.detailed(this.filter(q), null)
-    const rates = await this.repo.reportRows(this.filter(q), 50_000)
+    const [rates, book] = await Promise.all([
+      this.repo.reportRows(this.filter(q), 50_000),
+      this.rates.book(),
+    ])
     const rateById = new Map(rates.map((x) => [x.id, x]))
+    const withCost = this.ctx.permissions.has("rate.read")
     const header = [
       "Date",
       "Start Time",
@@ -183,6 +216,7 @@ export class TimeReportsService {
       "Billable",
       "Hourly Rate",
       "Amount",
+      ...(withCost ? ["Cost Rate", "Cost"] : []),
       "Currency",
       "Invoice",
     ]
@@ -192,10 +226,11 @@ export class TimeReportsService {
       const end = localParts(e.endedAt!, timezone)
       const seconds = e.durationSeconds ?? 0
       const p = rateById.get(e.id)
-      const hourly =
-        p && p.projectBilling === "hourly" && p.hourlyRate !== null
-          ? p.hourlyRate
-          : null
+      const priced = p ? this.price(p, book, withCost) : null
+      const hourly = priced?.rate?.rate ?? null
+      const cost = priced?.cost?.rate ?? null
+      const cur = p?.currency ?? ""
+      const fmt = (v: number) => fromMinorUnits(v, cur)
       lines.push([
         e.entryDate,
         start.time,
@@ -210,11 +245,15 @@ export class TimeReportsService {
         e.description ?? "",
         e.tags.map((t) => t.name).join(", "),
         e.billable ? "Yes" : "No",
-        hourly !== null ? (hourly / 100).toFixed(2) : "",
-        hourly !== null && e.billable
-          ? (unbilledAmountFor(seconds, hourly) / 100).toFixed(2)
-          : "",
-        p?.currency ?? "",
+        hourly !== null ? fmt(hourly) : "",
+        hourly !== null ? fmt(amountForSeconds(seconds, hourly)) : "",
+        ...(withCost
+          ? [
+              cost !== null ? fmt(cost) : "",
+              cost !== null ? fmt(amountForSeconds(seconds, cost)) : "",
+            ]
+          : []),
+        cur,
         e.invoiceNumber ?? "",
       ])
     }
@@ -296,6 +335,7 @@ class Acc {
   byDay: number[]
   byDayBillable: number[]
   private billed = new Map<string, Map<number, number>>()
+  private costed = new Map<string, Map<number, number>>()
 
   constructor(days: number) {
     this.byDay = new Array(days).fill(0)
@@ -306,7 +346,8 @@ class Acc {
     seconds: number,
     billable: boolean,
     day: number,
-    rate: { currency: string; rate: number } | null
+    rate: { currency: string; rate: number } | null,
+    cost: { currency: string; rate: number } | null = null
   ) {
     this.seconds += seconds
     this.byDay[day]! += seconds
@@ -314,24 +355,42 @@ class Acc {
       this.billable += seconds
       this.byDayBillable[day]! += seconds
     }
-    if (rate) {
-      const byRate = this.billed.get(rate.currency) ?? new Map<number, number>()
-      byRate.set(rate.rate, (byRate.get(rate.rate) ?? 0) + seconds)
-      this.billed.set(rate.currency, byRate)
-    }
+    if (rate) tally(this.billed, rate, seconds)
+    if (cost) tally(this.costed, cost, seconds)
   }
 
   amounts() {
-    return [...this.billed.entries()]
-      .map(([currency, byRate]) => ({
-        currency,
-        amount: [...byRate.entries()].reduce(
-          (s, [rate, sec]) => s + unbilledAmountFor(sec, rate),
-          0
-        ),
-      }))
-      .sort((a, b) => b.amount - a.amount)
+    return total(this.billed)
   }
+
+  costs() {
+    return total(this.costed)
+  }
+}
+
+type Tally = Map<string, Map<number, number>>
+
+function tally(
+  t: Tally,
+  r: { currency: string; rate: number },
+  seconds: number
+) {
+  const byRate = t.get(r.currency) ?? new Map<number, number>()
+  byRate.set(r.rate, (byRate.get(r.rate) ?? 0) + seconds)
+  t.set(r.currency, byRate)
+}
+
+/** Seconds per (currency, rate) → money per currency, largest first. */
+function total(t: Tally) {
+  return [...t.entries()]
+    .map(([currency, byRate]) => ({
+      currency,
+      amount: [...byRate.entries()].reduce(
+        (s, [rate, sec]) => s + amountForSeconds(sec, rate),
+        0
+      ),
+    }))
+    .sort((a, b) => b.amount - a.amount)
 }
 
 function dayCount(from: string, to: string) {

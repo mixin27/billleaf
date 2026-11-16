@@ -109,6 +109,16 @@ function amountText(
     : "—"
 }
 
+/** Billable amounts minus costs, per currency (only where costs exist). */
+function profits(report: Pick<SummaryReport, "amounts" | "costs">) {
+  return report.costs.map((c) => ({
+    currency: c.currency,
+    amount:
+      (report.amounts.find((a) => a.currency === c.currency)?.amount ?? 0) -
+      c.amount,
+  }))
+}
+
 /**
  * Clockify-style reports: Summary (chart + groups), Detailed (every entry,
  * paged and sortable) and Weekly (groups × days), with CSV export. Filters
@@ -359,7 +369,11 @@ export function TimeReports({ today }: { today: string }) {
         <p className="text-sm text-destructive">{summary.error.message}</p>
       ) : (
         <>
-          <Totals report={summary.data} locale={locale} />
+          <Totals
+            report={summary.data}
+            locale={locale}
+            showCost={can("rate.read")}
+          />
           {s.view === "summary" ? (
             <SummaryView
               report={summary.data}
@@ -382,9 +396,11 @@ export function TimeReports({ today }: { today: string }) {
 function Totals({
   report,
   locale,
+  showCost,
 }: {
   report: SummaryReport
   locale?: string
+  showCost?: boolean
 }) {
   const pct = report.totalSeconds
     ? Math.round((report.billableSeconds / report.totalSeconds) * 100)
@@ -400,9 +416,23 @@ function Totals({
       <Tile
         label="Amount"
         value={amountText(report.amounts, locale)}
-        hint="Billable hours × project hourly rate"
+        hint="Billable hours × hourly rate"
         className="col-span-2 sm:col-span-1"
       />
+      {showCost ? (
+        <>
+          <Tile
+            label="Cost"
+            value={amountText(report.costs, locale)}
+            hint="Tracked hours × member cost rate"
+          />
+          <Tile
+            label="Profit"
+            value={amountText(profits(report), locale)}
+            hint="Amount − cost"
+          />
+        </>
+      ) : null}
     </div>
   )
 }

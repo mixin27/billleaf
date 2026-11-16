@@ -49,6 +49,12 @@ export const projectSchema = z.object({
   currency: z.string(),
   budgetAmount: z.number().int().nullable(),
   hourlyRate: z.number().int().nullable(),
+  /** Time estimate in minutes. */
+  estimateMinutes: z.number().int().nullable(),
+  /** Money estimate (minor units) for hourly projects. */
+  estimateAmount: z.number().int().nullable(),
+  /** All finished time tracked on the project. */
+  trackedSeconds: z.number().int(),
   startDate: isoDate.nullable(),
   dueDate: isoDate.nullable(),
   isOverdue: z.boolean(),
@@ -81,6 +87,19 @@ const projectFields = {
     .number()
     .int()
     .min(0)
+    .nullish()
+    .transform((v) => v ?? null),
+  estimateMinutes: z
+    .number()
+    .int()
+    .min(1)
+    .max(10_000_000)
+    .nullish()
+    .transform((v) => v ?? null),
+  estimateAmount: z
+    .number()
+    .int()
+    .min(1)
     .nullish()
     .transform((v) => v ?? null),
   startDate: isoDate.nullish().transform((v) => v ?? null),
@@ -135,6 +154,8 @@ export const taskSchema = z.object({
   dueDate: isoDate.nullable(),
   assigneeMemberId: z.string().nullable(),
   assigneeName: z.string().nullable(),
+  /** Billable rate per hour (project currency); overrides the project's. */
+  hourlyRate: z.number().int().nullable(),
   completedAt: z.iso.datetime().nullable(),
   createdAt: z.iso.datetime(),
 })
@@ -149,6 +170,12 @@ export const createTaskSchema = z.object({
     .uuid()
     .nullish()
     .transform((v) => v ?? null),
+  hourlyRate: z
+    .number()
+    .int()
+    .min(0)
+    .nullish()
+    .transform((v) => v ?? null),
 })
 export type CreateTaskInput = z.input<typeof createTaskSchema>
 
@@ -159,6 +186,7 @@ export const updateTaskSchema = z
     status: taskStatusSchema,
     dueDate: isoDate.nullable(),
     assigneeMemberId: z.uuid().nullable(),
+    hourlyRate: z.number().int().min(0).nullable(),
     /**
      * Move the task: place it immediately after this task id in the target
      * status column (null = first). Combine with `status` to move columns.

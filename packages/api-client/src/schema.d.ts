@@ -1588,6 +1588,22 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  "/v1/project-budgets": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["TimeController_budgets_v1"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   "/v1/invoices/from-time": {
     parameters: {
       query?: never
@@ -1694,6 +1710,54 @@ export interface paths {
     get?: never
     put?: never
     post: operations["TimeReportsController_importClockify_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/rates": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["RatesController_list_v1"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/rates/default": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put: operations["RatesController_setDefault_v1"]
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/rates/members/{memberId}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put: operations["RatesController_setMember_v1"]
+    post?: never
     delete?: never
     options?: never
     head?: never
@@ -2475,6 +2539,8 @@ export interface components {
         | "project.create"
         | "project.update"
         | "project.delete"
+        | "rate.read"
+        | "rate.manage"
         | "time.read"
         | "time.track"
         | "time.manage"
@@ -2534,6 +2600,8 @@ export interface components {
         | "project.create"
         | "project.update"
         | "project.delete"
+        | "rate.read"
+        | "rate.manage"
         | "time.read"
         | "time.track"
         | "time.manage"
@@ -2591,6 +2659,8 @@ export interface components {
         | "project.create"
         | "project.update"
         | "project.delete"
+        | "rate.read"
+        | "rate.manage"
         | "time.read"
         | "time.track"
         | "time.manage"
@@ -2646,6 +2716,8 @@ export interface components {
         | "project.create"
         | "project.update"
         | "project.delete"
+        | "rate.read"
+        | "rate.manage"
         | "time.read"
         | "time.track"
         | "time.manage"
@@ -2696,6 +2768,8 @@ export interface components {
         | "project.create"
         | "project.update"
         | "project.delete"
+        | "rate.read"
+        | "rate.manage"
         | "time.read"
         | "time.track"
         | "time.manage"
@@ -3996,6 +4070,9 @@ export interface components {
         currency: string
         budgetAmount: number | null
         hourlyRate: number | null
+        estimateMinutes: number | null
+        estimateAmount: number | null
+        trackedSeconds: number
         /** Format: date */
         startDate: string | null
         /** Format: date */
@@ -4030,6 +4107,9 @@ export interface components {
       currency: string
       budgetAmount: number | null
       hourlyRate: number | null
+      estimateMinutes: number | null
+      estimateAmount: number | null
+      trackedSeconds: number
       /** Format: date */
       startDate: string | null
       /** Format: date */
@@ -4058,6 +4138,8 @@ export interface components {
       currency?: string
       budgetAmount?: number | null
       hourlyRate?: number | null
+      estimateMinutes?: number | null
+      estimateAmount?: number | null
       /** Format: date */
       startDate?: string | null
       /** Format: date */
@@ -4073,6 +4155,8 @@ export interface components {
       currency?: string
       budgetAmount?: number | null
       hourlyRate?: number | null
+      estimateMinutes?: number | null
+      estimateAmount?: number | null
       /** Format: date */
       startDate?: string | null
       /** Format: date */
@@ -4092,6 +4176,7 @@ export interface components {
       dueDate: string | null
       assigneeMemberId: string | null
       assigneeName: string | null
+      hourlyRate: number | null
       /** Format: date-time */
       completedAt: string | null
       /** Format: date-time */
@@ -4109,6 +4194,7 @@ export interface components {
       dueDate?: string | null
       /** Format: uuid */
       assigneeMemberId?: string | null
+      hourlyRate?: number | null
     }
     UpdateTaskDto: {
       title?: string
@@ -4119,6 +4205,7 @@ export interface components {
       dueDate?: string | null
       /** Format: uuid */
       assigneeMemberId?: string | null
+      hourlyRate?: number | null
       /** Format: uuid */
       afterTaskId?: string | null
     }
@@ -4413,8 +4500,23 @@ export interface components {
       billableSeconds: number
       unbilledSeconds: number
       unbilledAmount: number | null
+      billableAmount: number | null
+      unratedSeconds: number
+      cost: number | null
+      uncostedSeconds: number
       currency: string
     }
+    ProjectBudgetListDto_Output: {
+      projectId: string
+      name: string
+      clientName: string | null
+      currency: string
+      estimateMinutes: number | null
+      estimateAmount: number | null
+      trackedSeconds: number
+      billableAmount: number | null
+      percent: number
+    }[]
     InvoiceFromTimeDto: {
       /** Format: uuid */
       projectId: string
@@ -4455,6 +4557,10 @@ export interface components {
         currency: string
         amount: number
       }[]
+      costs: {
+        currency: string
+        amount: number
+      }[]
       byDay: {
         /** Format: date */
         date: string
@@ -4468,6 +4574,10 @@ export interface components {
         seconds: number
         billableSeconds: number
         amounts: {
+          currency: string
+          amount: number
+        }[]
+        costs: {
           currency: string
           amount: number
         }[]
@@ -4546,6 +4656,25 @@ export interface components {
         matched: boolean
         entries: number
       }[]
+    }
+    WorkspaceRatesDto_Output: {
+      currency: string
+      defaultHourlyRate: number | null
+      members: {
+        memberId: string
+        name: string
+        email: string
+        currency: string | null
+        hourlyRate: number | null
+        costRate: number | null
+      }[]
+    }
+    UpdateDefaultRateDto: {
+      hourlyRate: number | null
+    }
+    UpdateMemberRateDto: {
+      hourlyRate: number | null
+      costRate: number | null
     }
     PortalSessionCreateDto: {
       token: string
@@ -8537,6 +8666,25 @@ export interface operations {
       }
     }
   }
+  TimeController_budgets_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["ProjectBudgetListDto_Output"]
+        }
+      }
+    }
+  }
   TimeController_invoiceFromTime_v1: {
     parameters: {
       query?: never
@@ -8711,6 +8859,73 @@ export interface operations {
         }
         content: {
           "application/json": components["schemas"]["ClockifyImportResultDto_Output"]
+        }
+      }
+    }
+  }
+  RatesController_list_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["WorkspaceRatesDto_Output"]
+        }
+      }
+    }
+  }
+  RatesController_setDefault_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateDefaultRateDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["WorkspaceRatesDto_Output"]
+        }
+      }
+    }
+  }
+  RatesController_setMember_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        memberId: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateMemberRateDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["WorkspaceRatesDto_Output"]
         }
       }
     }

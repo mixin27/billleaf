@@ -88,7 +88,7 @@ export type SummaryReportQuery = z.input<typeof summaryReportQuerySchema>
 
 const amountSchema = z.object({
   currency: z.string(),
-  /** Minor units: billable hours × the project's hourly rate. */
+  /** Minor units: billable hours × rate (or, for costs, tracked hours × cost rate). */
   amount: z.number().int(),
 })
 
@@ -101,6 +101,8 @@ export const reportGroupSchema = z.object({
   seconds: z.number().int(),
   billableSeconds: z.number().int(),
   amounts: z.array(amountSchema),
+  /** Cost of the time per currency; empty without rate.read. */
+  costs: z.array(amountSchema),
   /** Seconds per day in the range (same order as `days`). */
   byDay: z.array(z.number().int()),
 })
@@ -113,6 +115,7 @@ export const summaryReportSchema = z.object({
   totalSeconds: z.number().int(),
   billableSeconds: z.number().int(),
   amounts: z.array(amountSchema),
+  costs: z.array(amountSchema),
   /** Seconds per day (all groups). */
   byDay: z.array(
     z.object({

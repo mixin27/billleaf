@@ -210,7 +210,7 @@ function ProjectView({ project }: { project: Project }) {
                   : project.billing === "hourly"
                     ? project.hourlyRate != null
                       ? `${money(project.hourlyRate, project.currency, locale)} / hour`
-                      : "Hourly (no rate set)"
+                      : "Hourly (member or default rate)"
                     : "Not billable"
               }
             />
@@ -235,9 +235,19 @@ function ProjectView({ project }: { project: Project }) {
         hasClient={Boolean(project.clientId)}
         locale={locale}
         today={today}
+        estimateMinutes={project.estimateMinutes}
+        estimateAmount={project.estimateAmount}
+        fixedPrice={project.budgetAmount}
       />
 
-      <TaskBoard projectId={project.id} locale={locale} today={today} />
+      <TaskBoard
+        projectId={project.id}
+        locale={locale}
+        today={today}
+        pricing={
+          project.billing === "hourly" ? { currency: project.currency } : null
+        }
+      />
 
       <ProjectFormDialog
         open={editing}

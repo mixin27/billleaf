@@ -225,8 +225,16 @@ export const projectTimeSummarySchema = z.object({
   totalSeconds: z.number().int(),
   billableSeconds: z.number().int(),
   unbilledSeconds: z.number().int(),
-  /** unbilled hours × hourly rate (minor units); null when not hourly or no rate. */
+  /** Uninvoiced billable hours × current rates (minor units); null unless hourly. */
   unbilledAmount: z.number().int().nullable(),
+  /** All billable time × rate (invoiced time at its invoiced rate); null unless hourly. */
+  billableAmount: z.number().int().nullable(),
+  /** Uninvoiced billable seconds with no rate on the task, project, member or workspace. */
+  unratedSeconds: z.number().int(),
+  /** Tracked time × member cost rates; null without rate.read. */
+  cost: z.number().int().nullable(),
+  /** Seconds whose member has no cost rate in the project currency. */
+  uncostedSeconds: z.number().int(),
   currency: z.string(),
 })
 export type ProjectTimeSummary = z.infer<typeof projectTimeSummarySchema>

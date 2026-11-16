@@ -9,6 +9,7 @@ import { addDays } from "../modules/documents/party-snapshot.js"
 import { InvoiceRemindersService } from "../modules/invoices/invoice-reminders.service.js"
 import { RecurringRepository } from "../modules/recurring/recurring.repository.js"
 import { RecurringService } from "../modules/recurring/recurring.service.js"
+import { BudgetsService } from "../modules/time/budgets.service.js"
 
 /**
  * Hourly sweeps on the recurring queue:
@@ -16,7 +17,9 @@ import { RecurringService } from "../modules/recurring/recurring.service.js"
  *   context so tenant scoping applies; generation is idempotent, so
  *   overlapping or retried sweeps are safe;
  * - send payment reminders for unpaid invoices (`invoice-reminders` job,
- *   see InvoiceRemindersService).
+ *   see InvoiceRemindersService);
+ * - email owners when a project reaches 80% / 100% of its estimate
+ *   (`budget-alerts` job, see BudgetsService).
  */
 @Processor(QUEUES.recurring, { concurrency: 1 })
 export class RecurringProcessor
@@ -30,7 +33,8 @@ export class RecurringProcessor
     private readonly cls: ClsService<RequestContextStore>,
     private readonly repo: RecurringRepository,
     private readonly recurring: RecurringService,
-    private readonly reminders: InvoiceRemindersService
+    private readonly reminders: InvoiceRemindersService,
+    private readonly budgets: BudgetsService
   ) {
     super()
   }
@@ -47,11 +51,21 @@ export class RecurringProcessor
       { pattern: "35 * * * *" },
       { name: "invoice-reminders", opts: { attempts: 1 } }
     )
+    // Budget alerts for project estimates (idempotent, hourly).
+    await this.queue.upsertJobScheduler(
+      "budget-alerts",
+      { pattern: "45 * * * *" },
+      { name: "budget-alerts", opts: { attempts: 1 } }
+    )
   }
 
   async process(job: Job) {
     if (job.name === "invoice-reminders") {
       await this.reminders.run()
+      return
+    }
+    if (job.name === "budget-alerts") {
+      await this.budgets.run()
       return
     }
     // UTC tomorrow covers every timezone; the service re-checks per workspace.

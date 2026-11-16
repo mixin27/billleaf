@@ -20,6 +20,7 @@ import {
   invoiceFromTimeSchema,
   invoiceSchema,
   listTimeEntriesQuerySchema,
+  projectBudgetSchema,
   projectTimeSummarySchema,
   startTimerSchema,
   tagListSchema,
@@ -35,7 +36,11 @@ import {
 import { createZodDto, ZodResponse } from "nestjs-zod"
 import { z } from "zod"
 
-import { RequireWorkspace } from "../../common/decorators/require-permission.decorator.js"
+import {
+  RequirePermission,
+  RequireWorkspace,
+} from "../../common/decorators/require-permission.decorator.js"
+import { BudgetsService } from "./budgets.service.js"
 import { TimeService } from "./time.service.js"
 
 class TimeEntryDto extends createZodDto(timeEntrySchema) {}
@@ -48,6 +53,7 @@ class StartDto extends createZodDto(startTimerSchema) {}
 class CreateDto extends createZodDto(createTimeEntrySchema) {}
 class UpdateDto extends createZodDto(updateTimeEntrySchema) {}
 class SummaryDto extends createZodDto(projectTimeSummarySchema) {}
+class ProjectBudgetListDto extends createZodDto(z.array(projectBudgetSchema)) {}
 class InvoiceFromTimeDto extends createZodDto(invoiceFromTimeSchema) {}
 class InvoiceDto extends createZodDto(invoiceSchema) {}
 class UpdateRunningDto extends createZodDto(updateRunningSchema) {}
@@ -68,7 +74,10 @@ const uuid = new ParseUUIDPipe()
 @Controller({ version: "1" })
 @RequireWorkspace()
 export class TimeController {
-  constructor(private readonly time: TimeService) {}
+  constructor(
+    private readonly time: TimeService,
+    private readonly budgetsService: BudgetsService
+  ) {}
 
   @Get("time-entries")
   @ZodResponse({ status: 200, type: TimeEntryListDto })
@@ -178,6 +187,14 @@ export class TimeController {
   @ZodResponse({ status: 200, type: SummaryDto })
   summary(@Param("id", uuid) id: string) {
     return this.time.summary(id)
+  }
+
+  /** Active projects with an estimate, the most used first. */
+  @Get("project-budgets")
+  @RequirePermission("project.read")
+  @ZodResponse({ status: 200, type: ProjectBudgetListDto })
+  budgets() {
+    return this.budgetsService.list()
   }
 
   @Post("invoices/from-time")
