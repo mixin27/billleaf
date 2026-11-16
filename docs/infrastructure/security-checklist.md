@@ -34,6 +34,10 @@ Review before first production launch and quarterly after.
 - [ ] Review `admin.*` entries in the audit log (impersonations, bans, plan changes) monthly.
 - [ ] Sensitive actions written to `audit_logs`.
 
+## Outgoing requests
+
+- [ ] `WEBHOOKS_ALLOW_PRIVATE_URLS` is unset or `false` in production (webhooks reach only public `https://` addresses; checked at connect time, no redirects) — [ADR-0014](../adr/0014-outgoing-webhooks.md)
+
 ## Data
 
 - [ ] Postgres least-privilege app role (no superuser); separate migrate role.

@@ -67,6 +67,7 @@ Billleaf is an all-in-one business workspace for freelancers — **Client → Qu
 | [0011](adr/0011-billing-core-with-test-provider.md)   | Billing core with a built-in test provider; MoR adapter later   | Accepted |
 | [0012](adr/0012-client-portal-magic-links.md)         | Client portal with emailed magic links, on every plan           | Accepted |
 | [0013](adr/0013-manual-payments-for-subscriptions.md) | Manual subscription payments, approved by platform admins       | Accepted |
+| [0014](adr/0014-outgoing-webhooks.md)                 | Outgoing webhooks delivered by the worker, with an SSRF guard   | Accepted |
 
 New ADR: copy [the template](adr/template.md).
 

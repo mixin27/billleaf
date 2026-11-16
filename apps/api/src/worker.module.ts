@@ -11,6 +11,8 @@ import { DataExportModule } from "./modules/data-export/data-export.module.js"
 import { InvoicesModule } from "./modules/invoices/invoices.module.js"
 import { RecurringModule } from "./modules/recurring/recurring.module.js"
 import { TimeModule } from "./modules/time/time.module.js"
+import { WebhooksModule } from "./modules/webhooks/webhooks.module.js"
+import { WebhookProcessor } from "./jobs/webhook.processor.js"
 
 /** Background worker: same codebase, no HTTP. Register queue processors here. */
 @Module({
@@ -21,12 +23,14 @@ import { TimeModule } from "./modules/time/time.module.js"
     InvoicesModule,
     DataExportModule,
     TimeModule,
+    WebhooksModule,
   ],
   providers: [
     EmailProcessor,
     RecurringProcessor,
     BillingProcessor,
     ExportProcessor,
+    WebhookProcessor,
     WorkerHeartbeat,
   ],
 })

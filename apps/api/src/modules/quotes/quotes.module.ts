@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common"
 
 import { IamModule } from "../../iam/iam.module.js"
+import { WebhooksModule } from "../webhooks/webhooks.module.js"
 import { MailModule } from "../../mail/mail.module.js"
 import { PortalLinksModule } from "../portal/portal-links.module.js"
 import { ClientsModule } from "../clients/clients.module.js"
@@ -13,6 +14,7 @@ import { QuotesService } from "./quotes.service.js"
 @Module({
   imports: [
     IamModule,
+    WebhooksModule,
     MailModule,
     PortalLinksModule,
     ClientsModule,

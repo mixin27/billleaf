@@ -29,6 +29,9 @@ export const PERMISSION_CATALOG = {
     update: "Edit roles and their permissions",
     delete: "Delete custom roles",
   },
+  webhook: {
+    manage: "Manage webhooks and see their deliveries",
+  },
   billing: {
     read: "View subscription and invoices from Billleaf",
     manage: "Change plan and payment method",

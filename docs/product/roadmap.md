@@ -45,7 +45,7 @@ Phases are scope buckets, not dates. Each phase ends with a production deploy. C
 - ✅ Client portal (view/accept quotes, sign contracts, upload payment proof).
 - Online invoice payments (payment links) where a gateway is available.
 - ✅ Audit log UI (workspace and platform).
-- Integrations & outgoing webhooks.
+- ✅ Outgoing webhooks ([ADR-0014](../adr/0014-outgoing-webhooks.md)); Zapier/Make templates later.
 - i18n.
 
 ## Phase 4 — Mobile

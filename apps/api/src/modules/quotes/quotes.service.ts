@@ -40,6 +40,7 @@ import {
   QuotesRepository,
   type QuoteWithClient,
 } from "./quotes.repository.js"
+import { WebhooksService } from "../webhooks/webhooks.service.js"
 
 const DEFAULT_VALIDITY_DAYS = 30
 
@@ -104,7 +105,8 @@ export class QuotesService {
     private readonly numbering: DocumentNumberingService,
     private readonly audit: AuditService,
     private readonly mail: MailService,
-    private readonly portalLinks: PortalLinksService
+    private readonly portalLinks: PortalLinksService,
+    private readonly webhooks: WebhooksService
   ) {}
 
   private async today() {
@@ -262,7 +264,9 @@ export class QuotesService {
           ? { via: "portal", name: by.name, email: by.email }
           : undefined,
     })
-    return this.get(id)
+    const quote = await this.get(id)
+    await this.webhooks.emit(`quote.${outcome}`, quote)
+    return quote
   }
 
   /** New draft with the same client, currency and lines (any status). */

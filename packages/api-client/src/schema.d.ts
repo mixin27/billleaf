@@ -612,6 +612,102 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  "/v1/webhooks": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["WebhooksController_list_v1"]
+    put?: never
+    post: operations["WebhooksController_create_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/webhooks/{id}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    delete: operations["WebhooksController_remove_v1"]
+    options?: never
+    head?: never
+    patch: operations["WebhooksController_update_v1"]
+    trace?: never
+  }
+  "/v1/webhooks/{id}/rotate-secret": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["WebhooksController_rotate_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/webhooks/{id}/test": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["WebhooksController_test_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/webhooks/{id}/deliveries": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["WebhooksController_deliveries_v1"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/webhook-deliveries/{id}/resend": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["WebhooksController_resend_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   "/v1/payment-accounts": {
     parameters: {
       query?: never
@@ -2518,6 +2614,7 @@ export interface components {
         | "role.create"
         | "role.update"
         | "role.delete"
+        | "webhook.manage"
         | "billing.read"
         | "billing.manage"
         | "audit.read"
@@ -2579,6 +2676,7 @@ export interface components {
         | "role.create"
         | "role.update"
         | "role.delete"
+        | "webhook.manage"
         | "billing.read"
         | "billing.manage"
         | "audit.read"
@@ -2638,6 +2736,7 @@ export interface components {
         | "role.create"
         | "role.update"
         | "role.delete"
+        | "webhook.manage"
         | "billing.read"
         | "billing.manage"
         | "audit.read"
@@ -2695,6 +2794,7 @@ export interface components {
         | "role.create"
         | "role.update"
         | "role.delete"
+        | "webhook.manage"
         | "billing.read"
         | "billing.manage"
         | "audit.read"
@@ -2747,6 +2847,7 @@ export interface components {
         | "role.create"
         | "role.update"
         | "role.delete"
+        | "webhook.manage"
         | "billing.read"
         | "billing.manage"
         | "audit.read"
@@ -3209,6 +3310,142 @@ export interface components {
     }
     VoidInvoiceDto: {
       reason: string
+    }
+    WebhookEndpointListDto_Output: {
+      items: {
+        id: string
+        url: string
+        description: string | null
+        events: string[]
+        secretHint: string
+        enabled: boolean
+        disabledReason: string | null
+        consecutiveFailures: number
+        lastDelivery: {
+          /** @enum {string} */
+          status: "pending" | "succeeded" | "failed"
+          /** Format: date-time */
+          createdAt: string
+        } | null
+        /** Format: date-time */
+        createdAt: string
+      }[]
+      available: boolean
+    }
+    CreateWebhookEndpointDto: {
+      /** Format: uri */
+      url: string
+      description?: string | null
+      events: (
+        | "client.created"
+        | "quote.accepted"
+        | "quote.declined"
+        | "contract.signed"
+        | "invoice.issued"
+        | "invoice.sent"
+        | "invoice.paid"
+        | "invoice.voided"
+        | "payment.recorded"
+        | "payment_proof.submitted"
+      )[]
+    }
+    WebhookSecretDto_Output: {
+      endpoint: {
+        id: string
+        url: string
+        description: string | null
+        events: string[]
+        secretHint: string
+        enabled: boolean
+        disabledReason: string | null
+        consecutiveFailures: number
+        lastDelivery: {
+          /** @enum {string} */
+          status: "pending" | "succeeded" | "failed"
+          /** Format: date-time */
+          createdAt: string
+        } | null
+        /** Format: date-time */
+        createdAt: string
+      }
+      secret: string
+    }
+    UpdateWebhookEndpointDto: {
+      /** Format: uri */
+      url?: string
+      description?: string | null
+      events?: (
+        | "client.created"
+        | "quote.accepted"
+        | "quote.declined"
+        | "contract.signed"
+        | "invoice.issued"
+        | "invoice.sent"
+        | "invoice.paid"
+        | "invoice.voided"
+        | "payment.recorded"
+        | "payment_proof.submitted"
+      )[]
+      enabled?: boolean
+    }
+    WebhookEndpointDto_Output: {
+      id: string
+      url: string
+      description: string | null
+      events: string[]
+      secretHint: string
+      enabled: boolean
+      disabledReason: string | null
+      consecutiveFailures: number
+      lastDelivery: {
+        /** @enum {string} */
+        status: "pending" | "succeeded" | "failed"
+        /** Format: date-time */
+        createdAt: string
+      } | null
+      /** Format: date-time */
+      createdAt: string
+    }
+    WebhookDeliveryDto_Output: {
+      id: string
+      endpointId: string
+      eventId: string
+      eventType: string
+      /** @enum {string} */
+      status: "pending" | "succeeded" | "failed"
+      attempts: number
+      responseStatus: number | null
+      responseBody: string | null
+      error: string | null
+      durationMs: number | null
+      payload: unknown
+      /** Format: date-time */
+      deliveredAt: string | null
+      /** Format: date-time */
+      createdAt: string
+    }
+    WebhookDeliveryListDto_Output: {
+      items: {
+        id: string
+        endpointId: string
+        eventId: string
+        eventType: string
+        /** @enum {string} */
+        status: "pending" | "succeeded" | "failed"
+        attempts: number
+        responseStatus: number | null
+        responseBody: string | null
+        error: string | null
+        durationMs: number | null
+        payload: unknown
+        /** Format: date-time */
+        deliveredAt: string | null
+        /** Format: date-time */
+        createdAt: string
+      }[]
+      total: number
+      page: number
+      pageSize: number
     }
     PaymentAccountListDto_Output: {
       items: {
@@ -5189,7 +5426,7 @@ export interface components {
       items: {
         id: string
         /** @enum {string} */
-        queue: "email" | "recurring" | "billing" | "exports"
+        queue: "email" | "recurring" | "billing" | "exports" | "webhooks"
         name: string
         attemptsMade: number
         failedReason: string | null
@@ -5201,7 +5438,7 @@ export interface components {
       }[]
       counts: {
         /** @enum {string} */
-        queue: "email" | "recurring" | "billing" | "exports"
+        queue: "email" | "recurring" | "billing" | "exports" | "webhooks"
         failed: number
         waiting: number
         active: number
@@ -6653,6 +6890,180 @@ export interface operations {
         }
         content: {
           "application/json": components["schemas"]["InvoiceDto_Output"]
+        }
+      }
+    }
+  }
+  WebhooksController_list_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["WebhookEndpointListDto_Output"]
+        }
+      }
+    }
+  }
+  WebhooksController_create_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateWebhookEndpointDto"]
+      }
+    }
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["WebhookSecretDto_Output"]
+        }
+      }
+    }
+  }
+  WebhooksController_remove_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  WebhooksController_update_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateWebhookEndpointDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["WebhookEndpointDto_Output"]
+        }
+      }
+    }
+  }
+  WebhooksController_rotate_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["WebhookSecretDto_Output"]
+        }
+      }
+    }
+  }
+  WebhooksController_test_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["WebhookDeliveryDto_Output"]
+        }
+      }
+    }
+  }
+  WebhooksController_deliveries_v1: {
+    parameters: {
+      query?: {
+        page?: number
+        pageSize?: number
+        status?: "pending" | "succeeded" | "failed"
+      }
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["WebhookDeliveryListDto_Output"]
+        }
+      }
+    }
+  }
+  WebhooksController_resend_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["WebhookDeliveryDto_Output"]
         }
       }
     }
@@ -9590,7 +10001,7 @@ export interface operations {
   AdminController_jobs_v1: {
     parameters: {
       query?: {
-        queue?: "email" | "recurring" | "billing" | "exports"
+        queue?: "email" | "recurring" | "billing" | "exports" | "webhooks"
         state?: "failed" | "delayed" | "waiting" | "active" | "completed"
       }
       header?: never

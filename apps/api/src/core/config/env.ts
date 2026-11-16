@@ -82,6 +82,15 @@ export const envSchema = z.object({
   /** Build version (git sha), baked into the image; shown by /health/live. */
   APP_VERSION: z.string().default("dev"),
 
+  /**
+   * Let webhooks reach http:// and private/local addresses. Defaults to on
+   * outside production (local testing) and off in production.
+   */
+  WEBHOOKS_ALLOW_PRIVATE_URLS: z
+    .enum(["true", "false"])
+    .optional()
+    .transform((v) => (v === undefined ? undefined : v === "true")),
+
   SMTP_URL: z.string().default("smtp://localhost:1025"),
   EMAIL_FROM: z.string().default("Billleaf <no-reply@billleaf.local>"),
 })

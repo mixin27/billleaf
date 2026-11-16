@@ -1,7 +1,9 @@
 import { readFileSync } from "node:fs"
 import zlib from "node:zlib"
 
-import { createHash } from "node:crypto"
+import { createHash, createHmac } from "node:crypto"
+import { createServer, type IncomingHttpHeaders } from "node:http"
+import type { AddressInfo } from "node:net"
 
 import {
   auditLogs,
@@ -12,6 +14,7 @@ import {
   roles,
   syncPermissions,
   timeEntries,
+  webhookEndpoints,
   workspaceSubscriptions,
 } from "@workspace/db"
 import { and, eq } from "drizzle-orm"
@@ -26,6 +29,7 @@ import { addInterval } from "../../src/billing/period.js"
 import { DataExportService } from "../../src/modules/data-export/data-export.service.js"
 import { InvoiceRemindersService } from "../../src/modules/invoices/invoice-reminders.service.js"
 import { BudgetsService } from "../../src/modules/time/budgets.service.js"
+import { WebhookDeliveryService } from "../../src/modules/webhooks/webhook-delivery.service.js"
 import { SubscriptionRemindersService } from "../../src/billing/manual/subscription-reminders.service.js"
 import { MailService } from "../../src/mail/mail.service.js"
 import type { TestBillingProvider } from "../../src/billing/providers/test-billing.provider.js"
@@ -3235,6 +3239,7 @@ describe("platform admin portal", () => {
       "recurring",
       "billing",
       "exports",
+      "webhooks",
     ])
   })
 })
@@ -4123,6 +4128,218 @@ describe("rates and budgets", () => {
       ).toBe("no_hourly_rate")
     } finally {
       spy.mockRestore()
+    }
+  })
+})
+
+describe("outgoing webhooks", () => {
+  it("is plan-gated, signs deliveries, retries, resends, and turns off failing endpoints", async () => {
+    // A local receiver: /ok answers 200, /fail answers 500.
+    const received: {
+      path: string
+      headers: IncomingHttpHeaders
+      body: string
+    }[] = []
+    const server = createServer((req, res) => {
+      let body = ""
+      req.on("data", (c) => (body += c))
+      req.on("end", () => {
+        received.push({ path: req.url ?? "", headers: req.headers, body })
+        res.statusCode = req.url?.startsWith("/fail") ? 500 : 200
+        res.end(req.url?.startsWith("/fail") ? "nope" : "ok")
+      })
+    })
+    await new Promise<void>((r) => server.listen(0, "127.0.0.1", r))
+    const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`
+    const mail = t.app.get(MailService)
+    const sent: any[] = []
+    const spy = vi
+      .spyOn(mail, "send")
+      .mockImplementation(async (m) => void sent.push(m))
+    const deliver = t.app.get(WebhookDeliveryService)
+    try {
+      const owner = new Client(t)
+      const { email: ownerEmail } = await owner.signUp("Hook Owner")
+      const ws = await owner.createWorkspace("Hooked Studio")
+      await owner.patch("/v1/workspace", { timezone: "UTC" })
+
+      // Free plan: listed as unavailable, can't add one.
+      expect((await owner.get("/v1/webhooks")).body).toEqual({
+        items: [],
+        available: false,
+      })
+      const free = await owner.post("/v1/webhooks", {
+        url: `${base}/ok`,
+        events: ["client.created"],
+      })
+      expect(free.body.code).toBe("feature_not_in_plan")
+      await t.db
+        .update(workspaceSubscriptions)
+        .set({ planKey: "pro" })
+        .where(eq(workspaceSubscriptions.workspaceId, ws.id))
+
+      expect(
+        (
+          await owner.post("/v1/webhooks", {
+            url: "ftp://example.com",
+            events: ["client.created"],
+          })
+        ).status
+      ).toBe(422)
+      expect(
+        (await owner.post("/v1/webhooks", { url: `${base}/ok`, events: [] }))
+          .status
+      ).toBe(422)
+      const created = await owner.post("/v1/webhooks", {
+        url: `${base}/ok`,
+        description: "Accounting",
+        events: [
+          "client.created",
+          "invoice.issued",
+          "invoice.paid",
+          "payment.recorded",
+        ],
+      })
+      expect(created.status).toBe(201)
+      const secret: string = created.body.secret
+      expect(secret).toMatch(/^whsec_/)
+      expect(created.body.endpoint.secretHint).toBe(
+        `whsec_…${secret.slice(-4)}`
+      )
+      const hookId: string = created.body.endpoint.id
+      const deliveries = async (status?: string) =>
+        (
+          await owner.get(
+            `/v1/webhooks/${hookId}/deliveries${status ? `?status=${status}` : ""}`
+          )
+        ).body.items as any[]
+
+      // Events fire for subscribed types only.
+      const client = (
+        await owner.post("/v1/clients", { name: "Hooked Client" })
+      ).body
+      const quoteLike = await owner.post("/v1/quotes", {
+        clientId: client.id,
+        lines: [{ description: "x", quantity: 1, unitPrice: 100 }],
+      })
+      expect(quoteLike.status).toBe(201) // quote.created isn't an event
+      let list = await deliveries()
+      expect(list.map((d) => d.eventType)).toEqual(["client.created"])
+      expect(list[0].status).toBe("pending")
+
+      // Delivery: signed POST, recorded as delivered.
+      expect(await deliver.attempt(list[0].id, false)).toBe("succeeded")
+      const req = received.at(-1)!
+      expect(req.path).toBe("/ok")
+      expect(req.headers["billleaf-event"]).toBe("client.created")
+      expect(req.headers["billleaf-delivery"]).toBe(list[0].id)
+      const [, t0, v1] = /^t=(\d+),v1=([0-9a-f]{64})$/.exec(
+        String(req.headers["billleaf-signature"])
+      )!
+      expect(v1).toBe(
+        createHmac("sha256", secret).update(`${t0}.${req.body}`).digest("hex")
+      )
+      const payload = JSON.parse(req.body)
+      expect(payload).toMatchObject({
+        id: list[0].eventId,
+        type: "client.created",
+        workspaceId: ws.id,
+        data: { object: { id: client.id, name: "Hooked Client" } },
+      })
+      list = await deliveries()
+      expect(list[0]).toMatchObject({
+        status: "succeeded",
+        attempts: 1,
+        responseStatus: 200,
+        responseBody: "ok",
+      })
+      expect(await deliver.attempt(list[0].id, false)).toBe("skipped")
+
+      // Invoice issued, then paid in full: issued, payment.recorded, paid.
+      const invoice = (
+        await owner.post("/v1/invoices", {
+          clientId: client.id,
+          lines: [{ description: "Work", quantity: 1, unitPrice: 20_000 }],
+        })
+      ).body
+      await owner.post(`/v1/invoices/${invoice.id}/issue`)
+      await owner.post(`/v1/invoices/${invoice.id}/payments`, {
+        amount: 20_000,
+      })
+      list = await deliveries()
+      expect(
+        list
+          .slice(0, 3)
+          .map((d) => d.eventType)
+          .sort()
+      ).toEqual(["invoice.issued", "invoice.paid", "payment.recorded"])
+      expect(
+        list.find((d) => d.eventType === "invoice.paid").payload.data.object
+      ).toMatchObject({ id: invoice.id, amountDue: 0 })
+
+      // Test event and resend (same event id, new delivery).
+      const ping = await owner.post(`/v1/webhooks/${hookId}/test`)
+      expect(ping.body).toMatchObject({ eventType: "ping", status: "pending" })
+      const again = await owner.post(
+        `/v1/webhook-deliveries/${list.at(-1).id}/resend`
+      )
+      expect(again.body.eventId).toBe(list.at(-1).eventId)
+      expect(again.body.id).not.toBe(list.at(-1).id)
+
+      // Failing endpoint: retried, then failed; the 10th in a row turns it off.
+      await owner.patch(`/v1/webhooks/${hookId}`, { url: `${base}/fail` })
+      const failing = (await owner.post(`/v1/webhooks/${hookId}/test`)).body
+      expect(await deliver.attempt(failing.id, false)).toBe("retry")
+      let row = (await deliveries()).find((d) => d.id === failing.id)
+      expect(row).toMatchObject({
+        status: "pending",
+        attempts: 1,
+        responseStatus: 500,
+        error: "HTTP 500",
+      })
+      await t.db
+        .update(webhookEndpoints)
+        .set({ consecutiveFailures: 8 })
+        .where(eq(webhookEndpoints.id, hookId))
+      expect(await deliver.attempt(failing.id, true)).toBe("failed")
+      let hook = (await owner.get("/v1/webhooks")).body.items[0]
+      expect(hook).toMatchObject({ enabled: true, consecutiveFailures: 9 })
+      const tenth = (await owner.post(`/v1/webhooks/${hookId}/test`)).body
+      sent.length = 0
+      expect(await deliver.attempt(tenth.id, true)).toBe("failed")
+      hook = (await owner.get("/v1/webhooks")).body.items[0]
+      expect(hook).toMatchObject({ enabled: false, consecutiveFailures: 10 })
+      expect(hook.disabledReason).toContain("10 failed deliveries")
+      expect(sent.map((m) => [m.to, m.subject])).toEqual([
+        [ownerEmail, "A webhook was turned off"],
+      ])
+      // Turned off: no new deliveries; turning it on clears the count.
+      const before = (await deliveries()).length
+      await owner.post("/v1/clients", { name: "Ignored" })
+      expect(await deliveries()).toHaveLength(before)
+      hook = (await owner.patch(`/v1/webhooks/${hookId}`, { enabled: true }))
+        .body
+      expect(hook).toMatchObject({
+        enabled: true,
+        consecutiveFailures: 0,
+        disabledReason: null,
+      })
+
+      // Rotating changes the secret; members can't manage webhooks.
+      const rotated = (await owner.post(`/v1/webhooks/${hookId}/rotate-secret`))
+        .body
+      expect(rotated.secret).not.toBe(secret)
+      const memberRole = (await owner.get("/v1/roles")).body.find(
+        (r: { slug: string }) => r.slug === "member"
+      )
+      expect(memberRole.permissions).not.toContain("webhook.manage")
+
+      // Deleting removes it and its log.
+      expect((await owner.del(`/v1/webhooks/${hookId}`)).status).toBe(204)
+      expect((await owner.get("/v1/webhooks")).body.items).toEqual([])
+    } finally {
+      spy.mockRestore()
+      server.close()
     }
   })
 })

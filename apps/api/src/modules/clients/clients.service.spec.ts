@@ -64,7 +64,9 @@ function setup(
   } as unknown as EntitlementsService
   const audit = { record: vi.fn() } as unknown as AuditService
   return {
-    service: new ClientsService(repo, entitlements, audit),
+    service: new ClientsService(repo, entitlements, audit, {
+      emit: vi.fn(),
+    } as never),
     repo,
     entitlements,
     audit,

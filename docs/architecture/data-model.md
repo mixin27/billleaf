@@ -222,3 +222,12 @@ Portal routes live under `/v1/portal/{slug}`. `PortalGuard` turns the cookie int
 **Rejecting** stores a reason and emails the client a portal link to try again.
 
 Pending proofs show on the invoice page, the payments page and the dashboard.
+
+### Webhooks (`webhooks.ts`)
+
+| Table                | Notes                                                                                                                                                                                                                                                            |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `webhook_endpoints`  | `url`, `description`, `events` (text[]), `secret` (`whsec_…`, needed to sign), `enabled`, `disabled_reason`, `consecutive_failures`                                                                                                                              |
+| `webhook_deliveries` | `endpoint_id` (cascade), `event_id` (same across resends), `event_type`, `payload` (jsonb, frozen), `status` (pending / succeeded / failed), `attempts`, `response_status`, `response_body` (1 KB), `error`, `duration_ms`, `delivered_at`; pruned after 30 days |
+
+See [webhooks](webhooks.md).
