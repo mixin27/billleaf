@@ -1,7 +1,7 @@
 import type { OpenAPIObject } from "@nestjs/swagger"
 import { describe, expect, it } from "vitest"
 
-import { publicOpenApi } from "./public-openapi.js"
+import { operationNames, publicOpenApi } from "./public-openapi.js"
 
 const ref = (n: string) => ({ $ref: `#/components/schemas/${n}` })
 
@@ -53,5 +53,22 @@ describe("publicOpenApi", () => {
     expect(doc.tags).toEqual([{ name: "clients" }])
     expect(doc.paths["/v1/clients"]!.get!.security).toEqual([{ apiKey: [] }])
     expect(doc.servers).toEqual([{ url: "https://api.example.com" }])
+  })
+
+  it("names operations readably", () => {
+    expect(operationNames("ClientsController_addContact_v1")).toEqual({
+      id: "clients-add-contact",
+      summary: "Add contact",
+    })
+    expect(operationNames("ClientsController_list_v1").summary).toBe(
+      "List clients"
+    )
+    expect(operationNames("ContractTemplatesController_get_v1")).toEqual({
+      id: "contract-templates-get",
+      summary: "Get contract template",
+    })
+    expect(operationNames("TimeReportsController_summary_v1").summary).toBe(
+      "Summary (time reports)"
+    )
   })
 })

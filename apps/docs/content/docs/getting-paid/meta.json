@@ -1,0 +1,12 @@
+{
+  "title": "Getting paid",
+  "pages": [
+    "invoices",
+    "payment-methods",
+    "payment-proofs",
+    "payments-and-receipts",
+    "reminders",
+    "recurring-invoices",
+    "credit-notes"
+  ]
+}

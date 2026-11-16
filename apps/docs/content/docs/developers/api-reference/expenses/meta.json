@@ -1,0 +1,17 @@
+{
+  "title": "Expenses",
+  "pages": [
+    "expenses-categories",
+    "expenses-create-category",
+    "expenses-update-category",
+    "expenses-list",
+    "expenses-create",
+    "expenses-get",
+    "expenses-update",
+    "expenses-remove",
+    "expenses-remove-receipt",
+    "expenses-set-receipt",
+    "expenses-invoice-from-expenses",
+    "expenses-profit-loss"
+  ]
+}

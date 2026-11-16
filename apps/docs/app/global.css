@@ -1,0 +1,25 @@
+@import "tailwindcss";
+@import "fumadocs-ui/css/neutral.css";
+@import "fumadocs-ui/css/preset.css";
+@import "fumadocs-openapi/css/preset.css";
+
+/* Billleaf brand colours (see packages/ui globals and docs/product/brand.md). */
+:root {
+  --color-fd-primary: oklch(0.527 0.154 150.069);
+  --color-fd-primary-foreground: oklch(0.982 0.018 155.826);
+  --color-fd-ring: oklch(0.527 0.154 150.069);
+}
+.dark {
+  --color-fd-primary: oklch(0.723 0.191 149.579);
+  --color-fd-primary-foreground: oklch(0.2 0.04 155);
+  --color-fd-ring: oklch(0.723 0.191 149.579);
+}
+
+html {
+  scrollbar-gutter: stable;
+}
+
+html > body[data-scroll-locked] {
+  margin-right: 0px !important;
+  --removed-body-scroll-bar-size: 0px !important;
+}

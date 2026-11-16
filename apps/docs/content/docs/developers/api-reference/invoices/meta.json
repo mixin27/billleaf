@@ -1,0 +1,23 @@
+{
+  "title": "Invoices",
+  "pages": [
+    "invoices-list",
+    "invoices-create",
+    "invoices-get",
+    "invoices-update",
+    "invoices-remove",
+    "invoices-pdf",
+    "invoices-from-quote",
+    "invoices-issue",
+    "invoices-send",
+    "invoices-set-reminders",
+    "invoices-void",
+    "invoices-duplicate",
+    "credit-notes-list",
+    "credit-notes-get",
+    "credit-notes-pdf",
+    "credit-notes-create",
+    "credit-notes-void",
+    "credit-notes-send"
+  ]
+}

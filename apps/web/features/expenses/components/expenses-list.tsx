@@ -46,6 +46,7 @@ import { PageHeader } from "@/components/page-header"
 import { Can, usePermissions } from "@/components/permissions/can"
 import { useWorkspaceProfile, useWorkspaceStore } from "@/features/workspace"
 import { errorMessage } from "@/lib/api"
+import { docsUrl } from "@/lib/docs"
 import { formatDate, money } from "@/lib/format"
 
 import {
@@ -219,7 +220,20 @@ export function ExpensesList() {
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Expenses"
-        description="What the business spends, with receipts. Bill expenses to clients from their page."
+        description={
+          <>
+            What the business spends, with receipts. Bill expenses to clients
+            from their page.{" "}
+            <a
+              className="underline"
+              href={docsUrl("/docs/books/expenses")}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Learn more
+            </a>
+          </>
+        }
         actions={
           <div className="flex flex-wrap gap-2">
             <Can permission="expense.update">

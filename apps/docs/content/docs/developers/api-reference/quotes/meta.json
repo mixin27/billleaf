@@ -1,0 +1,16 @@
+{
+  "title": "Quotes",
+  "pages": [
+    "quotes-list",
+    "quotes-create",
+    "quotes-get",
+    "quotes-update",
+    "quotes-remove",
+    "quotes-send",
+    "quotes-accept",
+    "quotes-decline",
+    "quotes-duplicate",
+    "quotes-pdf",
+    "quotes-email"
+  ]
+}

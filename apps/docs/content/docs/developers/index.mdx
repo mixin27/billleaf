@@ -1,0 +1,29 @@
+---
+title: Developer overview
+description: Connect Billleaf to your own tools with the REST API and webhooks.
+---
+
+Billleaf has two building blocks for integrations, on the **Pro** and **Team** plans:
+
+<Cards>
+  <Card title="API keys" href="/docs/developers/api-keys" description="Call the REST API from scripts, Zapier, Make or n8n." />
+  <Card title="Webhooks" href="/docs/developers/webhooks" description="Get notified when invoices are paid, quotes accepted and more." />
+  <Card title="API reference" href="/docs/developers/api-reference" description="Every endpoint an API key can use." />
+</Cards>
+
+## A quick example
+
+Create a key in **Settings → API keys** — the page also shows your API address — then:
+
+```bash
+curl "$BILLLEAF_API_URL/v1/clients" \
+  -H "Authorization: Bearer blk_your_key"
+```
+
+## Conventions
+
+- **JSON over HTTPS**; dates are `YYYY-MM-DD`, times are ISO 8601 in UTC.
+- **Money** is an integer in minor units with an ISO currency code: `12345` with `USD` means $123.45. Currencies without minor units (like JPY) are whole amounts.
+- **Lists are paged**: `?page=1&pageSize=25`, and responses include `items`, `total`, `page` and `pageSize`. Many lists accept `sort=field:asc|desc` and filters.
+- **Errors** use [problem details](https://www.rfc-editor.org/rfc/rfc9457) JSON with a `code` you can match on.
+- **Issued documents are immutable**: invoices and receipts can't be edited once issued; void them or issue credit notes.

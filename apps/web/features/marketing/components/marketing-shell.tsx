@@ -1,5 +1,8 @@
 import { Button } from "@workspace/ui/components/button"
+import { Logo } from "@workspace/brand/logo"
 import Link from "next/link"
+
+import { docsUrl } from "@/lib/docs"
 
 import { siteConfig } from "@/config/site"
 
@@ -16,8 +19,8 @@ export async function MarketingShell({
     <div className="flex min-h-svh flex-col bg-background">
       <header className="sticky top-0 z-20 border-b bg-background/90 backdrop-blur">
         <div className="mx-auto flex h-14 max-w-6xl items-center gap-4 px-4 sm:px-6">
-          <Link href="/" className="text-lg font-semibold tracking-tight">
-            billleaf
+          <Link href="/" aria-label="billleaf home">
+            <Logo height={34} />
           </Link>
           <nav className="ml-auto flex items-center gap-1 sm:gap-2">
             <Button
@@ -27,6 +30,14 @@ export async function MarketingShell({
               render={<Link href="/pricing" />}
             >
               Pricing
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              nativeButton={false}
+              render={<a href={docsUrl()} />}
+            >
+              Docs
             </Button>
             {signedIn ? (
               <Button
@@ -68,6 +79,15 @@ export async function MarketingShell({
             <Link href="/pricing" className="hover:text-foreground">
               Pricing
             </Link>
+            <a href={docsUrl()} className="hover:text-foreground">
+              Docs
+            </a>
+            <a
+              href={docsUrl("/docs/developers")}
+              className="hover:text-foreground"
+            >
+              Developers
+            </a>
             <Link href="/terms" className="hover:text-foreground">
               Terms
             </Link>

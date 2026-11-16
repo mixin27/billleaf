@@ -1,0 +1,15 @@
+{
+  "title": "Projects",
+  "pages": [
+    "projects-list",
+    "projects-create",
+    "projects-get",
+    "projects-update",
+    "projects-remove",
+    "projects-from-quote",
+    "projects-tasks",
+    "projects-create-task",
+    "projects-update-task",
+    "projects-delete-task"
+  ]
+}

@@ -1,0 +1,49 @@
+---
+title: API keys
+description: Authenticate API requests with a workspace key.
+---
+
+## Creating a key
+
+In **Settings → API keys** (owners and admins), click **Create API key**, give it a name, choose when it expires (30, 90 or 365 days, or never) and pick its permissions — **Read only**, **Read & write**, or individual ones. The key is shown **once**; store it like a password.
+
+## Using it
+
+Send it in the `Authorization` header. `BILLLEAF_API_URL` is the API address shown on the API keys page:
+
+```bash
+curl "$BILLLEAF_API_URL/v1/invoices?status=overdue" \
+  -H "Authorization: Bearer blk_your_key"
+```
+
+```js
+const res = await fetch(`${process.env.BILLLEAF_API_URL}/v1/clients`, {
+  method: "POST",
+  headers: {
+    Authorization: `Bearer ${process.env.BILLLEAF_API_KEY}`,
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({ name: "Acme Ltd", email: "billing@acme.test" }),
+})
+```
+
+## What a key can do
+
+- A key belongs to **one workspace** — no workspace header is needed.
+- It **acts as the person who created it**, limited to the permissions you picked, and never more than that person can do today. Audit entries show the person and "via API key *name*".
+- Keys can reach clients, quotes, contracts, projects and tasks, time, invoices, credit notes, recurring invoices, payments, expenses and the workspace profile. They can **never** reach billing, members, roles, settings, webhooks, API keys, data export, workspace deletion or the admin portal.
+- If the creator leaves the workspace, their keys stop working. If the workspace's plan no longer includes the Developer API, keys stop until it's upgraded.
+
+## Limits and errors
+
+Each key can make **120 requests a minute**; beyond that you get `429` — wait and retry.
+
+| Status | `code` | Meaning |
+| --- | --- | --- |
+| 401 | `invalid_api_key` | Unknown, revoked or expired key |
+| 403 | `api_key_scope_missing` | The key (or its creator) lacks the needed permission |
+| 403 | `api_key_wrong_workspace` | An `X-Workspace-Id` header named another workspace |
+| 403 | `not_available_with_api_key` | This endpoint needs a signed-in person |
+| 403 | `feature_not_in_plan` | The workspace's plan doesn't include the Developer API |
+
+Revoke a key any time from the same page; it stops working immediately.

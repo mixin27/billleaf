@@ -1,0 +1,6 @@
+{
+  "extends": "@workspace/typescript-config/react-library.json",
+  "compilerOptions": { "module": "esnext", "moduleResolution": "bundler" },
+  "include": ["src", "scripts"],
+  "exclude": ["node_modules", "assets"]
+}

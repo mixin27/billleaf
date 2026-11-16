@@ -23,13 +23,13 @@ import {
   Building03Icon,
   CheckmarkBadge01Icon,
   DashboardSquare01Icon,
-  Shield01Icon,
   Tag01Icon,
   Task01Icon,
   UserGroupIcon,
   WorkHistoryIcon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react"
+import { LogoMark } from "@workspace/brand/logo"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import * as React from "react"
@@ -135,9 +135,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton size="lg" render={<Link href="/admin" />}>
-                <span className="flex size-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
-                  <HugeiconsIcon icon={Shield01Icon} strokeWidth={1.8} />
-                </span>
+                <LogoMark size={32} />
                 <span className="flex flex-col leading-tight">
                   <span className="font-semibold">Billleaf</span>
                   <span className="text-xs text-muted-foreground">

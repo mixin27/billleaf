@@ -1,0 +1,15 @@
+{
+  "title": "Clients",
+  "pages": [
+    "clients-list",
+    "clients-create",
+    "clients-get",
+    "clients-update",
+    "clients-remove",
+    "clients-archive",
+    "clients-restore",
+    "clients-add-contact",
+    "clients-update-contact",
+    "clients-remove-contact"
+  ]
+}

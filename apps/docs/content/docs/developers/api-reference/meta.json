@@ -1,0 +1,13 @@
+{
+  "pages": [
+    "invoices",
+    "clients",
+    "quotes",
+    "payments",
+    "contracts",
+    "recurring-invoices",
+    "expenses",
+    "projects",
+    "time"
+  ]
+}
