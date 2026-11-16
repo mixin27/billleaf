@@ -91,7 +91,7 @@ export const envSchema = z.object({
     .optional()
     .transform((v) => (v === undefined ? undefined : v === "true")),
 
-  SMTP_URL: z.string().default("smtp://localhost:1025"),
+  SMTP_URL: z.string().default("smtp://127.0.0.1:1025"),
   EMAIL_FROM: z.string().default("Billleaf <no-reply@billleaf.local>"),
 })
 

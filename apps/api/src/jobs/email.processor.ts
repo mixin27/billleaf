@@ -14,7 +14,15 @@ export class EmailProcessor extends WorkerHost {
 
   constructor(@Inject(ENV) private readonly env: Env) {
     super()
-    this.transport = nodemailer.createTransport(env.SMTP_URL)
+    // Fail fast (and retry) instead of hanging past the job lock: a slow
+    // DNS lookup or an unresponsive server otherwise stalls the queue.
+    this.transport = nodemailer.createTransport({
+      url: env.SMTP_URL,
+      connectionTimeout: 10_000,
+      greetingTimeout: 10_000,
+      socketTimeout: 20_000,
+      dnsTimeout: 10_000,
+    })
   }
 
   async process(job: Job<EmailMessage>) {
