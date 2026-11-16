@@ -28,7 +28,7 @@ type Plan = {
     recurringInvoices: boolean
     timeTracking: boolean
     customRoles: boolean
-    webhooks: boolean
+    developerApi: boolean
   }
 }
 
@@ -43,7 +43,7 @@ export const PLANS = {
       recurringInvoices: false,
       timeTracking: true,
       customRoles: false,
-      webhooks: false,
+      developerApi: false,
     },
   },
   pro: {
@@ -61,7 +61,7 @@ export const PLANS = {
       recurringInvoices: true,
       timeTracking: true,
       customRoles: false,
-      webhooks: true,
+      developerApi: true,
     },
   },
   team: {
@@ -79,7 +79,7 @@ export const PLANS = {
       recurringInvoices: true,
       timeTracking: true,
       customRoles: true,
-      webhooks: true,
+      developerApi: true,
     },
   },
 } as const satisfies Record<PlanKey, Plan>
@@ -98,7 +98,7 @@ export const FEATURE_LABELS: Record<FeatureKey, string> = {
   recurringInvoices: "Recurring invoices",
   timeTracking: "Time tracking",
   customRoles: "Custom roles & permissions",
-  webhooks: "Webhooks to connect other apps",
+  developerApi: "Developer API & webhooks",
 }
 
 export function isPlanKey(v: string): v is PlanKey {

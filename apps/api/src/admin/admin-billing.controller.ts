@@ -38,6 +38,7 @@ import { readMultipart } from "../common/http/multipart.js"
 import { PlatformBillingService } from "../billing/manual/platform-billing.service.js"
 import { SubscriptionPaymentsService } from "../billing/manual/subscription-payments.service.js"
 import { PlatformAdminGuard } from "./platform-admin.guard.js"
+import { SessionOnly } from "../common/decorators/require-permission.decorator.js"
 
 class PlatformPriceDto extends createZodDto(platformPriceSchema) {}
 class PlatformPriceListDto extends createZodDto(platformPriceListSchema) {}
@@ -76,6 +77,7 @@ const uuid = new ParseUUIDPipe()
 
 /** Manual SaaS billing for platform admins: prices, payment methods, approvals. */
 @ApiTags("admin")
+@SessionOnly()
 @Controller({ path: "admin", version: "1" })
 @UseGuards(PlatformAdminGuard)
 @Throttle({ default: { limit: 120, ttl: 60_000 } })

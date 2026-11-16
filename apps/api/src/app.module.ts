@@ -1,8 +1,7 @@
 import { Module } from "@nestjs/common"
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from "@nestjs/core"
-import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler"
+import { ThrottlerModule } from "@nestjs/throttler"
 import { SentryModule } from "@sentry/nestjs/setup"
-import { AuthGuard } from "@thallesp/nestjs-better-auth"
 import { ZodSerializerInterceptor, ZodValidationPipe } from "nestjs-zod"
 
 import { AuthModule } from "./auth/auth.module.js"
@@ -23,6 +22,8 @@ import { PortalModule } from "./modules/portal/portal.module.js"
 import { RatesModule } from "./modules/rates/rates.module.js"
 import { TimeModule } from "./modules/time/time.module.js"
 import { WebhooksModule } from "./modules/webhooks/webhooks.module.js"
+import { AppThrottlerGuard } from "./iam/api-keys/api-key-throttler.guard.js"
+import { AppAuthGuard } from "./iam/api-keys/app-auth.guard.js"
 import { ContractsModule } from "./modules/contracts/contracts.module.js"
 import { QuotesModule } from "./modules/quotes/quotes.module.js"
 import { RecurringModule } from "./modules/recurring/recurring.module.js"
@@ -58,8 +59,9 @@ import { WorkspaceProfileModule } from "./modules/workspace/workspace-profile.mo
   ],
   providers: [
     // Guard order matters: rate limit → session → workspace/RBAC.
-    { provide: APP_GUARD, useClass: ThrottlerGuard },
-    { provide: APP_GUARD, useClass: AuthGuard },
+    // AppAuthGuard: API key (Bearer blk_…) or Better Auth session.
+    { provide: APP_GUARD, useClass: AppThrottlerGuard },
+    { provide: APP_GUARD, useClass: AppAuthGuard },
     { provide: APP_GUARD, useExisting: WorkspaceGuard },
     { provide: APP_PIPE, useClass: ZodValidationPipe },
     { provide: APP_INTERCEPTOR, useClass: ZodSerializerInterceptor },

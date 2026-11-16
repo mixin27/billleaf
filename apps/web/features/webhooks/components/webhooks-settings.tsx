@@ -25,6 +25,7 @@ import * as React from "react"
 import { toast } from "sonner"
 
 import { Field } from "@/components/form/field"
+import { SecretDialog } from "@/components/secret-dialog"
 import { useWorkspaceStore } from "@/features/workspace"
 import { errorMessage } from "@/lib/api"
 
@@ -123,7 +124,7 @@ export function WebhooksSettings() {
         onOpenChange={setCreating}
         onCreated={(s) => setSecret(s)}
       />
-      <SecretDialog secret={secret} onClose={() => setSecret(null)} />
+      <WebhookSecretDialog secret={secret} onClose={() => setSecret(null)} />
     </div>
   )
 }
@@ -279,53 +280,26 @@ export function WebhookFormDialog({
   )
 }
 
-/** Shows a new signing secret once, with copy. */
-export function SecretDialog({
+/** The webhook signing secret, shown once. */
+export function WebhookSecretDialog({
   secret,
   onClose,
 }: {
   secret: string | null
   onClose: () => void
 }) {
-  const [copied, setCopied] = React.useState(false)
-  React.useEffect(() => setCopied(false), [secret])
   return (
-    <Dialog open={secret !== null} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Signing secret</DialogTitle>
-          <DialogDescription>
-            Copy it now: it won&apos;t be shown again. Use it to check the{" "}
-            <code className="text-xs">Billleaf-Signature</code> header on each
-            request.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="flex gap-2">
-          <Input
-            readOnly
-            value={secret ?? ""}
-            className="font-mono text-xs"
-            aria-label="Signing secret"
-            onFocus={(e) => e.currentTarget.select()}
-          />
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => {
-              if (!secret) return
-              void navigator.clipboard.writeText(secret).then(() => {
-                setCopied(true)
-                toast.success("Secret copied")
-              })
-            }}
-          >
-            {copied ? "Copied" : "Copy"}
-          </Button>
-        </div>
-        <DialogFooter>
-          <Button onClick={onClose}>Done</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <SecretDialog
+      secret={secret}
+      onClose={onClose}
+      title="Signing secret"
+      description={
+        <>
+          Copy it now: it won&apos;t be shown again. Use it to check the{" "}
+          <code className="text-xs">Billleaf-Signature</code> header on each
+          request.
+        </>
+      }
+    />
   )
 }

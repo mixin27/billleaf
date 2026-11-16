@@ -28,6 +28,11 @@ const items: { title: string; href: string; permission: Permission }[] = [
     href: "/settings/webhooks",
     permission: "webhook.manage",
   },
+  {
+    title: "API keys",
+    href: "/settings/api-keys",
+    permission: "api_key.manage",
+  },
   { title: "Billing", href: "/settings/billing", permission: "billing.read" },
   { title: "Audit log", href: "/settings/audit", permission: "audit.read" },
   { title: "Data", href: "/settings/data", permission: "workspace.export" },

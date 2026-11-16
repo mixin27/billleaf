@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { AuditList } from "@workspace/contracts"
-import { auditLogs, organization, user } from "@workspace/db"
+import { apiKeys, auditLogs, organization, user } from "@workspace/db"
 import { and, count, eq, gte, ilike, lt, or, sql, type SQL } from "drizzle-orm"
 
 import { offsetOf, orderBy } from "../../common/pagination.js"
@@ -48,10 +48,12 @@ export class AuditQueryService {
           actorEmail: user.email,
           wsName: organization.name,
           wsSlug: organization.slug,
+          apiKeyName: apiKeys.name,
         })
         .from(auditLogs)
         .leftJoin(user, eq(user.id, auditLogs.actorUserId))
         .leftJoin(organization, eq(organization.id, auditLogs.workspaceId))
+        .leftJoin(apiKeys, eq(apiKeys.id, auditLogs.apiKeyId))
     const [rows, [total]] = await Promise.all([
       base()
         .where(where)
@@ -81,6 +83,10 @@ export class AuditQueryService {
                 name: r.actorName ?? "",
                 email: r.actorEmail,
               }
+            : null,
+        apiKey:
+          r.log.apiKeyId && r.apiKeyName
+            ? { id: r.log.apiKeyId, name: r.apiKeyName }
             : null,
         workspace:
           r.log.workspaceId && r.wsSlug

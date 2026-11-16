@@ -52,6 +52,10 @@ Global guard order (`app.module.ts`): `ThrottlerGuard → AuthGuard → Workspac
 
 `GET /v1/me` returns the user, active workspace and **effective permission keys**. The web uses them to hide/disable UI. This is cosmetic; the API is always the authority.
 
+## API keys
+
+Requests with `Authorization: Bearer blk_…` skip the session: `AppAuthGuard` verifies the key and `WorkspaceGuard` makes the request act as the key's creator in the key's workspace, with permissions = key scopes ∩ the creator's current permissions. Keys need the `developerApi` plan feature, are managed with `api_key.manage`, and can't reach non-workspace or `@SessionOnly()` routes. See [Developer API](developer-api.md) and [ADR-0015](../adr/0015-workspace-api-keys.md).
+
 ## Platform admin
 
 Billleaf staff run the platform from `/admin` in the web app (API: `/v1/admin/*`, `apps/api/src/admin/`). It is separate from workspace RBAC: a platform admin has no extra rights inside workspaces.

@@ -45,8 +45,8 @@ import {
 } from "../api/queries"
 import {
   EndpointStatus,
-  SecretDialog,
   WebhookFormDialog,
+  WebhookSecretDialog,
 } from "./webhooks-settings"
 
 const FILTERS = ["all", "failed", "succeeded", "pending"] as const
@@ -304,7 +304,7 @@ export function WebhookDetail({ id }: { id: string }) {
         onOpenChange={setEditing}
         endpoint={endpoint}
       />
-      <SecretDialog secret={secret} onClose={() => setSecret(null)} />
+      <WebhookSecretDialog secret={secret} onClose={() => setSecret(null)} />
       <DeliveryDialog delivery={open} onClose={() => setOpen(null)} />
       <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
         <AlertDialogContent>

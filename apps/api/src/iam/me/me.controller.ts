@@ -15,13 +15,17 @@ import { createZodDto, ZodResponse } from "nestjs-zod"
 import { EntitlementsService } from "../../billing/entitlements.service.js"
 import { AdminAccessService } from "../../admin/admin-access.service.js"
 import { RequestContext } from "../../common/context/request-context.js"
-import { RequireWorkspace } from "../../common/decorators/require-permission.decorator.js"
+import {
+  RequireWorkspace,
+  SessionOnly,
+} from "../../common/decorators/require-permission.decorator.js"
 import { InjectDb, type Database } from "../../core/database/database.module.js"
 
 class MeDto extends createZodDto(meSchema) {}
 class PermissionDto extends createZodDto(permissionSchema) {}
 
 @ApiTags("me")
+@SessionOnly()
 @Controller({ version: "1" })
 export class MeController {
   constructor(

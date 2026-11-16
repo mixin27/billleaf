@@ -5,6 +5,7 @@ import { accountDeletionCheckSchema } from "@workspace/contracts"
 import { createZodDto, ZodResponse } from "nestjs-zod"
 
 import { AccountService } from "./account.service.js"
+import { SessionOnly } from "../../common/decorators/require-permission.decorator.js"
 
 class AccountDeletionCheckDto extends createZodDto(
   accountDeletionCheckSchema
@@ -12,6 +13,7 @@ class AccountDeletionCheckDto extends createZodDto(
 
 /** The signed-in user's own account (not workspace-scoped). */
 @ApiTags("account")
+@SessionOnly()
 @Controller({ path: "account", version: "1" })
 export class AccountController {
   constructor(private readonly account: AccountService) {}

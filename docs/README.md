@@ -68,6 +68,7 @@ Billleaf is an all-in-one business workspace for freelancers — **Client → Qu
 | [0012](adr/0012-client-portal-magic-links.md)         | Client portal with emailed magic links, on every plan           | Accepted |
 | [0013](adr/0013-manual-payments-for-subscriptions.md) | Manual subscription payments, approved by platform admins       | Accepted |
 | [0014](adr/0014-outgoing-webhooks.md)                 | Outgoing webhooks delivered by the worker, with an SSRF guard   | Accepted |
+| [0015](adr/0015-workspace-api-keys.md)                | Workspace API keys that act as their creator, scoped            | Accepted |
 
 New ADR: copy [the template](adr/template.md).
 
