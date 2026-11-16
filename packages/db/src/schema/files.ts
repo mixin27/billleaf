@@ -14,7 +14,13 @@ export const files = pgTable(
     /** `<workspaceId>/<purpose>/<uuid>.<ext>` */
     key: text().notNull().unique(),
     purpose: text({
-      enum: ["logo", "attachment", "payment_qr", "payment_proof"],
+      enum: [
+        "logo",
+        "attachment",
+        "payment_qr",
+        "payment_proof",
+        "expense_receipt",
+      ],
     }).notNull(),
     filename: text().notNull(),
     contentType: text().notNull(),

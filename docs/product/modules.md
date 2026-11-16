@@ -13,6 +13,7 @@ Proposed product modules. Each maps to one API module under `apps/api/src/module
 | **Projects**           | Projects, tasks, milestones, deadlines                       | project, task, milestone            | 2             |
 | **Time**               | Clockify-style tracker, tags, billable hours → invoice lines | time_entry                          | 2             |
 | **Contracts**          | Agreement templates and documents (e-sign later)             | contract, contract_template         | 2             |
+| **Expenses**           | Spending with receipts, rebilling to clients, profit & loss  | expense, expense_category           | 2             |
 | **Files**              | Attachments stored in R2                                     | file                                | 1+            |
 | **Notifications**      | In-app + email notifications                                 | notification                        | 1+            |
 | **Billing** (internal) | Billleaf's own SaaS subscription & entitlements              | workspace_subscription              | 0 (live in 2) |
@@ -28,6 +29,7 @@ flowchart LR
   P --> T[Time entries]
   Q -- convert --> I[Invoice]
   T -- billable --> I
+  E[Expenses] -- billable --> I
   I --> Pay[Payment]
   Pay --> R[Receipt]
 ```

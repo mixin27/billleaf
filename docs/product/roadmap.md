@@ -37,6 +37,7 @@ Phases are scope buckets, not dates. Each phase ends with a production deploy. C
 - ✅ Launch readiness: public home and pricing pages, Terms and Privacy, data export and workspace deletion.
 - ✅ Payment reminders for unpaid invoices; users can delete their own account.
 - ✅ Time tracking rates and budgets: rate hierarchy, cost rates and profit, project estimates with alerts.
+- ✅ Expenses with receipts (photo or PDF), categories, billable expenses onto client invoices, and a profit & loss report with a tax summary.
 - Online subscription payments when a provider serves the operating country.
 
 ## Phase 3 — Teams & growth

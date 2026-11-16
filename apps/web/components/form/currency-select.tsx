@@ -18,8 +18,10 @@ export function CurrencySelect({
   onChange,
   allowEmpty,
   emptyLabel = "Workspace default",
+  disabled,
 }: {
   id?: string
+  disabled?: boolean
   value: string | null | undefined
   onChange: (value: string | null) => void
   allowEmpty?: boolean
@@ -36,6 +38,7 @@ export function CurrencySelect({
     <Select
       items={items}
       value={value ?? (allowEmpty ? NONE : null)}
+      disabled={disabled}
       onValueChange={(v) =>
         onChange(v === NONE || v == null ? null : String(v))
       }

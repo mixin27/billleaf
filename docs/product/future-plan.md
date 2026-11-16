@@ -13,6 +13,7 @@ Work we've agreed to do later, with enough detail to pick up without re-research
 - **Launch readiness:** public home and pricing pages, Terms and Privacy pages, data export (ZIP of CSVs) and workspace deletion.
 - **Payment reminders:** clients are emailed about unpaid invoices on the days the workspace picks (before, on and after the due date), each once; paused per invoice.
 - **Account deletion:** users delete their own login once they aren't the only owner of a workspace.
+- **Expenses:** spending with receipts (photo or PDF) and categories; billable expenses onto a client's draft invoice (released if the draft is deleted or the invoice voided); Reports → profit & loss per month, expenses by category, and a tax summary.
 - **Rates and budgets:** billable rates per task, project, member and workspace default (the most specific wins; invoiced time keeps its rate), member cost rates with cost and profit on projects and reports, time and money estimates with progress bars, a dashboard card, and owner alerts at 80% / 100%.
 - **Developer API:** workspace API keys (Settings → API keys) that act as their creator with chosen permissions, a public API reference at `/docs/api`, per-key rate limits and audit; Pro and Team ([ADR-0015](../adr/0015-workspace-api-keys.md)).
 - **Outgoing webhooks:** signed event deliveries to other apps (clients, quotes, contracts, invoices, payments, proofs) with retries, a delivery log with resend, test events, secret rotation, and auto-off after repeated failures; Pro and Team ([ADR-0014](../adr/0014-outgoing-webhooks.md)).
@@ -23,7 +24,8 @@ Work we've agreed to do later, with enough detail to pick up without re-research
 
 Production deploy is on hold until there's budget for it (see [On hold](#on-hold)). Until then, build in this order:
 
-1. **Small follow-ups** (table below), when someone needs them.
+1. **Credit notes:** corrections and partial refunds for issued (and paid) invoices, numbered, with PDF, email and portal, as the immutability rule expects.
+2. **Small follow-ups** (table below), when someone needs them.
 
 ## On hold
 

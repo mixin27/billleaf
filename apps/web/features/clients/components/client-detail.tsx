@@ -37,6 +37,7 @@ import { toast } from "sonner"
 
 import { Can, usePermissions } from "@/components/permissions/can"
 import { ClientInvoices } from "@/features/invoices"
+import { ClientExpenses } from "@/features/expenses"
 import { ClientProjects } from "@/features/projects"
 import { ClientQuotes } from "@/features/quotes"
 import { useWorkspaceProfile, useWorkspaceStore } from "@/features/workspace"
@@ -189,6 +190,7 @@ function ClientDetailView({ client }: { client: ClientDetailData }) {
         <ClientInvoices clientId={client.id} canCreate={!archived} />
         <ClientQuotes clientId={client.id} canCreate={!archived} />
         <ClientProjects clientId={client.id} canCreate={!archived} />
+        <ClientExpenses clientId={client.id} canCreate={!archived} />
       </div>
 
       <ClientFormDialog

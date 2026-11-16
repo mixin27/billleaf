@@ -1428,6 +1428,118 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  "/v1/expense-categories": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["ExpensesController_categories_v1"]
+    put?: never
+    post: operations["ExpensesController_createCategory_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/expense-categories/{id}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch: operations["ExpensesController_updateCategory_v1"]
+    trace?: never
+  }
+  "/v1/expenses": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["ExpensesController_list_v1"]
+    put?: never
+    post: operations["ExpensesController_create_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/expenses/{id}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["ExpensesController_get_v1"]
+    put?: never
+    post?: never
+    delete: operations["ExpensesController_remove_v1"]
+    options?: never
+    head?: never
+    patch: operations["ExpensesController_update_v1"]
+    trace?: never
+  }
+  "/v1/expenses/{id}/receipt": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put: operations["ExpensesController_setReceipt_v1"]
+    post?: never
+    delete: operations["ExpensesController_removeReceipt_v1"]
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/invoices/from-expenses": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["ExpensesController_invoiceFromExpenses_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/reports/profit-loss": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["ExpensesController_profitLoss_v1"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   "/v1/projects": {
     parameters: {
       query?: never
@@ -2755,6 +2867,10 @@ export interface components {
         | "invoice.update"
         | "invoice.send"
         | "invoice.void"
+        | "expense.read"
+        | "expense.create"
+        | "expense.update"
+        | "expense.delete"
         | "payment.read"
         | "payment.record"
         | "payment.refund"
@@ -2818,6 +2934,10 @@ export interface components {
         | "invoice.update"
         | "invoice.send"
         | "invoice.void"
+        | "expense.read"
+        | "expense.create"
+        | "expense.update"
+        | "expense.delete"
         | "payment.read"
         | "payment.record"
         | "payment.refund"
@@ -2879,6 +2999,10 @@ export interface components {
         | "invoice.update"
         | "invoice.send"
         | "invoice.void"
+        | "expense.read"
+        | "expense.create"
+        | "expense.update"
+        | "expense.delete"
         | "payment.read"
         | "payment.record"
         | "payment.refund"
@@ -2938,6 +3062,10 @@ export interface components {
         | "invoice.update"
         | "invoice.send"
         | "invoice.void"
+        | "expense.read"
+        | "expense.create"
+        | "expense.update"
+        | "expense.delete"
         | "payment.read"
         | "payment.record"
         | "payment.refund"
@@ -2992,6 +3120,10 @@ export interface components {
         | "invoice.update"
         | "invoice.send"
         | "invoice.void"
+        | "expense.read"
+        | "expense.create"
+        | "expense.update"
+        | "expense.delete"
         | "payment.read"
         | "payment.record"
         | "payment.refund"
@@ -4403,6 +4535,251 @@ export interface components {
       invoiceId: string | null
       invoiceNumber: string | null
       sent: boolean
+    }
+    ExpenseCategoryListDto_Output: {
+      items: {
+        id: string
+        name: string
+        archived: boolean
+      }[]
+    }
+    SaveExpenseCategoryDto: {
+      name: string
+      archived?: boolean
+    }
+    ExpenseCategoryDto_Output: {
+      id: string
+      name: string
+      archived: boolean
+    }
+    UpdateExpenseCategoryDto: {
+      name?: string
+      archived?: boolean
+    }
+    ExpenseListDto_Output: {
+      items: {
+        id: string
+        /** Format: date */
+        spentOn: string
+        vendor: string | null
+        description: string | null
+        categoryId: string | null
+        categoryName: string | null
+        amount: number
+        taxAmount: number
+        currency: string
+        /** @enum {string} */
+        paymentMethod:
+          "bank_transfer" | "card" | "cash" | "mobile_wallet" | "other"
+        reference: string | null
+        clientId: string | null
+        clientName: string | null
+        projectId: string | null
+        projectName: string | null
+        billable: boolean
+        invoiceId: string | null
+        invoiceNumber: string | null
+        receipt: {
+          filename: string
+          contentType: string
+          url: string
+        } | null
+        /** Format: date-time */
+        createdAt: string
+      }[]
+      total: number
+      page: number
+      pageSize: number
+      totals: {
+        currency: string
+        amount: number
+      }[]
+    }
+    ExpenseDto_Output: {
+      id: string
+      /** Format: date */
+      spentOn: string
+      vendor: string | null
+      description: string | null
+      categoryId: string | null
+      categoryName: string | null
+      amount: number
+      taxAmount: number
+      currency: string
+      /** @enum {string} */
+      paymentMethod:
+        "bank_transfer" | "card" | "cash" | "mobile_wallet" | "other"
+      reference: string | null
+      clientId: string | null
+      clientName: string | null
+      projectId: string | null
+      projectName: string | null
+      billable: boolean
+      invoiceId: string | null
+      invoiceNumber: string | null
+      receipt: {
+        filename: string
+        contentType: string
+        url: string
+      } | null
+      /** Format: date-time */
+      createdAt: string
+    }
+    CreateExpenseDto: {
+      /** Format: date */
+      spentOn: string
+      vendor?: string | null
+      description?: string | null
+      /** Format: uuid */
+      categoryId?: string | null
+      amount: number
+      /** @default 0 */
+      taxAmount: number
+      currency?: string
+      /**
+       * @default bank_transfer
+       * @enum {string}
+       */
+      paymentMethod:
+        "bank_transfer" | "card" | "cash" | "mobile_wallet" | "other"
+      reference?: string | null
+      /** Format: uuid */
+      clientId?: string | null
+      /** Format: uuid */
+      projectId?: string | null
+      /** @default false */
+      billable: boolean
+    }
+    UpdateExpenseDto: {
+      /** Format: date */
+      spentOn?: string
+      vendor?: string | null
+      description?: string | null
+      /** Format: uuid */
+      categoryId?: string | null
+      amount?: number
+      taxAmount?: number
+      currency?: string
+      /** @enum {string} */
+      paymentMethod?:
+        "bank_transfer" | "card" | "cash" | "mobile_wallet" | "other"
+      reference?: string | null
+      /** Format: uuid */
+      clientId?: string | null
+      /** Format: uuid */
+      projectId?: string | null
+      billable?: boolean
+    }
+    InvoiceFromExpensesDto: {
+      /** Format: uuid */
+      clientId: string
+      expenseIds?: string[]
+    }
+    ExpenseInvoiceDto_Output: {
+      id: string
+      number: string | null
+      /** @enum {string} */
+      status: "draft" | "issued" | "void"
+      /** @enum {string} */
+      paymentStatus: "unpaid" | "partially_paid" | "paid"
+      /** @enum {string} */
+      displayStatus:
+        "draft" | "open" | "overdue" | "partially_paid" | "paid" | "void"
+      isOverdue: boolean
+      title: string | null
+      clientId: string
+      clientName: string
+      quoteId: string | null
+      currency: string
+      /** Format: date */
+      issueDate: string
+      /** Format: date */
+      dueDate: string | null
+      subtotal: number
+      taxTotal: number
+      total: number
+      amountPaid: number
+      amountDue: number
+      /** Format: date-time */
+      createdAt: string
+      /** Format: date-time */
+      updatedAt: string
+      quoteNumber: string | null
+      recurringId: string | null
+      recurringPeriod: string | null
+      notes: string | null
+      terms: string | null
+      lines: {
+        id: string
+        position: number
+        description: string
+        quantity: number
+        unitPrice: number
+        taxRateBps: number
+        amount: number
+        taxAmount: number
+      }[]
+      /** Format: date-time */
+      issuedAt: string | null
+      /** Format: date-time */
+      voidedAt: string | null
+      voidReason: string | null
+      /** Format: date-time */
+      lastSentAt: string | null
+      lastSentTo: string | null
+      remindersPaused: boolean
+      reminders: {
+        offsetDays: number
+        sentTo: string
+        /** Format: date-time */
+        sentAt: string
+      }[]
+      clientSnapshot: {
+        name: string
+        legalName?: string | null
+        email?: string | null
+        phone?: string | null
+        taxId?: string | null
+        addressLines: string[]
+      } | null
+      issuerSnapshot: {
+        name: string
+        legalName?: string | null
+        email?: string | null
+        phone?: string | null
+        taxId?: string | null
+        addressLines: string[]
+      } | null
+    }
+    ProfitLossDto_Output: {
+      /** Format: date */
+      from: string
+      /** Format: date */
+      to: string
+      months: {
+        month: string
+        currency: string
+        income: number
+        expenses: number
+        profit: number
+      }[]
+      totals: {
+        currency: string
+        amount: number
+        income: number
+        expenses: number
+      }[]
+      byCategory: {
+        categoryId: string | null
+        name: string
+        currency: string
+        amount: number
+      }[]
+      tax: {
+        currency: string
+        collected: number
+        paid: number
+      }[]
     }
     ProjectListDto_Output: {
       items: {
@@ -8632,6 +9009,278 @@ export interface operations {
         }
         content: {
           "application/json": components["schemas"]["RunResultDto_Output"]
+        }
+      }
+    }
+  }
+  ExpensesController_categories_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["ExpenseCategoryListDto_Output"]
+        }
+      }
+    }
+  }
+  ExpensesController_createCategory_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SaveExpenseCategoryDto"]
+      }
+    }
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["ExpenseCategoryDto_Output"]
+        }
+      }
+    }
+  }
+  ExpensesController_updateCategory_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateExpenseCategoryDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["ExpenseCategoryDto_Output"]
+        }
+      }
+    }
+  }
+  ExpensesController_list_v1: {
+    parameters: {
+      query?: {
+        page?: number
+        pageSize?: number
+        sort?: string
+        from?: string
+        to?: string
+        categoryId?: string
+        clientId?: string
+        projectId?: string
+        billing?: "billable" | "unbilled" | "non_billable"
+        q?: string
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["ExpenseListDto_Output"]
+        }
+      }
+    }
+  }
+  ExpensesController_create_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateExpenseDto"]
+      }
+    }
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["ExpenseDto_Output"]
+        }
+      }
+    }
+  }
+  ExpensesController_get_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["ExpenseDto_Output"]
+        }
+      }
+    }
+  }
+  ExpensesController_remove_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  ExpensesController_update_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateExpenseDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["ExpenseDto_Output"]
+        }
+      }
+    }
+  }
+  ExpensesController_setReceipt_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["ExpenseDto_Output"]
+        }
+      }
+    }
+  }
+  ExpensesController_removeReceipt_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["ExpenseDto_Output"]
+        }
+      }
+    }
+  }
+  ExpensesController_invoiceFromExpenses_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["InvoiceFromExpensesDto"]
+      }
+    }
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["ExpenseInvoiceDto_Output"]
+        }
+      }
+    }
+  }
+  ExpensesController_profitLoss_v1: {
+    parameters: {
+      query: {
+        from: string
+        to: string
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["ProfitLossDto_Output"]
         }
       }
     }

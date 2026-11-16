@@ -4590,3 +4590,275 @@ describe("rate limits in Redis", () => {
     expect((await owner.get("/v1/clients")).status).toBe(200)
   })
 })
+
+describe("expenses", () => {
+  it("records expenses with receipts, bills them to a client once, and reports profit & loss", async () => {
+    const owner = new Client(t)
+    await owner.signUp("Spender")
+    const ws = await owner.createWorkspace("Spending Studio")
+    await owner.patch("/v1/workspace", {
+      timezone: "UTC",
+      defaultCurrency: "USD",
+      defaultTaxRateBps: 0,
+    })
+    const upload = async (id: string, filename: string, body: Buffer) => {
+      const boundary = "----billleaf-receipt"
+      const res = await t.app.inject({
+        method: "PUT",
+        url: `/v1/expenses/${id}/receipt`,
+        headers: {
+          ...owner.headers(),
+          "content-type": `multipart/form-data; boundary=${boundary}`,
+        },
+        payload: Buffer.concat([
+          Buffer.from(
+            `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="${filename}"\r\nContent-Type: application/octet-stream\r\n\r\n`
+          ),
+          body,
+          Buffer.from(`\r\n--${boundary}--\r\n`),
+        ]),
+      })
+      return { status: res.statusCode, body: JSON.parse(res.body) }
+    }
+
+    // Default categories appear on first use.
+    const cats = (await owner.get("/v1/expense-categories")).body.items
+    expect(cats.map((c: { name: string }) => c.name)).toContain("Travel")
+    const travel = cats.find((c: { name: string }) => c.name === "Travel")
+    expect(
+      (await owner.post("/v1/expense-categories", { name: "travel" })).body.code
+    ).toBe("category_exists")
+
+    const client = (
+      await owner.post("/v1/clients", { name: "Rebill Co", currency: "EUR" })
+    ).body
+    // Last year, so every date is in the past whenever this runs.
+    const year = new Date().getUTCFullYear() - 1
+    const day = (md: string) => `${year}-${md}`
+
+    // An overhead expense (USD default) and two billable ones (client currency).
+    const software = await owner.post("/v1/expenses", {
+      spentOn: day("01-10"),
+      vendor: "Design App",
+      amount: 12_000,
+      taxAmount: 2_000,
+    })
+    expect(software.status).toBe(201)
+    expect(software.body).toMatchObject({
+      currency: "USD",
+      billable: false,
+      receipt: null,
+    })
+    const flight = (
+      await owner.post("/v1/expenses", {
+        spentOn: day("01-15"),
+        vendor: "Airline",
+        description: "Client visit",
+        categoryId: travel.id,
+        amount: 30_000,
+        clientId: client.id,
+        billable: true,
+      })
+    ).body
+    expect(flight.currency).toBe("EUR")
+    const hotel = (
+      await owner.post("/v1/expenses", {
+        spentOn: day("01-16"),
+        vendor: "Hotel",
+        categoryId: travel.id,
+        amount: 20_000,
+        clientId: client.id,
+        billable: true,
+      })
+    ).body
+    expect(
+      (
+        await owner.post("/v1/expenses", {
+          spentOn: day("01-16"),
+          amount: 100,
+          taxAmount: 200,
+        })
+      ).status
+    ).toBe(422)
+
+    // Receipts: photos and PDFs, nothing else.
+    expect(
+      (await upload(software.body.id, "x.txt", Buffer.from("hello"))).body.code
+    ).toBe("unsupported_file_type")
+    const withPdf = await upload(
+      software.body.id,
+      "invoice.pdf",
+      Buffer.from("%PDF-1.4\n1 0 obj\n<<>>\nendobj\n%%EOF")
+    )
+    expect(withPdf.status).toBe(200)
+    expect(withPdf.body.receipt).toMatchObject({
+      filename: "invoice.pdf",
+      contentType: "application/pdf",
+      url: expect.stringContaining("http"),
+    })
+    const photo = await upload(
+      flight.id,
+      "ticket.jpg",
+      Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0, 0x10, 0x4a, 0x46])
+    )
+    expect(photo.body.receipt.contentType).toBe("image/jpeg")
+
+    // Filters and totals.
+    const unbilled = (
+      await owner.get(`/v1/expenses?clientId=${client.id}&billing=unbilled`)
+    ).body
+    expect(unbilled.total).toBe(2)
+    expect(unbilled.totals).toEqual([{ currency: "EUR", amount: 50_000 }])
+    expect(
+      (await owner.get(`/v1/expenses?categoryId=${travel.id}&q=hotel`)).body
+        .items
+    ).toEqual([expect.objectContaining({ id: hotel.id })])
+
+    // Bill them: one draft invoice, one line each, then locked.
+    const inv = await owner.post("/v1/invoices/from-expenses", {
+      clientId: client.id,
+    })
+    expect(inv.status).toBe(201)
+    expect(inv.body).toMatchObject({ currency: "EUR", total: 50_000 })
+    expect(
+      inv.body.lines.map((l: { unitPrice: number }) => l.unitPrice)
+    ).toEqual([30_000, 20_000])
+    expect(inv.body.lines[0].description).toContain("Airline")
+    expect(
+      (await owner.post("/v1/invoices/from-expenses", { clientId: client.id }))
+        .body.code
+    ).toBe("no_unbilled_expenses")
+    expect(
+      (await owner.patch(`/v1/expenses/${flight.id}`, { amount: 1 })).body.code
+    ).toBe("expense_invoiced")
+    expect((await owner.del(`/v1/expenses/${flight.id}`)).body.code).toBe(
+      "expense_invoiced"
+    )
+    expect(
+      (await owner.patch(`/v1/expenses/${flight.id}`, { description: "Fine" }))
+        .status
+    ).toBe(200)
+
+    // Deleting the draft releases them; voiding an issued one does too.
+    await owner.del(`/v1/invoices/${inv.body.id}`)
+    expect(
+      (await owner.get(`/v1/expenses/${flight.id}`)).body.invoiceId
+    ).toBeNull()
+    const again = (
+      await owner.post("/v1/invoices/from-expenses", {
+        clientId: client.id,
+        expenseIds: [flight.id],
+      })
+    ).body
+    expect(again.total).toBe(30_000)
+    await owner.post(`/v1/invoices/${again.id}/issue`)
+    await owner.post(`/v1/invoices/${again.id}/void`, { reason: "Redo" })
+    expect((await owner.get(`/v1/expenses/${flight.id}`)).body.invoiceId).toBe(
+      null
+    )
+
+    // Mixed currencies can't share an invoice.
+    await owner.post("/v1/expenses", {
+      spentOn: day("01-20"),
+      amount: 5_000,
+      currency: "USD",
+      clientId: client.id,
+      billable: true,
+    })
+    expect(
+      (await owner.post("/v1/invoices/from-expenses", { clientId: client.id }))
+        .body.code
+    ).toBe("mixed_currencies")
+
+    // Profit & loss: a USD invoice paid in February against USD expenses.
+    const usdClient = (
+      await owner.post("/v1/clients", { name: "Payer", currency: "USD" })
+    ).body
+    const sale = (
+      await owner.post("/v1/invoices", {
+        clientId: usdClient.id,
+        issueDate: day("02-01"),
+        lines: [
+          {
+            description: "Work",
+            quantity: 1,
+            unitPrice: 100_000,
+            taxRateBps: 1_000,
+          },
+        ],
+      })
+    ).body
+    await owner.post(`/v1/invoices/${sale.id}/issue`)
+    await owner.post(`/v1/invoices/${sale.id}/payments`, {
+      amount: 110_000,
+      paidOn: day("02-03"),
+    })
+    const pl = (
+      await owner.get(
+        `/v1/reports/profit-loss?from=${day("01-01")}&to=${day("12-31")}`
+      )
+    ).body
+    expect(pl.months).toEqual(
+      expect.arrayContaining([
+        {
+          month: `${year}-01`,
+          currency: "USD",
+          income: 0,
+          expenses: 17_000, // 120.00 software + 50.00 billable USD
+          profit: -17_000,
+        },
+        {
+          month: `${year}-02`,
+          currency: "USD",
+          income: 110_000,
+          expenses: 0,
+          profit: 110_000,
+        },
+        expect.objectContaining({
+          month: `${year}-01`,
+          currency: "EUR",
+          expenses: 50_000,
+        }),
+      ])
+    )
+    expect(pl.totals).toEqual(
+      expect.arrayContaining([
+        { currency: "USD", income: 110_000, expenses: 17_000, amount: 93_000 },
+      ])
+    )
+    expect(pl.byCategory).toEqual(
+      expect.arrayContaining([
+        {
+          categoryId: travel.id,
+          name: "Travel",
+          currency: "EUR",
+          amount: 50_000,
+        },
+      ])
+    )
+    expect(pl.tax).toEqual(
+      expect.arrayContaining([
+        { currency: "USD", collected: 10_000, paid: 2_000 },
+      ])
+    )
+
+    // Members record expenses but can't delete them.
+    const memberRole = (await owner.get("/v1/roles")).body.find(
+      (r: { slug: string }) => r.slug === "member"
+    )
+    expect(memberRole.permissions).toEqual(
+      expect.arrayContaining([
+        "expense.read",
+        "expense.create",
+        "expense.update",
+      ])
+    )
+    expect(memberRole.permissions).not.toContain("expense.delete")
+
+    // Deleting an expense removes its receipt; exports include expenses.
+    expect((await owner.del(`/v1/expenses/${software.body.id}`)).status).toBe(
+      204
+    )
+    void ws
+  })
+})

@@ -15,7 +15,7 @@ curl https://api.billleaf.example/v1/clients \
 
 ## What a key can reach
 
-Clients, quotes, contracts, projects and tasks, time, invoices, recurring invoices, payments and receipts, and reading the workspace profile — as allowed by its scopes. Never: billing, members, roles, settings, webhooks, API keys, rates, data export, workspace deletion, `/v1/me`, or the admin portal.
+Clients, quotes, contracts, projects and tasks, time, invoices, recurring invoices, payments and receipts, expenses, and reading the workspace profile — as allowed by its scopes. Never: billing, members, roles, settings, webhooks, API keys, rates, data export, workspace deletion, `/v1/me`, or the admin portal.
 
 Reference: `GET /v1/openapi.json`, browsable at `/docs/api`.
 
