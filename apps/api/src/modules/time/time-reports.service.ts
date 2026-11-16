@@ -276,6 +276,7 @@ export class TimeReportsService {
       startedAt: e.startedAt.toISOString(),
       endedAt: e.endedAt?.toISOString() ?? null,
       durationSeconds: e.durationSeconds,
+      hasTimes: e.hasTimes,
       billable: e.billable,
       tags: e.tags.map((t) => ({
         id: t.id,

@@ -5180,6 +5180,7 @@ export interface components {
         /** Format: date-time */
         endedAt: string | null
         durationSeconds: number | null
+        hasTimes: boolean
         billable: boolean
         tags: {
           id: string
@@ -5223,6 +5224,7 @@ export interface components {
         /** Format: date-time */
         endedAt: string | null
         durationSeconds: number | null
+        hasTimes: boolean
         billable: boolean
         tags: {
           id: string
@@ -5272,6 +5274,7 @@ export interface components {
       /** Format: date-time */
       endedAt: string | null
       durationSeconds: number | null
+      hasTimes: boolean
       billable: boolean
       tags: {
         id: string
@@ -5555,6 +5558,7 @@ export interface components {
         /** Format: date-time */
         endedAt: string | null
         durationSeconds: number | null
+        hasTimes: boolean
         billable: boolean
         tags: {
           id: string

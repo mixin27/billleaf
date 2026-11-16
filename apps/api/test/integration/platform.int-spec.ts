@@ -892,10 +892,21 @@ describe("time tracking", () => {
       durationMinutes: 90,
     })
     expect(design.body.durationSeconds).toBe(5_400)
-    await owner.post("/v1/time-entries", {
+    expect(design.body.hasTimes).toBe(false) // date + duration: no clock times
+    const timed = await owner.post("/v1/time-entries", {
       projectId: project.id,
       startedAt: `${today}T08:00:00.000Z`,
       endedAt: `${today}T08:30:00.000Z`,
+    })
+    expect(timed.body.hasTimes).toBe(true)
+    // Giving a duration-only entry clock times (calendar drag) makes it timed.
+    const placed = await owner.patch(`/v1/time-entries/${design.body.id}`, {
+      startedAt: `${today}T10:00:00.000Z`,
+      endedAt: `${today}T11:30:00.000Z`,
+    })
+    expect(placed.body).toMatchObject({
+      hasTimes: true,
+      durationSeconds: 5_400,
     })
     expect(
       (

@@ -11300,6 +11300,9 @@
                   "maximum": 9007199254740991,
                   "nullable": true
                 },
+                "hasTimes": {
+                  "type": "boolean"
+                },
                 "billable": {
                   "type": "boolean"
                 },
@@ -11364,6 +11367,7 @@
                 "startedAt",
                 "endedAt",
                 "durationSeconds",
+                "hasTimes",
                 "billable",
                 "tags",
                 "invoiceId",
@@ -11450,6 +11454,9 @@
                 "maximum": 9007199254740991,
                 "nullable": true
               },
+              "hasTimes": {
+                "type": "boolean"
+              },
               "billable": {
                 "type": "boolean"
               },
@@ -11514,6 +11521,7 @@
               "startedAt",
               "endedAt",
               "durationSeconds",
+              "hasTimes",
               "billable",
               "tags",
               "invoiceId",
@@ -11621,6 +11629,9 @@
             "maximum": 9007199254740991,
             "nullable": true
           },
+          "hasTimes": {
+            "type": "boolean"
+          },
           "billable": {
             "type": "boolean"
           },
@@ -11685,6 +11696,7 @@
           "startedAt",
           "endedAt",
           "durationSeconds",
+          "hasTimes",
           "billable",
           "tags",
           "invoiceId",
@@ -12636,6 +12648,9 @@
                   "maximum": 9007199254740991,
                   "nullable": true
                 },
+                "hasTimes": {
+                  "type": "boolean"
+                },
                 "billable": {
                   "type": "boolean"
                 },
@@ -12700,6 +12715,7 @@
                 "startedAt",
                 "endedAt",
                 "durationSeconds",
+                "hasTimes",
                 "billable",
                 "tags",
                 "invoiceId",
