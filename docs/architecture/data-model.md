@@ -239,3 +239,14 @@ See [webhooks](webhooks.md).
 | `api_keys` | `workspace_id`, `created_by_member_id` (cascade — keys go with the member), `name`, `prefix`, `key_hash` (SHA-256, unique), `scopes` (text[]), `expires_at`, `last_used_at`, `revoked_at` |
 
 `audit_logs.api_key_id` (set null) records actions taken with a key. See [Developer API](developer-api.md).
+
+### Expenses (`expenses.ts`)
+
+| Table                | Notes                                                                                                                                                                                                                                                                                                                                            |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `expense_categories` | Per workspace, name unique (case-insensitive), `archived`; defaults created the first time a workspace lists them                                                                                                                                                                                                                                |
+| `expenses`           | `spent_on`, `vendor`, `description`, `category_id` (set null), `amount` (total paid, minor units, tax included), `tax_amount`, `currency`, `payment_method`, `reference`, `client_id` / `project_id` (set null), `billable`, `invoice_id` (set null), `receipt_file_id` → files (`expense_receipt`: PNG/JPEG/PDF ≤ 5 MB), `created_by_member_id` |
+
+**Billing expenses:** `POST /v1/invoices/from-expenses` turns a client's billable, uninvoiced expenses (one currency) into a draft invoice, one line per expense at its full amount, and claims them atomically. Deleting the draft (FK set null) or voiding the invoice releases them; invoiced expenses can't change amount, currency, client or billable, or be deleted.
+
+**Profit & loss** (`GET /v1/reports/profit-loss`, `payment.read` + `expense.read`): income = payments by paid date minus refunds by refund date; expenses by spent date; per month and currency (no conversion); expenses by category; tax on invoices issued in the period vs `tax_amount` of expenses.

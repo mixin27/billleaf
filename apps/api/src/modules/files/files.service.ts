@@ -41,6 +41,13 @@ export function sniffImage(
   return null
 }
 
+/** A PDF by its header (`%PDF-`). */
+export function sniffPdf(buf: Buffer) {
+  return buf.length >= 5 && buf.subarray(0, 5).toString("latin1") === "%PDF-"
+    ? { contentType: "application/pdf", ext: "pdf" }
+    : null
+}
+
 /** Workspace-scoped file metadata + bytes in object storage. */
 @Injectable()
 export class FilesService {
@@ -58,19 +65,25 @@ export class FilesService {
     purpose: FilePurpose,
     filename: string,
     body: Buffer,
-    maxBytes: number
+    maxBytes: number,
+    opts: { allowPdf?: boolean } = {}
   ): Promise<FileRow> {
     if (body.length === 0) throw new BadRequestException("The file is empty")
     if (body.length > maxBytes) {
       throw new BadRequestException({
-        message: `Images must be ${Math.round(maxBytes / 1024)} KB or smaller`,
+        message:
+          maxBytes >= 1_048_576
+            ? `Files must be ${Math.round(maxBytes / 1_048_576)} MB or smaller`
+            : `Images must be ${Math.round(maxBytes / 1024)} KB or smaller`,
         code: "file_too_large",
       })
     }
-    const type = sniffImage(body)
+    const type = sniffImage(body) ?? (opts.allowPdf ? sniffPdf(body) : null)
     if (!type) {
       throw new BadRequestException({
-        message: "Upload a PNG or JPEG image",
+        message: opts.allowPdf
+          ? "Upload a PNG or JPEG image, or a PDF"
+          : "Upload a PNG or JPEG image",
         code: "unsupported_file_type",
       })
     }

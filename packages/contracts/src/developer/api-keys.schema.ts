@@ -18,6 +18,7 @@ const KEY_RESOURCES = [
   "time",
   "invoice",
   "payment",
+  "expense",
 ] as const
 
 /** Never grantable, even within the resources above. */

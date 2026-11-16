@@ -1,5 +1,6 @@
 import {
   Agreement01Icon,
+  ChartLineData01Icon,
   Clock01Icon,
   DashboardSquare01Icon,
   Folder01Icon,
@@ -9,6 +10,7 @@ import {
   RepeatIcon,
   Settings01Icon,
   UserGroupIcon,
+  Wallet01Icon,
 } from "@hugeicons/core-free-icons"
 import type { IconSvgElement } from "@hugeicons/react"
 import type { Permission } from "@workspace/contracts"
@@ -113,6 +115,25 @@ export const workspaceNav: NavGroup[] = [
         icon: MoneyReceive01Icon,
         permission: "payment.read",
         keywords: ["receipts"],
+      },
+    ],
+  },
+  {
+    label: "Books",
+    items: [
+      {
+        title: "Expenses",
+        href: "/expenses",
+        icon: Wallet01Icon,
+        permission: "expense.read",
+        keywords: ["costs", "spending", "receipts", "bills"],
+      },
+      {
+        title: "Reports",
+        href: "/reports",
+        icon: ChartLineData01Icon,
+        permission: "expense.read",
+        keywords: ["profit", "loss", "p&l", "tax", "income"],
       },
     ],
   },

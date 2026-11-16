@@ -95,6 +95,7 @@ function setup(
     update: vi.fn(),
     delete: vi.fn(),
     releaseTime: vi.fn(),
+    releaseExpenses: vi.fn(),
   } as unknown as InvoicesRepository
   const clients = {
     findById: vi.fn().mockResolvedValue({

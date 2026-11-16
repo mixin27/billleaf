@@ -6,6 +6,7 @@ import {
   invoiceReminders,
   invoices,
   quotes,
+  expenses,
   timeEntries,
   type Transaction,
 } from "@workspace/db"
@@ -273,6 +274,19 @@ export class InvoicesRepository {
   }
 
   /** Voided invoices give their tracked time back so it can be billed again. */
+  /** Expenses put on this invoice become unbilled again (void). */
+  async releaseExpenses(tx: Database | Transaction, invoiceId: string) {
+    await tx
+      .update(expenses)
+      .set({ invoiceId: null })
+      .where(
+        and(
+          eq(expenses.workspaceId, this.ctx.workspaceId),
+          eq(expenses.invoiceId, invoiceId)
+        )
+      )
+  }
+
   async releaseTime(tx: Database | Transaction, invoiceId: string) {
     await tx
       .update(timeEntries)

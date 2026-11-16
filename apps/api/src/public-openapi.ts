@@ -10,6 +10,7 @@ export const PUBLIC_API_TAGS = [
   "invoices",
   "recurring-invoices",
   "payments",
+  "expenses",
 ]
 
 const METHODS = ["get", "put", "post", "patch", "delete"] as const
