@@ -69,6 +69,7 @@ export function toInvoiceSummary(
     taxTotal: inv.taxTotal,
     total: inv.total,
     amountPaid: inv.amountPaid,
+    amountCredited: inv.amountCredited,
     createdAt: inv.createdAt.toISOString(),
     updatedAt: inv.updatedAt.toISOString(),
   }
@@ -78,7 +79,8 @@ function toInvoice(
   inv: InvoiceWithRefs,
   lines: InvoiceLineRow[],
   today: string,
-  reminders: { offsetDays: number; sentTo: string; sentAt: Date }[] = []
+  reminders: { offsetDays: number; sentTo: string; sentAt: Date }[] = [],
+  creditNotes: Invoice["creditNotes"] = []
 ): Invoice {
   return {
     ...toInvoiceSummary(inv, today),
@@ -101,6 +103,7 @@ function toInvoice(
     })),
     clientSnapshot: inv.clientSnapshot ?? null,
     issuerSnapshot: inv.issuerSnapshot ?? null,
+    creditNotes,
   }
 }
 
@@ -165,12 +168,13 @@ export class InvoicesService {
 
   async get(id: string): Promise<Invoice> {
     const invoice = await this.require(id)
-    const [lines, today, reminders] = await Promise.all([
+    const [lines, today, reminders, credits] = await Promise.all([
       this.repo.lines(id),
       this.today(),
       this.repo.reminders(id),
+      this.repo.creditNotes(id),
     ])
-    return toInvoice(invoice, lines, today, reminders)
+    return toInvoice(invoice, lines, today, reminders, credits)
   }
 
   async create(
@@ -342,6 +346,13 @@ export class InvoicesService {
           code: "invoice_has_payments",
         })
       }
+      if (await this.repo.hasIssuedCreditNotes(tx, id)) {
+        throw new ConflictException({
+          message:
+            "This invoice has credit notes. Void them before voiding it.",
+          code: "invoice_has_credit_notes",
+        })
+      }
       await this.repo.update(tx, id, {
         status: "void",
         voidedAt: new Date(),
@@ -440,6 +451,7 @@ export class InvoicesService {
       taxTotal: invoice.taxTotal,
       total: invoice.total,
       amountPaid: invoice.amountPaid,
+      amountCredited: invoice.amountCredited,
       amountDue: invoice.amountDue,
       notes: invoice.notes,
       terms: invoice.terms,
@@ -559,7 +571,8 @@ export class InvoicesService {
     })
   }
 
-  private async defaultRecipient(clientId: string): Promise<string | null> {
+  /** The client's primary contact email, else the client's email. */
+  async defaultRecipient(clientId: string): Promise<string | null> {
     const [client, contacts] = await Promise.all([
       this.clients.findById(clientId),
       this.clients.listContacts(clientId),

@@ -14,6 +14,7 @@ Workspaces on Pro and Team can have Billleaf POST events to their own URLs (Sett
 | `invoice.sent`            | An invoice is emailed                        | Invoice       |
 | `invoice.paid`            | A payment settles the invoice in full        | Invoice       |
 | `invoice.voided`          | An invoice is voided                         | Invoice       |
+| `credit_note.issued`      | A credit note is issued                      | Credit note   |
 | `payment.recorded`        | A payment is recorded (or a proof confirmed) | Payment       |
 | `payment_proof.submitted` | A client uploads a payment proof             | Proof summary |
 | `ping`                    | "Send test event"                            | `{ message }` |

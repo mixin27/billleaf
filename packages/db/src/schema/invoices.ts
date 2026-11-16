@@ -61,6 +61,8 @@ export const invoices = pgTable(
     total: integer().notNull().default(0),
     /** Maintained by the Payments module; 0 until payments are recorded. */
     amountPaid: integer().notNull().default(0),
+    /** Sum of issued credit notes applied to this invoice's balance. */
+    amountCredited: integer().notNull().default(0),
     clientSnapshot: jsonb().$type<PartySnapshot>(),
     issuerSnapshot: jsonb().$type<PartySnapshot>(),
     issuedAt: timestamp({ withTimezone: true }),
@@ -127,4 +129,71 @@ export const invoiceReminders = pgTable(
     ...timestamps,
   },
   (t) => [unique().on(t.invoiceId, t.offsetDays), index().on(t.workspaceId)]
+)
+
+/**
+ * Credit notes: issued against an issued invoice, immutable (void to undo).
+ * `applied_amount` reduced the invoice's balance; `refund_amount` is the
+ * part beyond what was still owed (the client already paid it), to be
+ * refunded or kept as credit outside Billleaf.
+ */
+export const creditNotes = pgTable(
+  "credit_notes",
+  {
+    id: id(),
+    workspaceId: uuid()
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    invoiceId: uuid()
+      .notNull()
+      .references(() => invoices.id, { onDelete: "restrict" }),
+    clientId: uuid()
+      .notNull()
+      .references(() => clients.id, { onDelete: "restrict" }),
+    number: text().notNull(),
+    status: text({ enum: ["issued", "void"] })
+      .notNull()
+      .default("issued"),
+    issueDate: date({ mode: "string" }).notNull(),
+    reason: text().notNull(),
+    currency: text().notNull(),
+    subtotal: integer().notNull(),
+    taxTotal: integer().notNull(),
+    total: integer().notNull(),
+    appliedAmount: integer().notNull(),
+    refundAmount: integer().notNull(),
+    clientSnapshot: jsonb().$type<PartySnapshot>(),
+    issuerSnapshot: jsonb().$type<PartySnapshot>(),
+    voidedAt: timestamp({ withTimezone: true }),
+    voidReason: text(),
+    lastSentAt: timestamp({ withTimezone: true }),
+    lastSentTo: text(),
+    ...timestamps,
+  },
+  (t) => [
+    unique().on(t.workspaceId, t.number),
+    index().on(t.invoiceId),
+    index().on(t.workspaceId, t.issueDate),
+  ]
+)
+
+export const creditNoteLines = pgTable(
+  "credit_note_lines",
+  {
+    id: id(),
+    workspaceId: uuid()
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    creditNoteId: uuid()
+      .notNull()
+      .references(() => creditNotes.id, { onDelete: "cascade" }),
+    position: integer().notNull(),
+    description: text().notNull(),
+    quantity: numeric({ precision: 14, scale: 3, mode: "number" }).notNull(),
+    unitPrice: integer().notNull(),
+    taxRateBps: integer().notNull().default(0),
+    amount: integer().notNull(),
+    taxAmount: integer().notNull(),
+  },
+  (t) => [index().on(t.creditNoteId, t.position)]
 )

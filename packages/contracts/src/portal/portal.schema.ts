@@ -91,6 +91,8 @@ export const portalInvoiceSummarySchema = z.object({
   currency: z.string(),
   total: z.number().int(),
   amountPaid: z.number().int(),
+  /** Issued credit notes applied to the balance. */
+  amountCredited: z.number().int(),
   amountDue: z.number().int(),
 })
 export type PortalInvoiceSummary = z.infer<typeof portalInvoiceSummarySchema>

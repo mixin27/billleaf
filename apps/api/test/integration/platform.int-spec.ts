@@ -4862,3 +4862,179 @@ describe("expenses", () => {
     void ws
   })
 })
+
+describe("credit notes", () => {
+  it("credits issued invoices partly or fully, splits refunds, and can be voided", async () => {
+    const mail = t.app.get(MailService)
+    const sent: any[] = []
+    const spy = vi
+      .spyOn(mail, "send")
+      .mockImplementation(async (m) => void sent.push(m))
+    try {
+      const owner = new Client(t)
+      await owner.signUp("Corrector")
+      await owner.createWorkspace("Correcting Studio")
+      await owner.patch("/v1/workspace", {
+        timezone: "UTC",
+        defaultTaxRateBps: 0,
+      })
+      const client = (
+        await owner.post("/v1/clients", {
+          name: "Credited Co",
+          email: "ap@credited.test",
+          currency: "USD",
+        })
+      ).body
+      const issue = async (unitPrice: number, taxRateBps = 0) => {
+        const inv = (
+          await owner.post("/v1/invoices", {
+            clientId: client.id,
+            lines: [
+              { description: "Work", quantity: 1, unitPrice, taxRateBps },
+            ],
+          })
+        ).body
+        return (await owner.post(`/v1/invoices/${inv.id}/issue`)).body
+      }
+      const credit = (id: string, body: any) =>
+        owner.post(`/v1/invoices/${id}/credit-notes`, body)
+      const line = (unitPrice: number) => ({
+        reason: "Discount agreed",
+        lines: [{ description: "Discount", quantity: 1, unitPrice }],
+      })
+
+      // Drafts can't be credited.
+      const draft = (
+        await owner.post("/v1/invoices", {
+          clientId: client.id,
+          lines: [{ description: "x", quantity: 1, unitPrice: 100 }],
+        })
+      ).body
+      expect((await credit(draft.id, line(50))).body.code).toBe(
+        "invoice_not_issued"
+      )
+
+      // 100.00 invoice: 30.00 credit lowers what's owed.
+      const a = await issue(10_000)
+      const first = await credit(a.id, line(3_000))
+      expect(first.status).toBe(201)
+      expect(first.body).toMatchObject({
+        number: "CN-0001",
+        status: "issued",
+        total: 3_000,
+        appliedAmount: 3_000,
+        refundAmount: 0,
+        invoiceNumber: a.number,
+      })
+      let inv = (await owner.get(`/v1/invoices/${a.id}`)).body
+      expect(inv).toMatchObject({
+        amountCredited: 3_000,
+        amountDue: 7_000,
+        displayStatus: "partially_paid",
+      })
+      expect(inv.creditNotes).toEqual([
+        expect.objectContaining({ number: "CN-0001", appliedAmount: 3_000 }),
+      ])
+      // Payments can't exceed the reduced balance; paying it settles the invoice.
+      expect(
+        (await owner.post(`/v1/invoices/${a.id}/payments`, { amount: 8_000 }))
+          .body.code
+      ).toBe("overpayment")
+      await owner.post(`/v1/invoices/${a.id}/payments`, { amount: 7_000 })
+      inv = (await owner.get(`/v1/invoices/${a.id}`)).body
+      expect(inv).toMatchObject({ displayStatus: "paid", amountDue: 0 })
+
+      // After it's paid, a further credit is a refund due.
+      const second = (await credit(a.id, line(2_000))).body
+      expect(second).toMatchObject({
+        number: "CN-0002",
+        appliedAmount: 0,
+        refundAmount: 2_000,
+      })
+      // Never more than what's left (100 − 30 − 20 = 50); "full" isn't possible now.
+      expect((await credit(a.id, line(6_000))).body.code).toBe(
+        "credit_exceeds_invoice"
+      )
+      expect(
+        (await credit(a.id, { reason: "All of it", full: true })).body.code
+      ).toBe("credit_exceeds_invoice")
+
+      // A fully credited invoice counts as settled; it can't be voided until
+      // its credit note is.
+      const b = await issue(5_000, 1_000)
+      const full = (
+        await credit(b.id, { reason: "Cancelled order", full: true })
+      ).body
+      expect(full).toMatchObject({
+        total: 5_500,
+        taxTotal: 500,
+        appliedAmount: 5_500,
+        lines: [
+          expect.objectContaining({ description: "Work", taxRateBps: 1_000 }),
+        ],
+      })
+      expect((await owner.get(`/v1/invoices/${b.id}`)).body).toMatchObject({
+        displayStatus: "paid",
+        amountDue: 0,
+      })
+      expect(
+        (await owner.post(`/v1/invoices/${b.id}/void`, { reason: "Cancelled" }))
+          .body.code
+      ).toBe("invoice_has_credit_notes")
+      const voided = await owner.post(`/v1/credit-notes/${full.id}/void`, {
+        reason: "Issued by mistake",
+      })
+      expect(voided.body.status).toBe("void")
+      expect((await owner.get(`/v1/invoices/${b.id}`)).body).toMatchObject({
+        amountCredited: 0,
+        amountDue: 5_500,
+      })
+      expect(
+        (
+          await owner.post(`/v1/credit-notes/${full.id}/void`, {
+            reason: "Again",
+          })
+        ).status
+      ).toBe(409)
+      expect(
+        (await owner.post(`/v1/invoices/${b.id}/void`, { reason: "Cancelled" }))
+          .body.status
+      ).toBe("void")
+
+      // PDF and email.
+      const pdf = await t.app.inject({
+        method: "GET",
+        url: `/v1/credit-notes/${first.body.id}/pdf`,
+        headers: owner.headers(),
+      })
+      expect(pdf.headers["content-type"]).toBe("application/pdf")
+      expect(pdf.rawPayload.subarray(0, 5).toString()).toBe("%PDF-")
+      sent.length = 0
+      const mailed = await owner.post(
+        `/v1/credit-notes/${first.body.id}/send`,
+        {}
+      )
+      expect(mailed.body.lastSentTo).toBe("ap@credited.test")
+      expect(sent[0]).toMatchObject({
+        to: "ap@credited.test",
+        subject: expect.stringContaining("Credit note CN-0001"),
+      })
+      expect(sent[0].attachments[0].filename).toBe("CN-0001.pdf")
+
+      // List and the tax summary (the voided note doesn't count).
+      const list = (await owner.get("/v1/credit-notes?sort=number:asc")).body
+      expect(list.items.map((n: { number: string }) => n.number)).toEqual([
+        "CN-0001",
+        "CN-0002",
+        "CN-0003",
+      ])
+      const today = new Date().toISOString().slice(0, 10)
+      const pl = (
+        await owner.get(`/v1/reports/profit-loss?from=${today}&to=${today}`)
+      ).body
+      expect(pl.tax).toEqual([]) // invoice b's tax was voided with it
+    } finally {
+      spy.mockRestore()
+    }
+  })
+})

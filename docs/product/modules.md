@@ -8,6 +8,7 @@ Proposed product modules. Each maps to one API module under `apps/api/src/module
 | **Clients**            | Client profiles, contacts, history                           | client, contact                     | 1             |
 | **Quotes**             | Quotations / proposals, accept → contract/project/invoice    | quote, quote_line                   | 1             |
 | **Invoices**           | Issue invoices, taxes, multi-currency, PDF + email, status   | invoice, invoice_line, tax_rate     | 1             |
+| **Credit notes**       | Corrections and partial refunds of issued invoices           | credit_note, credit_note_line       | 2             |
 | **Payments**           | Record (later: collect online) payments against invoices     | payment                             | 1             |
 | **Receipts**           | Generate receipts for recorded payments                      | receipt                             | 1             |
 | **Projects**           | Projects, tasks, milestones, deadlines                       | project, task, milestone            | 2             |

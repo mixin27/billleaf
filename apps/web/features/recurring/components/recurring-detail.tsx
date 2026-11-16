@@ -226,7 +226,8 @@ function RecurringDetailView({ schedule: r }: { schedule: RecurringInvoice }) {
                       {money(inv.total, inv.currency, locale)}
                     </TableCell>
                     <TableCell className="text-muted-foreground capitalize">
-                      {inv.status === "issued" && inv.amountPaid >= inv.total
+                      {inv.status === "issued" &&
+                      inv.amountPaid + inv.amountCredited >= inv.total
                         ? "paid"
                         : inv.status}
                     </TableCell>

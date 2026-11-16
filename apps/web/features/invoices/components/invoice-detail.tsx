@@ -37,6 +37,7 @@ import { DocumentSheet, toParty } from "@/components/documents/document-sheet"
 import { SendDialog } from "@/components/documents/send-dialog"
 import { usePermissions } from "@/components/permissions/can"
 import { useClient } from "@/features/clients"
+import { CreditNoteDialog, InvoiceCreditNotes } from "@/features/credit-notes"
 import {
   InvoicePayments,
   PaymentProofsPanel,
@@ -87,7 +88,7 @@ function InvoiceDetailView({ invoice }: { invoice: Invoice }) {
   const voidInvoice = useVoidInvoice(invoice.id)
   const remove = useDeleteInvoice(invoice.id)
   const [dialog, setDialog] = React.useState<
-    "issue" | "delete" | "void" | "send" | "pay" | null
+    "issue" | "delete" | "void" | "send" | "pay" | "credit" | null
   >(null)
   const [voidReason, setVoidReason] = React.useState("")
   const locale = profile.data?.locale
@@ -209,7 +210,15 @@ function InvoiceDetailView({ invoice }: { invoice: Invoice }) {
                       Duplicate
                     </DropdownMenuItem>
                   ) : null}
-                  {issued && invoice.amountPaid === 0 && can("invoice.void") ? (
+                  {issued && can("invoice.void") ? (
+                    <DropdownMenuItem onClick={() => setDialog("credit")}>
+                      Issue credit note
+                    </DropdownMenuItem>
+                  ) : null}
+                  {issued &&
+                  invoice.amountPaid === 0 &&
+                  !invoice.creditNotes.some((c) => c.status === "issued") &&
+                  can("invoice.void") ? (
                     <DropdownMenuItem
                       variant="destructive"
                       onClick={() => setDialog("void")}
@@ -263,6 +272,9 @@ function InvoiceDetailView({ invoice }: { invoice: Invoice }) {
                 ...(invoice.amountPaid > 0
                   ? [{ label: "Paid", amount: invoice.amountPaid }]
                   : []),
+                ...(invoice.amountCredited > 0
+                  ? [{ label: "Credited", amount: invoice.amountCredited }]
+                  : []),
                 {
                   label: "Amount due",
                   amount: invoice.amountDue,
@@ -284,6 +296,21 @@ function InvoiceDetailView({ invoice }: { invoice: Invoice }) {
           invoiceId={invoice.id}
           locale={locale}
           defaultEmail={primaryEmail}
+        />
+      ) : null}
+
+      <InvoiceCreditNotes
+        invoice={invoice}
+        locale={locale}
+        defaultEmail={primaryEmail}
+      />
+
+      {issued ? (
+        <CreditNoteDialog
+          invoice={invoice}
+          open={dialog === "credit"}
+          onOpenChange={(o) => setDialog(o ? "credit" : null)}
+          locale={locale}
         />
       ) : null}
 

@@ -124,7 +124,7 @@ export class PaymentsService {
         "Payments can only be recorded on issued invoices"
       )
     }
-    const due = invoice.total - invoice.amountPaid
+    const due = invoice.total - invoice.amountPaid - invoice.amountCredited
     if (due <= 0)
       throw new ConflictException({
         message: "This invoice is already paid",

@@ -6,6 +6,7 @@ import {
   invoiceReminders,
   invoices,
   quotes,
+  creditNotes,
   expenses,
   timeEntries,
   type Transaction,
@@ -61,9 +62,10 @@ export class InvoicesRepository {
   /** SQL equivalent of invoiceState().displayStatus. */
   private statusFilter(status: InvoiceDisplayStatus, today: string): SQL {
     const issued = eq(invoices.status, "issued")
+    const settled = sql`(${invoices.amountPaid} + ${invoices.amountCredited})`
     const late = and(
       lt(invoices.dueDate, today),
-      lt(invoices.amountPaid, invoices.total)
+      sql`${settled} < ${invoices.total}`
     )!
     const notLate = or(isNull(invoices.dueDate), gte(invoices.dueDate, today))!
     switch (status) {
@@ -71,20 +73,20 @@ export class InvoicesRepository {
       case "void":
         return eq(invoices.status, status)
       case "paid":
-        return and(issued, gte(invoices.amountPaid, invoices.total))!
+        return and(issued, sql`${settled} >= ${invoices.total}`)!
       case "overdue":
         return and(issued, late)!
       case "partially_paid":
         return and(
           issued,
-          gt(invoices.amountPaid, 0),
-          lt(invoices.amountPaid, invoices.total),
+          sql`${settled} > 0`,
+          sql`${settled} < ${invoices.total}`,
           notLate
         )!
       case "open":
         return and(
           issued,
-          eq(invoices.amountPaid, 0),
+          sql`${settled} = 0`,
           sql`${invoices.total} > 0`,
           notLate
         )!
@@ -128,7 +130,7 @@ export class InvoicesRepository {
               issueDate: invoices.issueDate,
               dueDate: invoices.dueDate,
               total: invoices.total,
-              amountDue: sql`${invoices.total} - ${invoices.amountPaid}`,
+              amountDue: sql`${invoices.total} - ${invoices.amountPaid} - ${invoices.amountCredited}`,
               createdAt: invoices.createdAt,
             },
             invoices.id
@@ -274,6 +276,43 @@ export class InvoicesRepository {
   }
 
   /** Voided invoices give their tracked time back so it can be billed again. */
+  async hasIssuedCreditNotes(tx: Database | Transaction, invoiceId: string) {
+    const [row] = await tx
+      .select({ id: creditNotes.id })
+      .from(creditNotes)
+      .where(
+        and(
+          eq(creditNotes.workspaceId, this.ctx.workspaceId),
+          eq(creditNotes.invoiceId, invoiceId),
+          eq(creditNotes.status, "issued")
+        )
+      )
+      .limit(1)
+    return Boolean(row)
+  }
+
+  /** Credit notes issued against an invoice, oldest first. */
+  async creditNotes(invoiceId: string) {
+    return this.db
+      .select({
+        id: creditNotes.id,
+        number: creditNotes.number,
+        status: creditNotes.status,
+        issueDate: creditNotes.issueDate,
+        total: creditNotes.total,
+        appliedAmount: creditNotes.appliedAmount,
+        refundAmount: creditNotes.refundAmount,
+      })
+      .from(creditNotes)
+      .where(
+        and(
+          eq(creditNotes.workspaceId, this.ctx.workspaceId),
+          eq(creditNotes.invoiceId, invoiceId)
+        )
+      )
+      .orderBy(asc(creditNotes.createdAt))
+  }
+
   /** Expenses put on this invoice become unbilled again (void). */
   async releaseExpenses(tx: Database | Transaction, invoiceId: string) {
     await tx

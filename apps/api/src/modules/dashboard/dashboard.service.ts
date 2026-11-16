@@ -100,7 +100,7 @@ export class DashboardService {
         number: i.number,
         clientName: i.clientName,
         currency: i.currency,
-        amountDue: i.total - i.amountPaid,
+        amountDue: i.total - i.amountPaid - i.amountCredited,
         dueDate: i.dueDate!,
         daysOverdue: Number(i.daysOverdue),
         displayStatus: invoiceState(
@@ -108,6 +108,7 @@ export class DashboardService {
             status: "issued",
             total: i.total,
             amountPaid: i.amountPaid,
+            amountCredited: i.amountCredited,
             dueDate: i.dueDate,
           },
           today

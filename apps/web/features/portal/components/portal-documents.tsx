@@ -156,9 +156,14 @@ export function PortalInvoiceView({ slug, id }: { slug: string; id: string }) {
           taxTotal={d.taxTotal}
           total={d.total}
           extraTotals={
-            d.amountPaid > 0
+            d.amountPaid > 0 || d.amountCredited > 0
               ? [
-                  { label: "Paid", amount: -d.amountPaid },
+                  ...(d.amountPaid > 0
+                    ? [{ label: "Paid", amount: -d.amountPaid }]
+                    : []),
+                  ...(d.amountCredited > 0
+                    ? [{ label: "Credited", amount: -d.amountCredited }]
+                    : []),
                   { label: "Amount due", amount: d.amountDue, strong: true },
                 ]
               : []

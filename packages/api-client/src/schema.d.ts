@@ -1364,6 +1364,102 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  "/v1/credit-notes": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["CreditNotesController_list_v1"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/credit-notes/{id}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["CreditNotesController_get_v1"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/credit-notes/{id}/pdf": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["CreditNotesController_pdf_v1"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/invoices/{id}/credit-notes": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["CreditNotesController_create_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/credit-notes/{id}/void": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["CreditNotesController_void_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/credit-notes/{id}/send": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["CreditNotesController_send_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   "/v1/recurring-invoices": {
     parameters: {
       query?: never
@@ -3420,6 +3516,7 @@ export interface components {
         taxTotal: number
         total: number
         amountPaid: number
+        amountCredited: number
         amountDue: number
         /** Format: date-time */
         createdAt: string
@@ -3454,6 +3551,7 @@ export interface components {
       taxTotal: number
       total: number
       amountPaid: number
+      amountCredited: number
       amountDue: number
       /** Format: date-time */
       createdAt: string
@@ -3505,6 +3603,17 @@ export interface components {
         taxId?: string | null
         addressLines: string[]
       } | null
+      creditNotes: {
+        id: string
+        number: string
+        /** @enum {string} */
+        status: "issued" | "void"
+        /** Format: date */
+        issueDate: string
+        total: number
+        appliedAmount: number
+        refundAmount: number
+      }[]
     }
     CreateInvoiceDto: {
       /** Format: uuid */
@@ -3590,6 +3699,7 @@ export interface components {
         | "invoice.sent"
         | "invoice.paid"
         | "invoice.voided"
+        | "credit_note.issued"
         | "payment.recorded"
         | "payment_proof.submitted"
       )[]
@@ -3628,6 +3738,7 @@ export interface components {
         | "invoice.sent"
         | "invoice.paid"
         | "invoice.voided"
+        | "credit_note.issued"
         | "payment.recorded"
         | "payment_proof.submitted"
       )[]
@@ -4348,6 +4459,108 @@ export interface components {
     VoidContractDto: {
       reason?: string | null
     }
+    CreditNoteListDto_Output: {
+      items: {
+        id: string
+        number: string
+        /** @enum {string} */
+        status: "issued" | "void"
+        invoiceId: string
+        invoiceNumber: string | null
+        clientId: string
+        clientName: string
+        /** Format: date */
+        issueDate: string
+        reason: string
+        currency: string
+        subtotal: number
+        taxTotal: number
+        total: number
+        appliedAmount: number
+        refundAmount: number
+        /** Format: date-time */
+        createdAt: string
+      }[]
+      total: number
+      page: number
+      pageSize: number
+    }
+    CreditNoteDto_Output: {
+      id: string
+      number: string
+      /** @enum {string} */
+      status: "issued" | "void"
+      invoiceId: string
+      invoiceNumber: string | null
+      clientId: string
+      clientName: string
+      /** Format: date */
+      issueDate: string
+      reason: string
+      currency: string
+      subtotal: number
+      taxTotal: number
+      total: number
+      appliedAmount: number
+      refundAmount: number
+      /** Format: date-time */
+      createdAt: string
+      lines: {
+        id: string
+        position: number
+        description: string
+        quantity: number
+        unitPrice: number
+        taxRateBps: number
+        amount: number
+        taxAmount: number
+      }[]
+      /** Format: date-time */
+      voidedAt: string | null
+      voidReason: string | null
+      /** Format: date-time */
+      lastSentAt: string | null
+      lastSentTo: string | null
+      clientSnapshot: {
+        name: string
+        legalName?: string | null
+        email?: string | null
+        phone?: string | null
+        taxId?: string | null
+        addressLines: string[]
+      } | null
+      issuerSnapshot: {
+        name: string
+        legalName?: string | null
+        email?: string | null
+        phone?: string | null
+        taxId?: string | null
+        addressLines: string[]
+      } | null
+    }
+    CreateCreditNoteDto: {
+      reason: string
+      /** @default false */
+      full: boolean
+      /** @default [] */
+      lines: {
+        description: string
+        quantity: number
+        unitPrice: number
+        /** @default 0 */
+        taxRateBps: number
+      }[]
+      /** Format: date */
+      issueDate?: string
+    }
+    VoidCreditNoteDto: {
+      reason: string
+    }
+    SendCreditNoteDto: {
+      /** Format: email */
+      to?: string
+      message?: string | null
+    }
     RecurringListDto_Output: {
       items: {
         id: string
@@ -4434,6 +4647,7 @@ export interface components {
       period: string | null
       total: number
       amountPaid: number
+      amountCredited: number
       currency: string
       dueDate: string | null
     }[]
@@ -4699,6 +4913,7 @@ export interface components {
       taxTotal: number
       total: number
       amountPaid: number
+      amountCredited: number
       amountDue: number
       /** Format: date-time */
       createdAt: string
@@ -4750,6 +4965,17 @@ export interface components {
         taxId?: string | null
         addressLines: string[]
       } | null
+      creditNotes: {
+        id: string
+        number: string
+        /** @enum {string} */
+        status: "issued" | "void"
+        /** Format: date */
+        issueDate: string
+        total: number
+        appliedAmount: number
+        refundAmount: number
+      }[]
     }
     ProfitLossDto_Output: {
       /** Format: date */
@@ -5530,6 +5756,7 @@ export interface components {
         currency: string
         total: number
         amountPaid: number
+        amountCredited: number
         amountDue: number
       }[]
     }
@@ -5546,6 +5773,7 @@ export interface components {
       currency: string
       total: number
       amountPaid: number
+      amountCredited: number
       amountDue: number
       notes: string | null
       terms: string | null
@@ -8854,6 +9082,148 @@ export interface operations {
         }
         content: {
           "application/json": components["schemas"]["ContractDto_Output"]
+        }
+      }
+    }
+  }
+  CreditNotesController_list_v1: {
+    parameters: {
+      query?: {
+        page?: number
+        pageSize?: number
+        sort?: string
+        status?: "issued" | "void"
+        clientId?: string
+        invoiceId?: string
+        q?: string
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["CreditNoteListDto_Output"]
+        }
+      }
+    }
+  }
+  CreditNotesController_get_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["CreditNoteDto_Output"]
+        }
+      }
+    }
+  }
+  CreditNotesController_pdf_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  CreditNotesController_create_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateCreditNoteDto"]
+      }
+    }
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["CreditNoteDto_Output"]
+        }
+      }
+    }
+  }
+  CreditNotesController_void_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["VoidCreditNoteDto"]
+      }
+    }
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["CreditNoteDto_Output"]
+        }
+      }
+    }
+  }
+  CreditNotesController_send_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SendCreditNoteDto"]
+      }
+    }
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["CreditNoteDto_Output"]
         }
       }
     }

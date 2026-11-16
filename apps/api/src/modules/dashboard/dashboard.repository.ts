@@ -36,12 +36,12 @@ export class DashboardRepository {
     return and(
       eq(invoices.workspaceId, this.ws),
       eq(invoices.status, "issued"),
-      lt(invoices.amountPaid, invoices.total)
+      sql`${invoices.amountPaid} + ${invoices.amountCredited} < ${invoices.total}`
     )!
   }
 
   async receivableTotals(today: string) {
-    const due = sql`${invoices.total} - ${invoices.amountPaid}`
+    const due = sql`${invoices.total} - ${invoices.amountPaid} - ${invoices.amountCredited}`
     const late = sql`${invoices.dueDate} < ${today}::date`
     const rows = await this.db
       .select({
@@ -64,7 +64,7 @@ export class DashboardRepository {
   }
 
   async aging(today: string) {
-    const due = sql`${invoices.total} - ${invoices.amountPaid}`
+    const due = sql`${invoices.total} - ${invoices.amountPaid} - ${invoices.amountCredited}`
     const days = sql`(${today}::date - ${invoices.dueDate})`
     const bucket = sql<string>`case
       when ${invoices.dueDate} is null or ${days} <= 0 then 'current'
@@ -109,6 +109,7 @@ export class DashboardRepository {
         currency: invoices.currency,
         total: invoices.total,
         amountPaid: invoices.amountPaid,
+        amountCredited: invoices.amountCredited,
         dueDate: invoices.dueDate,
         daysOverdue: sql<string>`${today}::date - ${invoices.dueDate}`,
       })

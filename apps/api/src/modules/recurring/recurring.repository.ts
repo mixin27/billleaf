@@ -143,6 +143,7 @@ export class RecurringRepository {
         period: invoices.recurringPeriod,
         total: invoices.total,
         amountPaid: invoices.amountPaid,
+        amountCredited: invoices.amountCredited,
         currency: invoices.currency,
         dueDate: invoices.dueDate,
       })
