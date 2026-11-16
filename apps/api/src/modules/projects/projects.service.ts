@@ -42,6 +42,9 @@ export function toProjectDto(p: ProjectWithRefs, today: string): Project {
     currency: p.currency,
     budgetAmount: p.budgetAmount,
     hourlyRate: p.hourlyRate,
+    estimateMinutes: p.estimateMinutes,
+    estimateAmount: p.estimateAmount,
+    trackedSeconds: p.trackedSeconds,
     startDate: p.startDate,
     dueDate: p.dueDate,
     isOverdue: p.status === "active" && p.dueDate !== null && p.dueDate < today,
@@ -62,6 +65,7 @@ export function toTaskDto(t: TaskRow): Task {
     dueDate: t.dueDate,
     assigneeMemberId: t.assigneeMemberId,
     assigneeName: t.assigneeName,
+    hourlyRate: t.hourlyRate,
     completedAt: t.completedAt?.toISOString() ?? null,
     createdAt: t.createdAt.toISOString(),
   }
@@ -123,6 +127,10 @@ export class ProjectsService {
       currency: input.currency ?? client?.currency ?? profile.defaultCurrency,
       budgetAmount: billing === "fixed" ? (input.budgetAmount ?? null) : null,
       hourlyRate: billing === "hourly" ? (input.hourlyRate ?? null) : null,
+      estimateMinutes: input.estimateMinutes ?? null,
+      // A money estimate measures billable amounts, so only hourly projects have one.
+      estimateAmount:
+        billing === "hourly" ? (input.estimateAmount ?? null) : null,
       startDate: input.startDate ?? null,
       dueDate: input.dueDate ?? null,
     })
@@ -177,6 +185,7 @@ export class ProjectsService {
       values.hourlyRate =
         billing === "hourly" ? (input.hourlyRate ?? project.hourlyRate) : null
     }
+    if (billing !== "hourly") values.estimateAmount = null
     const start = (
       input.startDate === undefined ? project.startDate : input.startDate
     ) as string | null
@@ -233,6 +242,7 @@ export class ProjectsService {
       position: (max ?? 0) + 1024,
       dueDate: input.dueDate ?? null,
       assigneeMemberId: input.assigneeMemberId ?? null,
+      hourlyRate: input.hourlyRate ?? null,
       completedAt: status === "done" ? new Date() : null,
     })
     return toTaskDto((await this.repo.findTask(projectId, id))!)

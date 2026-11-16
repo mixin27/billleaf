@@ -17,6 +17,7 @@ const items: { title: string; href: string; permission: Permission }[] = [
     href: "/settings/roles",
     permission: "role.read",
   },
+  { title: "Rates", href: "/settings/rates", permission: "rate.read" },
   {
     title: "Payment methods",
     href: "/settings/payment-methods",

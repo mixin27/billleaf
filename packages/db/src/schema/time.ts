@@ -59,6 +59,8 @@ export const timeEntries = pgTable(
     billable: boolean().notNull().default(true),
     /** Set when pulled into an invoice; released (null) if that draft is deleted. */
     invoiceId: uuid().references(() => invoices.id, { onDelete: "set null" }),
+    /** Hourly rate the entry was invoiced at (kept so rate changes don't rewrite history). */
+    billedRate: integer(),
     /** Set for entries brought in by an import (e.g. from Clockify). */
     importBatchId: uuid().references(() => timeImportBatches.id, {
       onDelete: "set null",

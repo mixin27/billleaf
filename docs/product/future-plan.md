@@ -13,6 +13,7 @@ Work we've agreed to do later, with enough detail to pick up without re-research
 - **Launch readiness:** public home and pricing pages, Terms and Privacy pages, data export (ZIP of CSVs) and workspace deletion.
 - **Payment reminders:** clients are emailed about unpaid invoices on the days the workspace picks (before, on and after the due date), each once; paused per invoice.
 - **Account deletion:** users delete their own login once they aren't the only owner of a workspace.
+- **Rates and budgets:** billable rates per task, project, member and workspace default (the most specific wins; invoiced time keeps its rate), member cost rates with cost and profit on projects and reports, time and money estimates with progress bars, a dashboard card, and owner alerts at 80% / 100%.
 - **Export with PDFs:** owners get a ZIP of every record plus all document PDFs by email; admins see each workspace's plan payments.
 - **Deploy readiness:** production compose stack, pinned images, approval gate, smoke test, [Dokploy runbook](../infrastructure/dokploy-runbook.md).
 
@@ -20,18 +21,13 @@ Work we've agreed to do later, with enough detail to pick up without re-research
 
 Production deploy is on hold until there's budget for it (see [On hold](#on-hold)). Until then, build in this order:
 
-1. **Rates and budgets for time tracking.** Today a project has one `hourlyRate` (hourly billing) or a `budgetAmount` (fixed price), and nothing warns when work runs over. Add:
-   - **Rate hierarchy:** workspace default → member → project → task; the most specific rate wins when time becomes invoice lines. Store the rate on each time entry when it's billed, so later changes don't rewrite history.
-   - **Cost rates** per member (what their time costs you), so reports show profit next to revenue.
-   - **Project estimates:** hours or money, with progress on the project page and the dashboard.
-   - **Budget alerts:** email the owner at 80% and 100% of the estimate, each once (a job on the `recurring` queue, like invoice reminders).
-2. **Outgoing webhooks.** Let a workspace send events to other tools:
+1. **Outgoing webhooks.** Let a workspace send events to other tools:
    - **Settings → Webhooks:** endpoint URL, which events, a signing secret (HMAC-SHA256 header with a timestamp), enable/disable.
    - **Events:** client created, quote accepted/declined, contract signed, invoice issued/sent/paid/voided, payment recorded, payment proof submitted.
    - **Delivery:** a `webhooks` BullMQ queue with exponential retries; a delivery log with status, response code and a "Resend" button; disable an endpoint after repeated failures and email the owner.
    - **Safety:** HTTPS only in production, no private/internal addresses, short timeouts. Pro/Team plan feature.
    - Later: Zapier/Make templates on top.
-3. **Small follow-ups** (table below), when someone needs them.
+2. **Small follow-ups** (table below), when someone needs them.
 
 ## On hold
 

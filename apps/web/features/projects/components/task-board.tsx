@@ -1,12 +1,22 @@
 "use client"
 
 import {
+  fromMinorUnits,
   type Task,
   TASK_STATUS_LABELS,
   type TaskStatus,
+  toMinorUnits,
 } from "@workspace/contracts"
 import { Button } from "@workspace/ui/components/button"
 import { Checkbox } from "@workspace/ui/components/checkbox"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@workspace/ui/components/dialog"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,26 +32,34 @@ import { cn } from "@workspace/ui/lib/utils"
 import * as React from "react"
 import { toast } from "sonner"
 
+import { Field } from "@/components/form/field"
 import { usePermissions } from "@/components/permissions/can"
 import { useMembers } from "@/features/members"
 import { errorMessage } from "@/lib/api"
-import { formatDate } from "@/lib/format"
+import { formatDate, money } from "@/lib/format"
 
 import { useCreateTask, useDeleteTask, useUpdateTask } from "../api/mutations"
 import { useTasks } from "../api/queries"
 
 const COLUMNS: TaskStatus[] = ["todo", "in_progress", "done"]
 
+/** Hourly projects can price a task differently from the project. */
+type Pricing = { currency: string } | null
+
 /** Three-column task board (to do / in progress / done) with optimistic updates. */
 export function TaskBoard({
   projectId,
   locale,
   today,
+  pricing = null,
 }: {
   projectId: string
   locale?: string
   today?: string
+  /** Set for hourly projects: tasks can have their own hourly rate. */
+  pricing?: Pricing
 }) {
+  const [pricingTask, setPricingTask] = React.useState<Task | null>(null)
   const tasks = useTasks(projectId)
   const { can } = usePermissions()
   const editable = can("project.update")
@@ -83,6 +101,8 @@ export function TaskBoard({
                 members={memberOptions}
                 locale={locale}
                 today={today}
+                pricing={pricing}
+                onSetRate={() => setPricingTask(task)}
               />
             ))}
             {editable ? (
@@ -91,7 +111,96 @@ export function TaskBoard({
           </section>
         )
       })}
+      {pricing ? (
+        <TaskRateDialog
+          task={pricingTask}
+          projectId={projectId}
+          currency={pricing.currency}
+          onClose={() => setPricingTask(null)}
+        />
+      ) : null}
     </div>
+  )
+}
+
+function TaskRateDialog({
+  task,
+  projectId,
+  currency,
+  onClose,
+}: {
+  task: Task | null
+  projectId: string
+  currency: string
+  onClose: () => void
+}) {
+  const update = useUpdateTask(projectId)
+  const [value, setValue] = React.useState("")
+  React.useEffect(() => {
+    if (task)
+      setValue(
+        task.hourlyRate === null
+          ? ""
+          : fromMinorUnits(task.hourlyRate, currency)
+      )
+  }, [task, currency])
+  const minor = value.trim() ? toMinorUnits(value, currency) : null
+  const invalid = Boolean(value.trim()) && (minor === null || minor < 0)
+  return (
+    <Dialog open={task !== null} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Hourly rate for this task</DialogTitle>
+          <DialogDescription>
+            Time on “{task?.title}” is billed at this rate instead of the
+            project&apos;s or member&apos;s. Leave empty to use those.
+          </DialogDescription>
+        </DialogHeader>
+        <form
+          id="task-rate"
+          onSubmit={(e) => {
+            e.preventDefault()
+            if (!task || invalid) return
+            update.mutate(
+              { taskId: task.id, hourlyRate: minor },
+              {
+                onSuccess: () => {
+                  toast.success("Task rate saved")
+                  onClose()
+                },
+                onError: (err) => toast.error(errorMessage(err)),
+              }
+            )
+          }}
+        >
+          <Field
+            label={`Per hour (${currency})`}
+            htmlFor="task-rate-input"
+            error={invalid ? "Enter a valid amount" : undefined}
+          >
+            <Input
+              id="task-rate-input"
+              inputMode="decimal"
+              className="w-40"
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+            />
+          </Field>
+        </form>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            form="task-rate"
+            disabled={update.isPending || invalid}
+          >
+            Save
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
 
@@ -105,6 +214,8 @@ function TaskCard({
   members,
   locale,
   today,
+  pricing,
+  onSetRate,
 }: {
   task: Task
   projectId: string
@@ -115,6 +226,8 @@ function TaskCard({
   members: { id: string; name: string }[]
   locale?: string
   today?: string
+  pricing: Pricing
+  onSetRate: () => void
 }) {
   const update = useUpdateTask(projectId)
   const remove = useDeleteTask(projectId)
@@ -145,15 +258,23 @@ function TaskCard({
         >
           {task.title}
         </p>
-        {task.assigneeName || task.dueDate ? (
+        {task.assigneeName ||
+        task.dueDate ||
+        (pricing && task.hourlyRate !== null) ? (
           <p className="mt-0.5 text-xs text-muted-foreground">
-            {task.assigneeName}
-            {task.assigneeName && task.dueDate ? " · " : ""}
-            {task.dueDate ? (
-              <span className={cn(late && "text-destructive")}>
-                due {formatDate(task.dueDate, locale)}
-              </span>
-            ) : null}
+            {[
+              task.assigneeName,
+              task.dueDate ? (
+                <span key="due" className={cn(late && "text-destructive")}>
+                  due {formatDate(task.dueDate, locale)}
+                </span>
+              ) : null,
+              pricing && task.hourlyRate !== null
+                ? `${money(task.hourlyRate, pricing.currency, locale)} / h`
+                : null,
+            ]
+              .filter(Boolean)
+              .flatMap((x, i) => (i === 0 ? [x] : [" · ", x]))}
           </p>
         ) : null}
       </div>
@@ -235,6 +356,16 @@ function TaskCard({
                     </DropdownMenuItem>
                   ) : null}
                 </DropdownMenuGroup>
+              </>
+            ) : null}
+            {pricing ? (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={onSetRate}>
+                  {task.hourlyRate === null
+                    ? "Set hourly rate…"
+                    : "Change hourly rate…"}
+                </DropdownMenuItem>
               </>
             ) : null}
             <DropdownMenuSeparator />

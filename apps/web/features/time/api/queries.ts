@@ -16,6 +16,7 @@ export const timeKeys = {
   suggestions: (ws: string | undefined, q: string) =>
     ["time", ws, "suggestions", q] as const,
   tags: (ws: string | undefined) => ["time", ws, "tags"] as const,
+  budgets: (ws: string | undefined) => ["time", ws, "budgets"] as const,
 }
 
 /** Workspace tags, alphabetical. */
@@ -80,6 +81,26 @@ export function useProjectTimeSummary(projectId: string, enabled = true) {
           params: { path: { id: projectId } },
         })
       ),
+    enabled: Boolean(ws) && enabled,
+  })
+}
+
+/** Settings → Rates: default and member rates (needs rate.read). */
+export function useRates(enabled = true) {
+  const ws = useWorkspaceStore((s) => s.workspace?.id)
+  return useQuery({
+    queryKey: ["rates", ws] as const,
+    queryFn: () => unwrap(api.GET("/v1/rates")),
+    enabled: Boolean(ws) && enabled,
+  })
+}
+
+/** Active projects with an estimate, the most used first. */
+export function useProjectBudgets(enabled = true) {
+  const ws = useWorkspaceStore((s) => s.workspace?.id)
+  return useQuery({
+    queryKey: timeKeys.budgets(ws),
+    queryFn: () => unwrap(api.GET("/v1/project-budgets")),
     enabled: Boolean(ws) && enabled,
   })
 }

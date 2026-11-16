@@ -32,6 +32,7 @@ export type ProjectWithRefs = ProjectRow & {
   clientName: string | null
   quoteNumber: string | null
   taskCounts: Record<TaskStatus, number>
+  trackedSeconds: number
 }
 export type TaskRow = typeof tasks.$inferSelect & {
   assigneeName: string | null
@@ -76,6 +77,22 @@ export class ProjectsRepository {
         )
       )
       .groupBy(tasks.projectId, tasks.status)
+    const tracked = await this.db
+      .select({
+        projectId: timeEntries.projectId,
+        seconds: sql<string>`coalesce(sum(${timeEntries.durationSeconds}), 0)`,
+      })
+      .from(timeEntries)
+      .where(
+        inArray(
+          timeEntries.projectId,
+          rows.map((r) => r.project.id)
+        )
+      )
+      .groupBy(timeEntries.projectId)
+    const trackedBy = new Map(
+      tracked.map((t) => [t.projectId, Number(t.seconds)])
+    )
     return rows.map((r) => {
       const taskCounts = { todo: 0, in_progress: 0, done: 0 }
       for (const c of counts)
@@ -85,6 +102,7 @@ export class ProjectsRepository {
         clientName: r.clientName,
         quoteNumber: r.quoteNumber,
         taskCounts,
+        trackedSeconds: trackedBy.get(r.project.id) ?? 0,
       }
     })
   }
@@ -140,6 +158,21 @@ export class ProjectsRepository {
         .where(where),
     ])
     return { items: await this.withCounts(rows), total: counted?.n ?? 0 }
+  }
+
+  /** Active projects with a time or money estimate. */
+  async withEstimates(): Promise<ProjectWithRefs[]> {
+    const rows = await this.select().where(
+      and(
+        this.scope(),
+        eq(projects.status, "active"),
+        or(
+          sql`${projects.estimateMinutes} is not null`,
+          sql`${projects.estimateAmount} is not null`
+        )
+      )
+    )
+    return this.withCounts(rows)
   }
 
   async findById(id: string): Promise<ProjectWithRefs | null> {

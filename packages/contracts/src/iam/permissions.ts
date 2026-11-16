@@ -62,6 +62,10 @@ export const PERMISSION_CATALOG = {
     update: "Edit projects and tasks",
     delete: "Delete projects",
   },
+  rate: {
+    read: "See member rates, costs and profit",
+    manage: "Set the default and member hourly rates",
+  },
   time: {
     read: "View all time entries",
     track: "Track own time",
@@ -143,7 +147,9 @@ export const SYSTEM_ROLES = {
     name: "Member",
     description: "Work on clients, projects and time; cannot manage billing.",
     permissions: [
-      ...readAll.filter((k) => !["billing.read", "audit.read"].includes(k)),
+      ...readAll.filter(
+        (k) => !["billing.read", "audit.read", "rate.read"].includes(k)
+      ),
       "client.create",
       "client.update",
       "contract.create",

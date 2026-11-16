@@ -13,6 +13,7 @@ import * as React from "react"
 
 import { DataTablePagination, useDataTableState } from "@/components/data-table"
 import { Can } from "@/components/permissions/can"
+import { BudgetBar, hoursLabel } from "@/features/time"
 import { useWorkspaceProfile, useWorkspaceStore } from "@/features/workspace"
 import { formatDate, money } from "@/lib/format"
 
@@ -134,6 +135,22 @@ export function ProjectsList() {
                           : ""}
                       </p>
                     </div>
+                    {p.estimateMinutes ? (
+                      <div className="flex flex-col gap-1">
+                        <BudgetBar
+                          compact
+                          label={`${p.name} time estimate`}
+                          used={p.trackedSeconds / 60}
+                          estimate={p.estimateMinutes}
+                          usedText={hoursLabel(p.trackedSeconds)}
+                          estimateText={hoursLabel(p.estimateMinutes * 60)}
+                        />
+                        <p className="text-xs text-muted-foreground tabular-nums">
+                          {hoursLabel(p.trackedSeconds)} of{" "}
+                          {hoursLabel(p.estimateMinutes * 60)} estimated
+                        </p>
+                      </div>
+                    ) : null}
                     <p className="text-xs text-muted-foreground">
                       {p.billing === "fixed" && p.budgetAmount != null
                         ? `Fixed · ${money(p.budgetAmount, p.currency, locale)}`
@@ -141,7 +158,7 @@ export function ProjectsList() {
                           ? `${money(p.hourlyRate, p.currency, locale)} / hour`
                           : p.billing === "non_billable"
                             ? "Not billable"
-                            : "No rate set"}
+                            : "Hourly"}
                     </p>
                   </CardContent>
                 </Card>

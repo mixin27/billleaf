@@ -31,7 +31,9 @@ import { AuditService } from "../../iam/audit/audit.service.js"
 import { addDays, todayIn } from "../documents/party-snapshot.js"
 import { InvoicesService } from "../invoices/invoices.service.js"
 import { ProjectsService } from "../projects/projects.service.js"
+import { RatesService } from "../rates/rates.service.js"
 import { WorkspaceProfileService } from "../workspace/workspace-profile.service.js"
+import { ProjectUsageService } from "./project-usage.service.js"
 import {
   type TagRow,
   TimeRepository,
@@ -55,11 +57,18 @@ export class TimeService {
     private readonly invoices: InvoicesService,
     private readonly profile: WorkspaceProfileService,
     private readonly ctx: RequestContext,
-    private readonly audit: AuditService
+    private readonly audit: AuditService,
+    private readonly rates: RatesService,
+    private readonly projectUsage: ProjectUsageService
   ) {}
 
   private can(
-    p: "time.track" | "time.read" | "time.manage" | "invoice.create"
+    p:
+      | "time.track"
+      | "time.read"
+      | "time.manage"
+      | "invoice.create"
+      | "rate.read"
   ) {
     return this.ctx.permissions.has(p)
   }
@@ -663,15 +672,18 @@ export class TimeService {
 
   async summary(projectId: string): Promise<ProjectTimeSummary> {
     const project = await this.projects.get(projectId)
-    const s = await this.repo.summary(projectId)
+    const u = (
+      await this.projectUsage.usage([project], { cost: this.can("rate.read") })
+    ).get(project.id)!
     return {
-      totalSeconds: s.total,
-      billableSeconds: s.billable,
-      unbilledSeconds: s.unbilled,
-      unbilledAmount:
-        project.billing === "hourly" && project.hourlyRate !== null
-          ? unbilledAmountFor(s.unbilled, project.hourlyRate)
-          : null,
+      totalSeconds: u.trackedSeconds,
+      billableSeconds: u.billableSeconds,
+      unbilledSeconds: u.unbilledSeconds,
+      unbilledAmount: u.unbilledAmount,
+      billableAmount: u.billableAmount,
+      unratedSeconds: u.unratedSeconds,
+      cost: u.cost,
+      uncostedSeconds: u.uncostedSeconds,
       currency: project.currency,
     }
   }
@@ -695,9 +707,9 @@ export class TimeService {
       throw new BadRequestException(
         "Internal projects have no client to invoice"
       )
-    if (project.billing !== "hourly" || project.hourlyRate === null) {
+    if (project.billing !== "hourly") {
       throw new BadRequestException({
-        message: "Set an hourly rate on the project first",
+        message: "Only hourly projects can invoice tracked time",
         code: "no_hourly_rate",
       })
     }
@@ -708,11 +720,39 @@ export class TimeService {
         code: "no_unbilled_time",
       })
 
+    // Price each entry: task → project → member → workspace default rate.
+    const [book, tasks] = await Promise.all([
+      this.rates.book(),
+      this.projects.listTasks(projectId),
+    ])
+    const taskRate = new Map(tasks.map((t) => [t.id, t.hourlyRate]))
+    const priced = entries.map((e) => ({
+      ...e,
+      rate: book.rate({
+        billing: project.billing,
+        currency: project.currency,
+        projectRate: project.hourlyRate,
+        taskRate: e.taskId ? taskRate.get(e.taskId) : null,
+        memberId: e.memberId,
+      }),
+    }))
+    if (priced.some((e) => e.rate === null)) {
+      throw new BadRequestException({
+        message:
+          "Some of this time has no hourly rate. Set one on the project, its tasks, the members or the workspace (Settings → Rates).",
+        code: "no_hourly_rate",
+      })
+    }
+
     const profile = await this.profile.get()
-    const lines = groupLines(entries, project.name).map((g) => ({
+    const groups = groupLines(
+      priced as (TimeEntryWithRefs & { rate: number })[],
+      project.name
+    )
+    const lines = groups.map((g) => ({
       description: g.description,
       quantity: Math.max(0.01, secondsToHours(g.seconds)),
-      unitPrice: project.hourlyRate!,
+      unitPrice: g.rate,
       taxRateBps: profile.defaultTaxRateBps,
     }))
     const invoice = await this.invoices.create({
@@ -732,6 +772,8 @@ export class TimeService {
         code: "time_already_invoiced",
       })
     }
+    for (const g of groups)
+      await this.repo.setBilledRate(g.entryIds, invoice.id, g.rate)
     await this.audit.record("time.invoiced", {
       resourceType: "invoice",
       resourceId: invoice.id,
@@ -821,32 +863,39 @@ const formatHm = (seconds: number) =>
 const defaultBillable = (project: { billing: string } | null) =>
   project ? project.billing !== "non_billable" : true
 
-/** Amount for unbilled seconds at an hourly rate (matches invoice line math). */
-export function unbilledAmountFor(seconds: number, hourlyRate: number) {
-  return Math.round(secondsToHours(seconds) * hourlyRate)
-}
-
-/** One invoice line per task (entries without a task share a line). */
-export function groupLines(
-  entries: Pick<
+/**
+ * One invoice line per task and rate (entries without a task share a line;
+ * the same task at two rates, e.g. two members, gets two lines).
+ */
+export function groupLines<
+  E extends Pick<
     TimeEntryWithRefs,
-    "taskId" | "taskTitle" | "durationSeconds" | "entryDate"
-  >[],
-  projectName: string
-) {
+    "id" | "taskId" | "taskTitle" | "durationSeconds" | "entryDate"
+  > & { rate?: number },
+>(entries: E[], projectName: string) {
   const groups = new Map<
     string,
-    { title: string; seconds: number; from: string; to: string }
+    {
+      title: string
+      rate: number
+      seconds: number
+      from: string
+      to: string
+      entryIds: string[]
+    }
   >()
   for (const e of entries) {
-    const key = e.taskId ?? "__general__"
+    const key = `${e.taskId ?? "__general__"}:${e.rate ?? 0}`
     const g = groups.get(key) ?? {
       title: e.taskTitle ?? projectName,
+      rate: e.rate ?? 0,
       seconds: 0,
       from: e.entryDate,
       to: e.entryDate,
+      entryIds: [],
     }
     g.seconds += e.durationSeconds ?? 0
+    g.entryIds.push(e.id)
     if (e.entryDate < g.from) g.from = e.entryDate
     if (e.entryDate > g.to) g.to = e.entryDate
     groups.set(key, g)
@@ -854,5 +903,7 @@ export function groupLines(
   return [...groups.values()].map((g) => ({
     description: `${g.title} (${g.from === g.to ? g.from : `${g.from} – ${g.to}`})`,
     seconds: g.seconds,
+    rate: g.rate,
+    entryIds: g.entryIds,
   }))
 }

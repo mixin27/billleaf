@@ -270,26 +270,58 @@ export class TimeRepository {
     return rows.length
   }
 
-  async summary(projectId: string) {
-    const [row] = await this.db
-      .select({
-        total: sql<string>`coalesce(sum(${timeEntries.durationSeconds}), 0)`,
-        billable: sql<string>`coalesce(sum(${timeEntries.durationSeconds}) filter (where ${timeEntries.billable}), 0)`,
-        unbilled: sql<string>`coalesce(sum(${timeEntries.durationSeconds}) filter (where ${timeEntries.billable} and ${timeEntries.invoiceId} is null), 0)`,
-      })
-      .from(timeEntries)
+  /** Record the hourly rate claimed entries were invoiced at. */
+  async setBilledRate(ids: string[], invoiceId: string, rate: number) {
+    await this.db
+      .update(timeEntries)
+      .set({ billedRate: rate })
       .where(
         and(
           this.scope(),
-          eq(timeEntries.projectId, projectId),
+          inArray(timeEntries.id, ids),
+          eq(timeEntries.invoiceId, invoiceId)
+        )
+      )
+  }
+
+  /**
+   * Finished time of projects, summed per (project, task, member, billable,
+   * invoiced, billed rate): enough to price it with any rate book.
+   */
+  async usageRows(projectIds: string[]) {
+    if (projectIds.length === 0) return []
+    const rows = await this.db
+      .select({
+        projectId: timeEntries.projectId,
+        taskRate: tasks.hourlyRate,
+        memberId: timeEntries.memberId,
+        billable: timeEntries.billable,
+        invoiced: sql<boolean>`${timeEntries.invoiceId} is not null`,
+        billedRate: timeEntries.billedRate,
+        seconds: sql<string>`sum(${timeEntries.durationSeconds})`,
+      })
+      .from(timeEntries)
+      .leftJoin(tasks, eq(tasks.id, timeEntries.taskId))
+      .where(
+        and(
+          this.scope(),
+          inArray(timeEntries.projectId, projectIds),
           isNotNull(timeEntries.endedAt)
         )
       )
-    return {
-      total: Number(row?.total ?? 0),
-      billable: Number(row?.billable ?? 0),
-      unbilled: Number(row?.unbilled ?? 0),
-    }
+      .groupBy(
+        timeEntries.projectId,
+        tasks.hourlyRate,
+        timeEntries.memberId,
+        timeEntries.billable,
+        sql`${timeEntries.invoiceId} is not null`,
+        timeEntries.billedRate
+      )
+    return rows.map((r) => ({
+      ...r,
+      projectId: r.projectId!,
+      seconds: Number(r.seconds ?? 0),
+    }))
   }
 
   /** Display name of a workspace member (for the entry's name snapshot). */
@@ -500,6 +532,9 @@ export class TimeRepository {
         projectName: projects.name,
         projectBilling: projects.billing,
         hourlyRate: projects.hourlyRate,
+        taskRate: tasks.hourlyRate,
+        invoiced: sql<boolean>`${timeEntries.invoiceId} is not null`,
+        billedRate: timeEntries.billedRate,
         currency: projects.currency,
         clientId: projects.clientId,
         clientName: clients.name,

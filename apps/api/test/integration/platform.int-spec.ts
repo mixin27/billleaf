@@ -25,6 +25,7 @@ import { WORKER_HEARTBEAT_KEY } from "../../src/jobs/worker-heartbeat.js"
 import { addInterval } from "../../src/billing/period.js"
 import { DataExportService } from "../../src/modules/data-export/data-export.service.js"
 import { InvoiceRemindersService } from "../../src/modules/invoices/invoice-reminders.service.js"
+import { BudgetsService } from "../../src/modules/time/budgets.service.js"
 import { SubscriptionRemindersService } from "../../src/billing/manual/subscription-reminders.service.js"
 import { MailService } from "../../src/mail/mail.service.js"
 import type { TestBillingProvider } from "../../src/billing/providers/test-billing.provider.js"
@@ -2092,7 +2093,7 @@ describe("timesheet, reports and Clockify import", () => {
     expect(lines).toHaveLength(4)
     // Formula-looking text is neutralised; amounts use the hourly rate.
     expect(lines.find((l) => l.includes("SUM"))).toContain(
-      '\'=SUM(A1),"Design, Meeting",Yes,100.00,200.00,USD'
+      '\'=SUM(A1),"Design, Meeting",Yes,100.00,200.00,,,USD'
     )
 
     // A member without time.read only ever sees their own time.
@@ -3896,6 +3897,230 @@ describe("full export with PDFs", () => {
       expect(pdfs.some((n) => n.startsWith("pdfs/invoices/"))).toBe(true)
       expect(pdfs.some((n) => n.startsWith("pdfs/receipts/"))).toBe(true)
       expect(strFromU8(zip[pdfs[0]!]!.slice(0, 5))).toBe("%PDF-")
+    } finally {
+      spy.mockRestore()
+    }
+  })
+})
+
+describe("rates and budgets", () => {
+  it("prices time task → project → member → default, keeps invoiced rates, shows cost, and alerts on estimates once", async () => {
+    const mail = t.app.get(MailService)
+    const sent: any[] = []
+    const spy = vi
+      .spyOn(mail, "send")
+      .mockImplementation(async (m) => void sent.push(m))
+    try {
+      const owner = new Client(t)
+      const { email: ownerEmail } = await owner.signUp("Rate Owner")
+      const ws = await owner.createWorkspace("Rated Studio")
+      await owner.patch("/v1/workspace", {
+        timezone: "UTC",
+        defaultTaxRateBps: 0,
+        defaultCurrency: "USD",
+      })
+      await t.db
+        .update(workspaceSubscriptions)
+        .set({ planKey: "team" })
+        .where(eq(workspaceSubscriptions.workspaceId, ws.id))
+
+      // A Member (system role) tracks time but can't see or set rates.
+      const memberRole = (await owner.get("/v1/roles")).body.find(
+        (r: { slug: string }) => r.slug === "member"
+      )
+      expect(memberRole.permissions).not.toContain("rate.read")
+      const member = new Client(t)
+      const { email } = await member.signUp("Rate Member")
+      const inv = (
+        await owner.post("/v1/invitations", { email, roleId: memberRole.id })
+      ).body
+      await member.post("/api/auth/organization/accept-invitation", {
+        invitationId: inv.id,
+      })
+      member.workspaceId = ws.id
+      expect((await member.get("/v1/rates")).status).toBe(403)
+      expect(
+        (await member.put("/v1/rates/default", { hourlyRate: 1 })).status
+      ).toBe(403)
+
+      // Default 50.00/h; the owner bills 80.00/h and costs 30.00/h.
+      await owner.put("/v1/rates/default", { hourlyRate: 5_000 })
+      const rates = (await owner.get("/v1/rates")).body
+      expect(rates).toMatchObject({ currency: "USD", defaultHourlyRate: 5_000 })
+      const ownerMember = rates.members.find(
+        (m: { email: string }) => m.email === ownerEmail
+      )
+      const saved = await owner.put(
+        `/v1/rates/members/${ownerMember.memberId}`,
+        { hourlyRate: 8_000, costRate: 3_000 }
+      )
+      expect(saved.status).toBe(200)
+      expect(
+        saved.body.members.find(
+          (m: { memberId: string }) => m.memberId === ownerMember.memberId
+        )
+      ).toMatchObject({ currency: "USD", hourlyRate: 8_000, costRate: 3_000 })
+      expect(
+        (
+          await owner.put(`/v1/rates/members/${crypto.randomUUID()}`, {
+            hourlyRate: 1,
+            costRate: null,
+          })
+        ).status
+      ).toBe(404)
+
+      // Hourly project with no rate of its own, 2 h and 150.00 estimates.
+      const client = (await owner.post("/v1/clients", { name: "Rated Co" }))
+        .body
+      const project = (
+        await owner.post("/v1/projects", {
+          name: "Rated work",
+          clientId: client.id,
+          currency: "USD",
+          estimateMinutes: 120,
+          estimateAmount: 15_000,
+        })
+      ).body
+      expect(project).toMatchObject({
+        hourlyRate: null,
+        estimateMinutes: 120,
+        estimateAmount: 15_000,
+        trackedSeconds: 0,
+      })
+      const review = (
+        await owner.post(`/v1/projects/${project.id}/tasks`, {
+          title: "Review",
+          hourlyRate: 12_000,
+        })
+      ).body
+      expect(review.hourlyRate).toBe(12_000)
+
+      const today = new Date().toISOString().slice(0, 10)
+      const log = (c: Client, minutes: number, taskId?: string) =>
+        c.post("/v1/time-entries", {
+          projectId: project.id,
+          taskId,
+          entryDate: today,
+          durationMinutes: minutes,
+        })
+      await log(owner, 60) // member rate 80.00
+      await log(owner, 30, review.id) // task rate 120.00
+      expect((await log(member, 60)).status).toBe(201) // default 50.00
+
+      const summary = (
+        await owner.get(`/v1/projects/${project.id}/time-summary`)
+      ).body
+      expect(summary).toMatchObject({
+        totalSeconds: 9_000,
+        billableAmount: 19_000, // 80 + 60 + 50
+        unbilledAmount: 19_000,
+        unratedSeconds: 0,
+        cost: 4_500, // the owner's 1.5 h × 30.00
+        uncostedSeconds: 3_600, // the member has no cost rate
+      })
+      // Without rate.read: no cost.
+      expect(
+        (await member.get(`/v1/projects/${project.id}/time-summary`)).body
+      ).toMatchObject({ billableAmount: 19_000, cost: null })
+      expect(
+        (await owner.get(`/v1/projects/${project.id}`)).body.trackedSeconds
+      ).toBe(9_000)
+
+      // Budgets: 2.5 h of 2 h (125%), 190.00 of 150.00 (127%).
+      const budgets = (await owner.get("/v1/project-budgets")).body
+      expect(budgets).toEqual([
+        expect.objectContaining({ projectId: project.id, percent: 127 }),
+      ])
+
+      // Alerts: each estimate's 100% once (80% recorded, not emailed).
+      const alerts = t.app.get(BudgetsService)
+      sent.length = 0
+      await alerts.run()
+      const mine = () => sent.filter((m) => m.to === ownerEmail)
+      expect(mine().map((m) => m.subject)).toEqual([
+        "Rated work is over its estimate",
+        "Rated work is over its estimate",
+      ])
+      expect(mine()[0].text).toContain("2.5 h of 2 h")
+      await alerts.run()
+      expect(mine()).toHaveLength(2)
+      expect(sent.some((m) => m.to === email)).toBe(false) // owners only
+      // A new estimate re-arms its alerts: 2.5 h of 3 h = 83%.
+      await owner.patch(`/v1/projects/${project.id}`, { estimateMinutes: 180 })
+      await alerts.run()
+      expect(mine().at(-1).subject).toBe(
+        "Rated work has used 80% of its estimate"
+      )
+      expect(mine()).toHaveLength(3)
+
+      // Reports price the same way; cost needs rate.read.
+      const range = `from=${today}&to=${today}`
+      const report = (
+        await owner.get(`/v1/time/reports/summary?${range}&groupBy=member`)
+      ).body
+      expect(report.amounts).toEqual([{ currency: "USD", amount: 19_000 }])
+      expect(report.costs).toEqual([{ currency: "USD", amount: 4_500 }])
+      const memberReport = (
+        await member.get(`/v1/time/reports/summary?${range}`)
+      ).body
+      // (Members have time.read, so they see everyone's time, but no cost.)
+      expect(memberReport.amounts).toEqual([
+        { currency: "USD", amount: 19_000 },
+      ])
+      expect(memberReport.costs).toEqual([])
+      const csv = (
+        await t.app.inject({
+          method: "GET",
+          url: `/v1/time/reports/detailed.csv?${range}`,
+          headers: owner.headers(),
+        })
+      ).body
+      expect(csv).toContain("Cost Rate,Cost,Currency")
+      expect(csv).toContain(",80.00,80.00,30.00,30.00,USD")
+
+      // Invoicing: one line per task and rate, each entry keeps its rate.
+      const invoice = await owner.post("/v1/invoices/from-time", {
+        projectId: project.id,
+      })
+      expect(invoice.status).toBe(201)
+      expect(
+        invoice.body.lines
+          .map((l: { unitPrice: number; quantity: number }) => [
+            l.unitPrice,
+            l.quantity,
+          ])
+          .sort((a: number[], b: number[]) => a[0]! - b[0]!)
+      ).toEqual([
+        [5_000, 1],
+        [8_000, 1],
+        [12_000, 0.5],
+      ])
+      expect(invoice.body.total).toBe(19_000)
+      await owner.put("/v1/rates/default", { hourlyRate: 9_000 })
+      expect(
+        (await owner.get(`/v1/projects/${project.id}/time-summary`)).body
+      ).toMatchObject({ billableAmount: 19_000, unbilledAmount: 0 })
+
+      // Member and default rates don't cross currencies.
+      const eur = (
+        await owner.post("/v1/projects", {
+          name: "Euro work",
+          clientId: client.id,
+          currency: "EUR",
+        })
+      ).body
+      await owner.post("/v1/time-entries", {
+        projectId: eur.id,
+        entryDate: today,
+        durationMinutes: 60,
+      })
+      expect(
+        (await owner.get(`/v1/projects/${eur.id}/time-summary`)).body
+      ).toMatchObject({ unratedSeconds: 3_600, billableAmount: 0, cost: 0 })
+      expect(
+        (await owner.post("/v1/invoices/from-time", { projectId: eur.id })).body
+          .code
+      ).toBe("no_hourly_rate")
     } finally {
       spy.mockRestore()
     }

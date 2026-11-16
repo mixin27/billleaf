@@ -32,6 +32,11 @@ export const workspaceProfiles = pgTable("workspace_profiles", {
    * (-3 = three days before, 0 = on the day, 7 = a week late). Empty = off.
    */
   invoiceReminderOffsets: integer().array().notNull().default([]),
+  /**
+   * Default billable rate per hour (minor units, in `defaultCurrency`), used
+   * for hourly projects without a more specific rate. Null = none.
+   */
+  defaultHourlyRate: integer(),
   /** Basis points: 700 = 7.00% */
   defaultTaxRateBps: integer().notNull().default(0),
   documentFooter: text(),

@@ -453,3 +453,29 @@ export function dataExportReadyEmail(p: {
     text: `${line}\n\nDownload: ${p.url}\n\n${note}`,
   }
 }
+
+/** A project reached 80% or 100% of its time or money estimate. */
+export function budgetAlertEmail(p: {
+  to: string
+  workspaceName: string
+  projectName: string
+  threshold: number
+  /** e.g. "34 h of 40 h" or "MMK 850,000 of MMK 1,000,000". */
+  used: string
+  url: string
+}): EmailMessage {
+  const over = p.threshold >= 100
+  const subject = over
+    ? `${p.projectName} is over its estimate`
+    : `${p.projectName} has used ${p.threshold}% of its estimate`
+  const line = `${p.projectName} (${p.workspaceName}) has used ${p.used}${over ? ", reaching its estimate" : ""}.`
+  return {
+    to: p.to,
+    subject,
+    html: layout(subject, `<p>${esc(line)}</p>`, {
+      label: "Open the project",
+      url: p.url,
+    }),
+    text: `${line}\n\nOpen the project: ${p.url}`,
+  }
+}

@@ -20,6 +20,7 @@ import { ProjectsModule } from "./modules/projects/projects.module.js"
 import { AdminModule } from "./admin/admin.module.js"
 import { PaymentAccountsModule } from "./modules/payment-accounts/payment-accounts.module.js"
 import { PortalModule } from "./modules/portal/portal.module.js"
+import { RatesModule } from "./modules/rates/rates.module.js"
 import { TimeModule } from "./modules/time/time.module.js"
 import { ContractsModule } from "./modules/contracts/contracts.module.js"
 import { QuotesModule } from "./modules/quotes/quotes.module.js"
@@ -47,6 +48,7 @@ import { WorkspaceProfileModule } from "./modules/workspace/workspace-profile.mo
     PaymentsModule,
     ProjectsModule,
     TimeModule,
+    RatesModule,
     PortalModule,
     PaymentAccountsModule,
     AdminModule,
