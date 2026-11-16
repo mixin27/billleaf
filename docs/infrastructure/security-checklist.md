@@ -34,6 +34,11 @@ Review before first production launch and quarterly after.
 - [ ] Review `admin.*` entries in the audit log (impersonations, bans, plan changes) monthly.
 - [ ] Sensitive actions written to `audit_logs`.
 
+## API keys
+
+- [ ] Keys are stored only as SHA-256 hashes, shown once, sent as `Authorization: Bearer` only, pinned to one workspace, and limited to business scopes (never billing, members, roles, settings, admin) — [ADR-0015](../adr/0015-workspace-api-keys.md)
+- [ ] Rate limits are stored in Valkey (shared by every API instance); keep Valkey private to the server network
+
 ## Outgoing requests
 
 - [ ] `WEBHOOKS_ALLOW_PRIVATE_URLS` is unset or `false` in production (webhooks reach only public `https://` addresses; checked at connect time, no redirects) — [ADR-0014](../adr/0014-outgoing-webhooks.md)

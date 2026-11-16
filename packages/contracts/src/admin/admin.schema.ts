@@ -245,6 +245,8 @@ export const auditEntrySchema = z.object({
   actor: z
     .object({ id: z.string(), name: z.string(), email: z.string() })
     .nullable(),
+  /** The API key the actor used, if any (Developer API). */
+  apiKey: z.object({ id: z.string(), name: z.string() }).nullable(),
   workspace: z
     .object({ id: z.string(), name: z.string(), slug: z.string() })
     .nullable(),

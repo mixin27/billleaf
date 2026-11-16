@@ -54,6 +54,10 @@ export function buildOpenApi(app: INestApplication) {
     .setTitle("Billleaf API")
     .setVersion("1")
     .addCookieAuth("billleaf.session_token")
+    .addBearerAuth(
+      { type: "http", scheme: "bearer", description: "API key (blk_…)" },
+      "apiKey"
+    )
     .addApiKey(
       { type: "apiKey", in: "header", name: "x-workspace-id" },
       "workspace"

@@ -40,6 +40,7 @@ import {
 } from "../iam/audit/audit-query.service.js"
 import { AdminService } from "./admin.service.js"
 import { PlatformAdminGuard } from "./platform-admin.guard.js"
+import { SessionOnly } from "../common/decorators/require-permission.decorator.js"
 
 class AdminOverviewDto extends createZodDto(adminOverviewSchema) {}
 class AdminWorkspaceListQueryDto extends createZodDto(
@@ -70,6 +71,7 @@ const queue = (v: string) => {
 
 /** Platform admin portal (Billleaf staff). 404 for everyone else. */
 @ApiTags("admin")
+@SessionOnly()
 @Controller({ path: "admin", version: "1" })
 @UseGuards(PlatformAdminGuard)
 @Throttle({ default: { limit: 120, ttl: 60_000 } })

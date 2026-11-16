@@ -145,12 +145,12 @@ export class WebhooksService {
       .orderBy(webhookEndpoints.createdAt)
     return {
       items: await Promise.all(rows.map((r) => this.toDto(r))),
-      available: await this.entitlements.hasFeature("webhooks"),
+      available: await this.entitlements.hasFeature("developerApi"),
     }
   }
 
   async create(input: CreateWebhookEndpointInput): Promise<WebhookSecret> {
-    await this.entitlements.assertFeature("webhooks")
+    await this.entitlements.assertFeature("developerApi")
     const [{ n } = { n: 0 }] = await this.db
       .select({ n: count() })
       .from(webhookEndpoints)
@@ -191,7 +191,7 @@ export class WebhooksService {
     if (input.description !== undefined) values.description = input.description
     if (input.events !== undefined) values.events = input.events
     if (input.enabled !== undefined) {
-      if (input.enabled) await this.entitlements.assertFeature("webhooks")
+      if (input.enabled) await this.entitlements.assertFeature("developerApi")
       values.enabled = input.enabled
       values.disabledReason = null
       if (input.enabled) values.consecutiveFailures = 0
@@ -266,7 +266,7 @@ export class WebhooksService {
 
   /** Send a `ping` event to one endpoint (ignores its event list). */
   async sendTest(id: string): Promise<WebhookDelivery> {
-    await this.entitlements.assertFeature("webhooks")
+    await this.entitlements.assertFeature("developerApi")
     const endpoint = await this.require(id)
     const [delivery] = await this.enqueue(
       [endpoint.id],
@@ -279,7 +279,7 @@ export class WebhooksService {
 
   /** Deliver the same event (same id and payload) again. */
   async resend(deliveryId: string): Promise<WebhookDelivery> {
-    await this.entitlements.assertFeature("webhooks")
+    await this.entitlements.assertFeature("developerApi")
     const [old] = await this.db
       .select()
       .from(webhookDeliveries)
@@ -357,7 +357,7 @@ export class WebhooksService {
           )
         )
       if (endpoints.length === 0) return
-      if (!(await this.entitlements.hasFeature("webhooks"))) return
+      if (!(await this.entitlements.hasFeature("developerApi"))) return
       await this.enqueue(
         endpoints.map((e) => e.id),
         this.envelope(type, object)

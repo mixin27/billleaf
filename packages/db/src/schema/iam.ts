@@ -11,6 +11,7 @@
  *   member_roles      — which roles a workspace member holds (many-to-many)
  */
 import {
+  type AnyPgColumn,
   boolean,
   index,
   integer,
@@ -20,6 +21,7 @@ import {
   text,
   timestamp,
   unique,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core"
 
@@ -98,6 +100,10 @@ export const auditLogs = pgTable(
       onDelete: "cascade",
     }),
     actorUserId: uuid().references(() => user.id, { onDelete: "set null" }),
+    /** Set when the actor used an API key (acting as `actor_user_id`). */
+    apiKeyId: uuid().references((): AnyPgColumn => apiKeys.id, {
+      onDelete: "set null",
+    }),
     action: text().notNull(),
     resourceType: text(),
     resourceId: text(),
@@ -111,6 +117,38 @@ export const auditLogs = pgTable(
     // Admin portal filters: by action prefix and by actor.
     index().on(t.action, t.createdAt),
     index().on(t.actorUserId, t.createdAt),
+  ]
+)
+
+/**
+ * Workspace API keys (Developer API). A key acts as the member who made
+ * it, limited to `scopes`. Only a SHA-256 hash is stored; the key itself is
+ * shown once.
+ */
+export const apiKeys = pgTable(
+  "api_keys",
+  {
+    id: id(),
+    workspaceId: uuid()
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    createdByMemberId: uuid()
+      .notNull()
+      .references(() => member.id, { onDelete: "cascade" }),
+    name: text().notNull(),
+    /** First characters of the key, shown to tell keys apart. */
+    prefix: text().notNull(),
+    keyHash: text().notNull(),
+    /** Permission keys this key may use (see API_KEY_SCOPES). */
+    scopes: text().array().notNull(),
+    expiresAt: timestamp({ withTimezone: true }),
+    lastUsedAt: timestamp({ withTimezone: true }),
+    revokedAt: timestamp({ withTimezone: true }),
+    ...timestamps,
+  },
+  (t) => [
+    uniqueIndex("api_keys_key_hash_unique").on(t.keyHash),
+    index().on(t.workspaceId),
   ]
 )
 

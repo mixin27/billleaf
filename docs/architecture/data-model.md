@@ -231,3 +231,11 @@ Pending proofs show on the invoice page, the payments page and the dashboard.
 | `webhook_deliveries` | `endpoint_id` (cascade), `event_id` (same across resends), `event_type`, `payload` (jsonb, frozen), `status` (pending / succeeded / failed), `attempts`, `response_status`, `response_body` (1 KB), `error`, `duration_ms`, `delivered_at`; pruned after 30 days |
 
 See [webhooks](webhooks.md).
+
+### API keys (`iam.ts`)
+
+| Table      | Notes                                                                                                                                                                                     |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `api_keys` | `workspace_id`, `created_by_member_id` (cascade — keys go with the member), `name`, `prefix`, `key_hash` (SHA-256, unique), `scopes` (text[]), `expires_at`, `last_used_at`, `revoked_at` |
+
+`audit_logs.api_key_id` (set null) records actions taken with a key. See [Developer API](developer-api.md).

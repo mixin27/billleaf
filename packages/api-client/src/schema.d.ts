@@ -20,6 +20,38 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  "/v1/api-keys": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["ApiKeysController_list_v1"]
+    put?: never
+    post: operations["ApiKeysController_create_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/api-keys/{id}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    delete: operations["ApiKeysController_revoke_v1"]
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   "/v1/audit": {
     parameters: {
       query?: never
@@ -2559,6 +2591,78 @@ export interface components {
         slug: string
       }[]
     }
+    ApiKeyListDto_Output: {
+      items: {
+        id: string
+        name: string
+        prefix: string
+        scopes: string[]
+        createdBy: {
+          memberId: string
+          name: string
+        } | null
+        /** Format: date-time */
+        expiresAt: string | null
+        /** Format: date-time */
+        lastUsedAt: string | null
+        /** Format: date-time */
+        revokedAt: string | null
+        /** @enum {string} */
+        status: "active" | "expired" | "revoked"
+        /** Format: date-time */
+        createdAt: string
+      }[]
+      available: boolean
+    }
+    CreateApiKeyDto: {
+      name: string
+      scopes: string[]
+      /** @default null */
+      expiresInDays: (30 | 90 | 365) | null
+    }
+    CreatedApiKeyDto_Output: {
+      apiKey: {
+        id: string
+        name: string
+        prefix: string
+        scopes: string[]
+        createdBy: {
+          memberId: string
+          name: string
+        } | null
+        /** Format: date-time */
+        expiresAt: string | null
+        /** Format: date-time */
+        lastUsedAt: string | null
+        /** Format: date-time */
+        revokedAt: string | null
+        /** @enum {string} */
+        status: "active" | "expired" | "revoked"
+        /** Format: date-time */
+        createdAt: string
+      }
+      key: string
+    }
+    ApiKeyDto_Output: {
+      id: string
+      name: string
+      prefix: string
+      scopes: string[]
+      createdBy: {
+        memberId: string
+        name: string
+      } | null
+      /** Format: date-time */
+      expiresAt: string | null
+      /** Format: date-time */
+      lastUsedAt: string | null
+      /** Format: date-time */
+      revokedAt: string | null
+      /** @enum {string} */
+      status: "active" | "expired" | "revoked"
+      /** Format: date-time */
+      createdAt: string
+    }
     AuditListDto_Output: {
       items: {
         id: string
@@ -2569,6 +2673,10 @@ export interface components {
           id: string
           name: string
           email: string
+        } | null
+        apiKey: {
+          id: string
+          name: string
         } | null
         workspace: {
           id: string
@@ -2615,6 +2723,7 @@ export interface components {
         | "role.update"
         | "role.delete"
         | "webhook.manage"
+        | "api_key.manage"
         | "billing.read"
         | "billing.manage"
         | "audit.read"
@@ -2677,6 +2786,7 @@ export interface components {
         | "role.update"
         | "role.delete"
         | "webhook.manage"
+        | "api_key.manage"
         | "billing.read"
         | "billing.manage"
         | "audit.read"
@@ -2737,6 +2847,7 @@ export interface components {
         | "role.update"
         | "role.delete"
         | "webhook.manage"
+        | "api_key.manage"
         | "billing.read"
         | "billing.manage"
         | "audit.read"
@@ -2795,6 +2906,7 @@ export interface components {
         | "role.update"
         | "role.delete"
         | "webhook.manage"
+        | "api_key.manage"
         | "billing.read"
         | "billing.manage"
         | "audit.read"
@@ -2848,6 +2960,7 @@ export interface components {
         | "role.update"
         | "role.delete"
         | "webhook.manage"
+        | "api_key.manage"
         | "billing.read"
         | "billing.manage"
         | "audit.read"
@@ -5456,6 +5569,10 @@ export interface components {
           name: string
           email: string
         } | null
+        apiKey: {
+          id: string
+          name: string
+        } | null
         workspace: {
           id: string
           name: string
@@ -5774,6 +5891,69 @@ export interface operations {
         }
         content: {
           "application/json": components["schemas"]["AccountDeletionCheckDto_Output"]
+        }
+      }
+    }
+  }
+  ApiKeysController_list_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["ApiKeyListDto_Output"]
+        }
+      }
+    }
+  }
+  ApiKeysController_create_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateApiKeyDto"]
+      }
+    }
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["CreatedApiKeyDto_Output"]
+        }
+      }
+    }
+  }
+  ApiKeysController_revoke_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["ApiKeyDto_Output"]
         }
       }
     }

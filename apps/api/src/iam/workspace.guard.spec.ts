@@ -24,6 +24,14 @@ function setup(opts: {
   headers?: Record<string, string>
   membership?: { id: string } | null
   granted?: Permission[]
+  apiKey?: {
+    id: string
+    workspaceId: string
+    memberId: string
+    userId: string
+    scopes: Permission[]
+  }
+  feature?: boolean
 }) {
   const reflector = new Reflector()
   vi.spyOn(reflector, "getAllAndOverride").mockImplementation((key) => {
@@ -41,7 +49,16 @@ function setup(opts: {
     where: () => chain,
     limit: () => Promise.resolve(opts.membership ? [opts.membership] : []),
   }
-  const guard = new WorkspaceGuard(reflector, ctx, resolver, chain as never)
+  const entitlements = {
+    hasFeature: vi.fn().mockResolvedValue(opts.feature ?? true),
+  }
+  const guard = new WorkspaceGuard(
+    reflector,
+    ctx,
+    resolver,
+    chain as never,
+    entitlements as never
+  )
   const exec = {
     getType: () => "http",
     getHandler: () => () => undefined,
@@ -50,6 +67,7 @@ function setup(opts: {
       getRequest: () => ({
         headers: opts.headers ?? {},
         session: opts.session,
+        apiKey: opts.apiKey,
       }),
     }),
   } as unknown as ExecutionContext
@@ -138,5 +156,68 @@ describe("WorkspaceGuard", () => {
     })
     await guard.canActivate(exec)
     expect(resolver.resolve).toHaveBeenCalledWith(other, "m2")
+  })
+
+  describe("with an API key", () => {
+    const key = {
+      id: "key-1",
+      workspaceId: WS,
+      memberId: "m-1",
+      userId: "user-1",
+      scopes: ["client.read", "client.create", "invoice.read"] as Permission[],
+    }
+
+    it("acts as the creator with scopes narrowed to their permissions", async () => {
+      const { guard, exec, ctx } = setup({
+        required: ["client.read"],
+        apiKey: key,
+        granted: ["client.read", "invoice.read", "role.read"],
+      })
+      await expect(guard.canActivate(exec)).resolves.toBe(true)
+      expect(ctx.set).toHaveBeenCalledWith({
+        userId: "user-1",
+        apiKeyId: "key-1",
+      })
+      expect(ctx.set).toHaveBeenCalledWith({
+        permissions: new Set(["client.read", "invoice.read"]),
+      })
+    })
+
+    it("refuses scopes the creator has lost", async () => {
+      const { guard, exec } = setup({
+        required: ["client.create"],
+        apiKey: key,
+        granted: ["client.read"],
+      })
+      await expect(guard.canActivate(exec)).rejects.toMatchObject({
+        response: { code: "api_key_scope_missing" },
+      })
+    })
+
+    it("refuses non-workspace routes, other workspaces and plans without it", async () => {
+      await expect(
+        setup({ apiKey: key }).guard.canActivate(setup({ apiKey: key }).exec)
+      ).rejects.toMatchObject({
+        response: { code: "not_available_with_api_key" },
+      })
+      const other = setup({
+        required: ["client.read"],
+        apiKey: key,
+        granted: ["client.read"],
+        headers: { "x-workspace-id": "00000000-0000-4000-8000-000000000000" },
+      })
+      await expect(other.guard.canActivate(other.exec)).rejects.toMatchObject({
+        response: { code: "api_key_wrong_workspace" },
+      })
+      const free = setup({
+        required: ["client.read"],
+        apiKey: key,
+        granted: ["client.read"],
+        feature: false,
+      })
+      await expect(free.guard.canActivate(free.exec)).rejects.toBeInstanceOf(
+        ForbiddenException
+      )
+    })
   })
 })

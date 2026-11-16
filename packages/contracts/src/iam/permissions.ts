@@ -32,6 +32,9 @@ export const PERMISSION_CATALOG = {
   webhook: {
     manage: "Manage webhooks and see their deliveries",
   },
+  api_key: {
+    manage: "Create and revoke API keys",
+  },
   billing: {
     read: "View subscription and invoices from Billleaf",
     manage: "Change plan and payment method",

@@ -118,6 +118,11 @@ export function AuditLog({
             <p className="truncate text-xs text-muted-foreground">
               {row.original.actor.email}
             </p>
+            {row.original.apiKey ? (
+              <p className="truncate text-xs text-muted-foreground">
+                via API key “{row.original.apiKey.name}”
+              </p>
+            ) : null}
           </div>
         ) : (
           <span className="text-muted-foreground">System</span>

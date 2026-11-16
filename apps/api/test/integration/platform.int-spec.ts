@@ -13,6 +13,7 @@ import {
   rolePermissions,
   roles,
   syncPermissions,
+  apiKeys,
   timeEntries,
   webhookEndpoints,
   workspaceSubscriptions,
@@ -24,6 +25,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
 
 import { BILLING_PROVIDER } from "../../src/billing/providers/billing-provider.js"
 import { REDIS } from "../../src/core/cache/redis.module.js"
+import { RedisThrottlerStorage } from "../../src/core/cache/redis-throttler.storage.js"
 import { WORKER_HEARTBEAT_KEY } from "../../src/jobs/worker-heartbeat.js"
 import { addInterval } from "../../src/billing/period.js"
 import { DataExportService } from "../../src/modules/data-export/data-export.service.js"
@@ -4341,5 +4343,250 @@ describe("outgoing webhooks", () => {
       spy.mockRestore()
       server.close()
     }
+  })
+})
+
+describe("developer API keys", () => {
+  it("authenticates by bearer key as its creator, within its scopes, workspace and plan", async () => {
+    // Calls with only the key: no cookie, no origin.
+    const withKey = async (
+      key: string,
+      method: string,
+      url: string,
+      body?: unknown,
+      headers: Record<string, string> = {}
+    ) => {
+      const res = await t.app.inject({
+        method: method as "GET",
+        url,
+        headers: {
+          authorization: `Bearer ${key}`,
+          ...(body ? { "content-type": "application/json" } : {}),
+          ...headers,
+        },
+        payload: body ? JSON.stringify(body) : undefined,
+      })
+      return {
+        status: res.statusCode,
+        body: res.body ? JSON.parse(res.body) : undefined,
+      }
+    }
+
+    const owner = new Client(t)
+    await owner.signUp("Key Owner")
+    const ws = await owner.createWorkspace("Keyed Studio")
+    const other = new Client(t)
+    await other.signUp("Other Owner")
+    const otherWs = await other.createWorkspace("Other Studio")
+
+    // Free plan: no keys.
+    expect((await owner.get("/v1/api-keys")).body).toEqual({
+      items: [],
+      available: false,
+    })
+    expect(
+      (
+        await owner.post("/v1/api-keys", {
+          name: "Free",
+          scopes: ["client.read"],
+        })
+      ).body.code
+    ).toBe("feature_not_in_plan")
+    await t.db
+      .update(workspaceSubscriptions)
+      .set({ planKey: "team" })
+      .where(eq(workspaceSubscriptions.workspaceId, ws.id))
+
+    // Validation: scopes must be grantable.
+    expect(
+      (
+        await owner.post("/v1/api-keys", {
+          name: "Too much",
+          scopes: ["billing.manage"],
+        })
+      ).status
+    ).toBe(422)
+    const created = await owner.post("/v1/api-keys", {
+      name: "Sync",
+      scopes: ["client.read", "client.create", "invoice.read", "time.track"],
+      expiresInDays: 30,
+    })
+    expect(created.status).toBe(201)
+    const key: string = created.body.key
+    expect(key).toMatch(/^blk_[A-Za-z0-9_-]{43}$/)
+    expect(created.body.apiKey).toMatchObject({
+      name: "Sync",
+      prefix: key.slice(0, 12),
+      status: "active",
+      lastUsedAt: null,
+    })
+    const listed = (await owner.get("/v1/api-keys")).body.items[0]
+    expect(JSON.stringify(listed)).not.toContain(key)
+    const [stored] = await t.db
+      .select({ keyHash: apiKeys.keyHash })
+      .from(apiKeys)
+      .where(eq(apiKeys.id, listed.id))
+    expect(stored!.keyHash).toBe(createHash("sha256").update(key).digest("hex"))
+
+    // Works with no session; acts as the owner; audit shows the key.
+    const made = await withKey(key, "POST", "/v1/clients", { name: "Via API" })
+    expect(made.status).toBe(201)
+    expect((await withKey(key, "GET", "/v1/clients")).body.items).toEqual([
+      expect.objectContaining({ name: "Via API" }),
+    ])
+    const today = new Date().toISOString().slice(0, 10)
+    const entry = await withKey(key, "POST", "/v1/time-entries", {
+      entryDate: today,
+      durationMinutes: 30,
+    })
+    expect(entry.status).toBe(201)
+    expect(entry.body.isMine).toBe(true)
+    const audit = (await owner.get("/v1/audit?action=client")).body.items
+    expect(audit[0]).toMatchObject({
+      action: "client.created",
+      apiKey: { name: "Sync" },
+      actor: expect.objectContaining({ name: "Key Owner" }),
+    })
+    expect((await owner.get("/v1/api-keys")).body.items[0].lastUsedAt).not.toBe(
+      null
+    )
+
+    // Outside its scopes, its workspace, or the API: refused.
+    expect((await withKey(key, "GET", "/v1/quotes")).body.code).toBe(
+      "api_key_scope_missing"
+    )
+    expect(
+      (await withKey(key, "POST", "/v1/invoices", { clientId: made.body.id }))
+        .body.code
+    ).toBe("api_key_scope_missing")
+    for (const url of ["/v1/me", "/v1/admin/overview"])
+      expect((await withKey(key, "GET", url)).body.code).toBe(
+        "not_available_with_api_key"
+      )
+    expect((await withKey(key, "GET", "/v1/webhooks")).status).toBe(403)
+    expect((await withKey(key, "GET", "/v1/api-keys")).status).toBe(403)
+    expect(
+      (
+        await withKey(key, "GET", "/v1/clients", undefined, {
+          "x-workspace-id": otherWs.id,
+        })
+      ).body.code
+    ).toBe("api_key_wrong_workspace")
+    expect(
+      (await withKey("blk_" + "x".repeat(43), "GET", "/v1/clients")).body.code
+    ).toBe("invalid_api_key")
+
+    // Plan downgrade stops it; upgrade brings it back.
+    await t.db
+      .update(workspaceSubscriptions)
+      .set({ planKey: "free" })
+      .where(eq(workspaceSubscriptions.workspaceId, ws.id))
+    expect((await withKey(key, "GET", "/v1/clients")).body.code).toBe(
+      "feature_not_in_plan"
+    )
+    await t.db
+      .update(workspaceSubscriptions)
+      .set({ planKey: "team" })
+      .where(eq(workspaceSubscriptions.workspaceId, ws.id))
+    expect((await withKey(key, "GET", "/v1/clients")).status).toBe(200)
+
+    // Expired and revoked keys are rejected.
+    await t.db
+      .update(apiKeys)
+      .set({ expiresAt: new Date(Date.now() - 1000) })
+      .where(eq(apiKeys.id, listed.id))
+    expect((await withKey(key, "GET", "/v1/clients")).status).toBe(401)
+    await t.db
+      .update(apiKeys)
+      .set({ expiresAt: null })
+      .where(eq(apiKeys.id, listed.id))
+    expect((await owner.del(`/v1/api-keys/${listed.id}`)).body.status).toBe(
+      "revoked"
+    )
+    expect((await withKey(key, "GET", "/v1/clients")).body.code).toBe(
+      "invalid_api_key"
+    )
+
+    // A member's key: never more than they have, gone when they are.
+    const role = (
+      await owner.post("/v1/roles", {
+        name: "Integrator",
+        permissions: ["api_key.manage", "client.read"],
+      })
+    ).body
+    const dev = new Client(t)
+    const { email } = await dev.signUp("Integrator Dev")
+    const inv = (
+      await owner.post("/v1/invitations", { email, roleId: role.id })
+    ).body
+    await dev.post("/api/auth/organization/accept-invitation", {
+      invitationId: inv.id,
+    })
+    dev.workspaceId = ws.id
+    expect(
+      (
+        await dev.post("/v1/api-keys", {
+          name: "Escalate",
+          scopes: ["client.read", "client.create"],
+        })
+      ).body.code
+    ).toBe("scope_not_held")
+    const devKey = (
+      await dev.post("/v1/api-keys", { name: "Dev", scopes: ["client.read"] })
+    ).body.key
+    expect((await withKey(devKey, "GET", "/v1/clients")).status).toBe(200)
+    const devMember = (await owner.get("/v1/members")).body.find(
+      (m: { email: string }) => m.email === email
+    )
+    expect((await owner.del(`/v1/members/${devMember.id}`)).status).toBe(204)
+    expect((await withKey(devKey, "GET", "/v1/clients")).status).toBe(401)
+  })
+})
+
+describe("rate limits in Redis", () => {
+  it("shares counters across instances, blocks past the limit, then recovers", async () => {
+    const redis = t.app.get(REDIS)
+    const prefix = `throttle-test-${Date.now()}`
+    // Two "instances" with their own storage objects, one Redis.
+    const a = new RedisThrottlerStorage(redis, prefix)
+    const b = new RedisThrottlerStorage(redis, prefix)
+    const hit = (s: RedisThrottlerStorage) =>
+      s.increment("k", 1_000, 2, 1_000, "default")
+    expect(await hit(a)).toMatchObject({ totalHits: 1, isBlocked: false })
+    expect(await hit(b)).toMatchObject({ totalHits: 2, isBlocked: false })
+    const third = await hit(a)
+    expect(third).toMatchObject({ totalHits: 3, isBlocked: true })
+    expect(third.timeToBlockExpire).toBeGreaterThan(0)
+    expect((await hit(b)).isBlocked).toBe(true)
+    await new Promise((r) => setTimeout(r, 1_100))
+    expect(await hit(b)).toMatchObject({ totalHits: 1, isBlocked: false })
+  })
+
+  it("limits one API key to 120 requests a minute", async () => {
+    const owner = new Client(t)
+    await owner.signUp("Busy Integrator")
+    const ws = await owner.createWorkspace("Busy Studio")
+    await t.db
+      .update(workspaceSubscriptions)
+      .set({ planKey: "pro" })
+      .where(eq(workspaceSubscriptions.workspaceId, ws.id))
+    const { key } = (
+      await owner.post("/v1/api-keys", {
+        name: "Busy",
+        scopes: ["client.read"],
+      })
+    ).body
+    const call = () =>
+      t.app.inject({
+        method: "GET",
+        url: "/v1/clients",
+        headers: { authorization: `Bearer ${key}` },
+      })
+    const statuses: number[] = []
+    for (let i = 0; i < 121; i++) statuses.push((await call()).statusCode)
+    expect(statuses.slice(0, 120).every((s) => s === 200)).toBe(true)
+    expect(statuses[120]).toBe(429)
+    // The browser session (tracked by IP) isn't affected by the key's limit.
+    expect((await owner.get("/v1/clients")).status).toBe(200)
   })
 })

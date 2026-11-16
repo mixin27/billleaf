@@ -4,6 +4,8 @@ import { ClsService, type ClsStore } from "nestjs-cls"
 
 export interface RequestContextStore extends ClsStore {
   userId?: string
+  /** Set when the request is authenticated with an API key (acting as userId). */
+  apiKeyId?: string
   workspaceId?: string
   memberId?: string
   permissions?: ReadonlySet<Permission>
@@ -60,6 +62,11 @@ export class RequestContext {
 
   get portalEmail(): string {
     return this.cls.get("portalEmail") ?? ""
+  }
+
+  /** The API key making this request, or null for a browser session. */
+  get apiKeyId(): string | null {
+    return this.cls.get("apiKeyId") ?? null
   }
 
   get hasWorkspace(): boolean {

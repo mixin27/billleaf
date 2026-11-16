@@ -41,7 +41,7 @@ member_roles       workspace_id, member_id, role_id   (member = Better Auth orga
 create(@Body() dto: CreateInvoiceDto) { … }   // workspace comes from RequestContext
 ```
 
-Global guard order (`app.module.ts`): `ThrottlerGuard → AuthGuard → WorkspaceGuard`.
+Global guard order (`app.module.ts`): `AppThrottlerGuard → AppAuthGuard → WorkspaceGuard`. Rate-limit counters are kept in Valkey (`RedisThrottlerStorage`), shared by all API instances: 300 requests a minute per route per IP, 120 per API key.
 
 1. `AuthGuard` (Better Auth) requires a session unless the route is `@AllowAnonymous()`.
 2. `WorkspaceGuard` (for routes with `@RequirePermission` / `@RequireWorkspace`) resolves the workspace from the `X-Workspace-Id` header or the session's active organization, verifies membership (403 otherwise) and loads the member's permission set via `PermissionResolver` (Valkey, falling back to DB). It fills `RequestContext` (`userId`, `workspaceId`, `memberId`, `permissions`).
@@ -51,6 +51,10 @@ Global guard order (`app.module.ts`): `ThrottlerGuard → AuthGuard → Workspac
 ### UI gating
 
 `GET /v1/me` returns the user, active workspace and **effective permission keys**. The web uses them to hide/disable UI. This is cosmetic; the API is always the authority.
+
+## API keys
+
+Requests with `Authorization: Bearer blk_…` skip the session: `AppAuthGuard` verifies the key and `WorkspaceGuard` makes the request act as the key's creator in the key's workspace, with permissions = key scopes ∩ the creator's current permissions. Keys need the `developerApi` plan feature, are managed with `api_key.manage`, and can't reach non-workspace or `@SessionOnly()` routes. See [Developer API](developer-api.md) and [ADR-0015](../adr/0015-workspace-api-keys.md).
 
 ## Platform admin
 

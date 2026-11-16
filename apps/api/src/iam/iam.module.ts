@@ -3,6 +3,8 @@ import { Module } from "@nestjs/common"
 import { AdminAccessModule } from "../admin/admin-access.module.js"
 import { MailModule } from "../mail/mail.module.js"
 import { AccountController } from "./account/account.controller.js"
+import { ApiKeysController } from "./api-keys/api-keys.controller.js"
+import { ApiKeysService } from "./api-keys/api-keys.service.js"
 import { AccountService } from "./account/account.service.js"
 import { AuditQueryService } from "./audit/audit-query.service.js"
 import { AuditController } from "./audit/audit.controller.js"
@@ -24,6 +26,7 @@ import { WorkspaceBootstrapService } from "./workspaces/workspace-bootstrap.serv
   imports: [MailModule, AdminAccessModule],
   controllers: [
     AccountController,
+    ApiKeysController,
     AuditController,
     MeController,
     RolesController,
@@ -32,6 +35,7 @@ import { WorkspaceBootstrapService } from "./workspaces/workspace-bootstrap.serv
   ],
   providers: [
     AccountService,
+    ApiKeysService,
     AuditService,
     AuditQueryService,
     PermissionResolver,
@@ -45,6 +49,7 @@ import { WorkspaceBootstrapService } from "./workspaces/workspace-bootstrap.serv
   ],
   exports: [
     AccountService,
+    ApiKeysService,
     WorkspaceGuard,
     AuditService,
     AuditQueryService,
