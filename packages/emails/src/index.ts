@@ -479,3 +479,24 @@ export function budgetAlertEmail(p: {
     text: `${line}\n\nOpen the project: ${p.url}`,
   }
 }
+
+/** A webhook endpoint was turned off after failing repeatedly. */
+export function webhookDisabledEmail(p: {
+  to: string
+  workspaceName: string
+  url: string
+  failures: number
+  settingsUrl: string
+}): EmailMessage {
+  const subject = "A webhook was turned off"
+  const line = `${p.workspaceName}'s webhook to ${p.url} failed ${p.failures} deliveries in a row, so we turned it off. Fix the receiving app, then turn the webhook back on in Settings → Webhooks.`
+  return {
+    to: p.to,
+    subject,
+    html: layout(subject, `<p>${esc(line)}</p>`, {
+      label: "Open webhooks",
+      url: p.settingsUrl,
+    }),
+    text: `${line}\n\nOpen webhooks: ${p.settingsUrl}`,
+  }
+}

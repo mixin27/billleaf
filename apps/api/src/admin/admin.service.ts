@@ -95,9 +95,10 @@ export class AdminService {
     @InjectQueue(QUEUES.email) email: Queue,
     @InjectQueue(QUEUES.recurring) recurring: Queue,
     @InjectQueue(QUEUES.billing) billingQueue: Queue,
-    @InjectQueue(QUEUES.exports) exports: Queue
+    @InjectQueue(QUEUES.exports) exports: Queue,
+    @InjectQueue(QUEUES.webhooks) webhooks: Queue
   ) {
-    this.queues = { email, recurring, billing: billingQueue, exports }
+    this.queues = { email, recurring, billing: billingQueue, exports, webhooks }
   }
 
   // ── Overview ────────────────────────────────────────
@@ -691,7 +692,9 @@ export class AdminService {
           ? `Billing event ${String(data.eventRowId ?? "")}`.trim()
           : queue === "exports"
             ? `Data export for workspace ${String(data.workspaceId ?? "?")}`
-            : j.name
+            : queue === "webhooks" && data.deliveryId
+              ? `Webhook delivery ${String(data.deliveryId)}`
+              : j.name
     return {
       id: String(j.id),
       queue,

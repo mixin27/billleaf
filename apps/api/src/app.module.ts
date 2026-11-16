@@ -22,6 +22,7 @@ import { PaymentAccountsModule } from "./modules/payment-accounts/payment-accoun
 import { PortalModule } from "./modules/portal/portal.module.js"
 import { RatesModule } from "./modules/rates/rates.module.js"
 import { TimeModule } from "./modules/time/time.module.js"
+import { WebhooksModule } from "./modules/webhooks/webhooks.module.js"
 import { ContractsModule } from "./modules/contracts/contracts.module.js"
 import { QuotesModule } from "./modules/quotes/quotes.module.js"
 import { RecurringModule } from "./modules/recurring/recurring.module.js"
@@ -49,6 +50,7 @@ import { WorkspaceProfileModule } from "./modules/workspace/workspace-profile.mo
     ProjectsModule,
     TimeModule,
     RatesModule,
+    WebhooksModule,
     PortalModule,
     PaymentAccountsModule,
     AdminModule,

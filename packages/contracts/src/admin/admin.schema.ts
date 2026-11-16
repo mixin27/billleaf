@@ -195,6 +195,7 @@ export const ADMIN_QUEUES = [
   "recurring",
   "billing",
   "exports",
+  "webhooks",
 ] as const
 export const ADMIN_JOB_STATES = [
   "failed",

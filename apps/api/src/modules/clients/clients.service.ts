@@ -21,6 +21,7 @@ import {
   type ContactRow,
   type ContactValues,
 } from "./clients.repository.js"
+import { WebhooksService } from "../webhooks/webhooks.service.js"
 
 export function toClientDto(r: ClientRow): Client {
   return {
@@ -70,7 +71,8 @@ export class ClientsService {
   constructor(
     private readonly repo: ClientsRepository,
     private readonly entitlements: EntitlementsService,
-    private readonly audit: AuditService
+    private readonly audit: AuditService,
+    private readonly webhooks: WebhooksService
   ) {}
 
   async list(
@@ -101,7 +103,9 @@ export class ClientsService {
       resourceType: "client",
       resourceId: row.id,
     })
-    return toClientDto(row)
+    const client = toClientDto(row)
+    await this.webhooks.emit("client.created", client)
+    return client
   }
 
   async update(id: string, input: Partial<ClientValues>): Promise<Client> {

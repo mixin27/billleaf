@@ -23,6 +23,11 @@ const items: { title: string; href: string; permission: Permission }[] = [
     href: "/settings/payment-methods",
     permission: "workspace.read",
   },
+  {
+    title: "Webhooks",
+    href: "/settings/webhooks",
+    permission: "webhook.manage",
+  },
   { title: "Billing", href: "/settings/billing", permission: "billing.read" },
   { title: "Audit log", href: "/settings/audit", permission: "audit.read" },
   { title: "Data", href: "/settings/data", permission: "workspace.export" },

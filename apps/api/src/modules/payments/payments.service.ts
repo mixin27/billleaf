@@ -35,6 +35,8 @@ import {
   PaymentsRepository,
   type PaymentWithRefs,
 } from "./payments.repository.js"
+import { WebhooksService } from "../webhooks/webhooks.service.js"
+import { InvoicesService } from "../invoices/invoices.service.js"
 
 export function toPaymentDto(p: PaymentWithRefs): Payment {
   return {
@@ -76,7 +78,9 @@ export class PaymentsService {
     private readonly ctx: RequestContext,
     private readonly mail: MailService,
     private readonly portalLinks: PortalLinksService,
-    private readonly audit: AuditService
+    private readonly audit: AuditService,
+    private readonly invoicesService: InvoicesService,
+    private readonly webhooks: WebhooksService
   ) {}
 
   async list(
@@ -171,7 +175,22 @@ export class PaymentsService {
       resourceId: paymentId,
       metadata: { invoiceId, amount: input.amount },
     })
-    return this.get(paymentId)
+    return this.afterRecorded(paymentId)
+  }
+
+  /**
+   * Webhooks for a just-committed payment: `payment.recorded`, plus
+   * `invoice.paid` when it settled the invoice.
+   */
+  async afterRecorded(paymentId: string): Promise<Payment> {
+    const payment = await this.get(paymentId)
+    await this.webhooks.emit("payment.recorded", payment)
+    const invoice = await this.invoicesService
+      .get(payment.invoiceId)
+      .catch(() => null)
+    if (invoice && invoice.amountDue <= 0)
+      await this.webhooks.emit("invoice.paid", invoice)
+    return payment
   }
 
   async refund(id: string, reason: string): Promise<Payment> {

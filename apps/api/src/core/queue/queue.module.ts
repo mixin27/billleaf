@@ -10,6 +10,8 @@ export const QUEUES = {
   billing: "billing",
   /** Long-running data exports (ZIP with PDFs), emailed when ready. */
   exports: "exports",
+  /** Outgoing webhook deliveries (retried with backoff) and log cleanup. */
+  webhooks: "webhooks",
 } as const
 
 /**
@@ -36,7 +38,8 @@ export const QUEUES = {
       { name: QUEUES.email },
       { name: QUEUES.recurring },
       { name: QUEUES.billing },
-      { name: QUEUES.exports }
+      { name: QUEUES.exports },
+      { name: QUEUES.webhooks }
     ),
   ],
   exports: [BullModule],

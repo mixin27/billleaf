@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common"
 
 import { IamModule } from "../../iam/iam.module.js"
+import { WebhooksModule } from "../webhooks/webhooks.module.js"
 import { MailModule } from "../../mail/mail.module.js"
 import { PaymentAccountsModule } from "../payment-accounts/payment-accounts.module.js"
 import { PortalLinksModule } from "../portal/portal-links.module.js"
@@ -16,6 +17,7 @@ import { InvoicesService } from "./invoices.service.js"
 @Module({
   imports: [
     IamModule,
+    WebhooksModule,
     MailModule,
     PaymentAccountsModule,
     PortalLinksModule,

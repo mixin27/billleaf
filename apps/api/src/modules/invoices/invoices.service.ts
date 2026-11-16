@@ -47,6 +47,7 @@ import {
   InvoicesRepository,
   type InvoiceWithRefs,
 } from "./invoices.repository.js"
+import { WebhooksService } from "../webhooks/webhooks.service.js"
 
 export function toInvoiceSummary(
   inv: InvoiceWithRefs,
@@ -121,7 +122,8 @@ export class InvoicesService {
     private readonly audit: AuditService,
     private readonly entitlements: EntitlementsService,
     private readonly usage: UsageService,
-    private readonly paymentAccounts: PaymentAccountsService
+    private readonly paymentAccounts: PaymentAccountsService,
+    private readonly webhooks: WebhooksService
   ) {}
 
   /**
@@ -323,7 +325,9 @@ export class InvoicesService {
       resourceType: "invoice",
       resourceId: id,
     })
-    return this.get(id)
+    const issued = await this.get(id)
+    await this.webhooks.emit("invoice.issued", issued)
+    return issued
   }
 
   async void(id: string, reason: string): Promise<Invoice> {
@@ -350,7 +354,9 @@ export class InvoicesService {
       resourceId: id,
       metadata: { reason },
     })
-    return this.get(id)
+    const voided = await this.get(id)
+    await this.webhooks.emit("invoice.voided", voided)
+    return voided
   }
 
   async duplicate(id: string): Promise<Invoice> {
@@ -495,7 +501,9 @@ export class InvoicesService {
       resourceId: id,
       metadata: { to },
     })
-    return this.get(id)
+    const sent = await this.get(id)
+    await this.webhooks.emit("invoice.sent", sent)
+    return sent
   }
 
   /** Turn automatic payment reminders off or on for one invoice. */

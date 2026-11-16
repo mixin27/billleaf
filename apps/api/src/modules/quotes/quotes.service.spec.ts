@@ -117,7 +117,8 @@ function setup(
     numbering,
     audit,
     mail,
-    { documentLink: vi.fn().mockResolvedValue("http://portal.test") } as never
+    { documentLink: vi.fn().mockResolvedValue("http://portal.test") } as never,
+    { emit: vi.fn() } as never
   )
   return { service, repo, numbering, tx }
 }
