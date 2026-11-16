@@ -2052,6 +2052,86 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  "/v1/timesheet-approvals": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["TimesheetApprovalsController_list_v1"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/timesheet-approvals/submit": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["TimesheetApprovalsController_submit_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/timesheet-approvals/withdraw": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["TimesheetApprovalsController_withdraw_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/timesheet-approvals/{id}/approve": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["TimesheetApprovalsController_approve_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/timesheet-approvals/{id}/reject": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["TimesheetApprovalsController_reject_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   "/v1/rates": {
     parameters: {
       query?: never
@@ -2958,6 +3038,7 @@ export interface components {
         | "time.read"
         | "time.track"
         | "time.manage"
+        | "time.approve"
         | "invoice.read"
         | "invoice.create"
         | "invoice.update"
@@ -3025,6 +3106,7 @@ export interface components {
         | "time.read"
         | "time.track"
         | "time.manage"
+        | "time.approve"
         | "invoice.read"
         | "invoice.create"
         | "invoice.update"
@@ -3090,6 +3172,7 @@ export interface components {
         | "time.read"
         | "time.track"
         | "time.manage"
+        | "time.approve"
         | "invoice.read"
         | "invoice.create"
         | "invoice.update"
@@ -3153,6 +3236,7 @@ export interface components {
         | "time.read"
         | "time.track"
         | "time.manage"
+        | "time.approve"
         | "invoice.read"
         | "invoice.create"
         | "invoice.update"
@@ -3211,6 +3295,7 @@ export interface components {
         | "time.read"
         | "time.track"
         | "time.manage"
+        | "time.approve"
         | "invoice.read"
         | "invoice.create"
         | "invoice.update"
@@ -3455,6 +3540,7 @@ export interface components {
       locale: string
       paymentTermsDays: number
       invoiceReminderOffsets: number[]
+      timesheetApprovals: boolean
       defaultTaxRateBps: number
       documentFooter: string | null
       brandColor: string | null
@@ -3474,6 +3560,7 @@ export interface components {
       locale?: string
       paymentTermsDays?: number
       invoiceReminderOffsets?: number[]
+      timesheetApprovals?: boolean
       defaultTaxRateBps?: number
       documentFooter?: string | null
       brandColor?: (string | null) | ""
@@ -3702,6 +3789,9 @@ export interface components {
         | "credit_note.issued"
         | "payment.recorded"
         | "payment_proof.submitted"
+        | "timesheet.submitted"
+        | "timesheet.approved"
+        | "timesheet.rejected"
       )[]
     }
     WebhookSecretDto_Output: {
@@ -3741,6 +3831,9 @@ export interface components {
         | "credit_note.issued"
         | "payment.recorded"
         | "payment_proof.submitted"
+        | "timesheet.submitted"
+        | "timesheet.approved"
+        | "timesheet.rejected"
       )[]
       enabled?: boolean
     }
@@ -5202,6 +5295,7 @@ export interface components {
         invoiceNumber: string | null
         isRunning: boolean
         isMine: boolean
+        approvalLocked: boolean
       }[]
       totalSeconds: number
       billableSeconds: number
@@ -5246,6 +5340,7 @@ export interface components {
         invoiceNumber: string | null
         isRunning: boolean
         isMine: boolean
+        approvalLocked: boolean
       } | null
     }
     StartDto: {
@@ -5296,6 +5391,7 @@ export interface components {
       invoiceNumber: string | null
       isRunning: boolean
       isMine: boolean
+      approvalLocked: boolean
     }
     UpdateRunningDto: {
       /** Format: uuid */
@@ -5460,6 +5556,7 @@ export interface components {
       unratedSeconds: number
       cost: number | null
       uncostedSeconds: number
+      unapprovedSeconds: number
       currency: string
     }
     ProjectBudgetListDto_Output: {
@@ -5491,6 +5588,25 @@ export interface components {
         seconds: number[]
         lockedSeconds: number[]
       }[]
+      approvalsEnabled: boolean
+      approval: {
+        id: string
+        memberId: string
+        memberName: string
+        /** Format: date */
+        weekStart: string
+        /** @enum {string} */
+        status: "submitted" | "approved" | "rejected"
+        totalSeconds: number
+        billableSeconds: number
+        /** Format: date-time */
+        submittedAt: string
+        /** Format: date-time */
+        reviewedAt: string | null
+        reviewedByName: string | null
+        note: string | null
+      } | null
+      locked: boolean
     }
     SetTimesheetCellDto: {
       /** Format: date */
@@ -5580,6 +5696,7 @@ export interface components {
         invoiceNumber: string | null
         isRunning: boolean
         isMine: boolean
+        approvalLocked: boolean
       }[]
       total: number
       page: number
@@ -5613,6 +5730,55 @@ export interface components {
         matched: boolean
         entries: number
       }[]
+    }
+    ApprovalListDto_Output: {
+      items: {
+        id: string
+        memberId: string
+        memberName: string
+        /** Format: date */
+        weekStart: string
+        /** @enum {string} */
+        status: "submitted" | "approved" | "rejected"
+        totalSeconds: number
+        billableSeconds: number
+        /** Format: date-time */
+        submittedAt: string
+        /** Format: date-time */
+        reviewedAt: string | null
+        reviewedByName: string | null
+        note: string | null
+      }[]
+      pendingCount: number
+      available: boolean
+      enabled: boolean
+    }
+    WeekDto: {
+      /** Format: date */
+      week: string
+    }
+    ApprovalDto_Output: {
+      id: string
+      memberId: string
+      memberName: string
+      /** Format: date */
+      weekStart: string
+      /** @enum {string} */
+      status: "submitted" | "approved" | "rejected"
+      totalSeconds: number
+      billableSeconds: number
+      /** Format: date-time */
+      submittedAt: string
+      /** Format: date-time */
+      reviewedAt: string | null
+      reviewedByName: string | null
+      note: string | null
+    }
+    ReviewDto: {
+      note?: string
+    }
+    RejectDto: {
+      note: string
     }
     WorkspaceRatesDto_Output: {
       currency: string
@@ -10326,6 +10492,7 @@ export interface operations {
     parameters: {
       query: {
         week: string
+        memberId?: string
       }
       header?: never
       path?: never
@@ -10473,6 +10640,122 @@ export interface operations {
         }
         content: {
           "application/json": components["schemas"]["ClockifyImportResultDto_Output"]
+        }
+      }
+    }
+  }
+  TimesheetApprovalsController_list_v1: {
+    parameters: {
+      query?: {
+        status?: "submitted" | "approved" | "rejected"
+        memberId?: string
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["ApprovalListDto_Output"]
+        }
+      }
+    }
+  }
+  TimesheetApprovalsController_submit_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["WeekDto"]
+      }
+    }
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["ApprovalDto_Output"]
+        }
+      }
+    }
+  }
+  TimesheetApprovalsController_withdraw_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["WeekDto"]
+      }
+    }
+    responses: {
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  TimesheetApprovalsController_approve_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ReviewDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["ApprovalDto_Output"]
+        }
+      }
+    }
+  }
+  TimesheetApprovalsController_reject_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RejectDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["ApprovalDto_Output"]
         }
       }
     }

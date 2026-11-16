@@ -513,3 +513,58 @@ export function webhookDisabledEmail(p: {
     text: `${line}\n\nOpen webhooks: ${p.settingsUrl}`,
   }
 }
+
+/** A member submitted a week of time; sent to the workspace's approvers. */
+export function timesheetSubmittedEmail(p: {
+  to: string
+  workspaceName: string
+  memberName: string
+  /** e.g. "Nov 9 – Nov 15, 2026". */
+  week: string
+  /** e.g. "38:30". */
+  total: string
+  url: string
+}): EmailMessage {
+  const subject = `${p.memberName} submitted their timesheet for ${p.week}`
+  const line = `${p.memberName} submitted ${p.total} hours for ${p.week} in ${p.workspaceName}. Approve it, or send it back with a note.`
+  return {
+    to: p.to,
+    subject,
+    html: layout(subject, `<p>${esc(line)}</p>`, {
+      label: "Review timesheets",
+      url: p.url,
+    }),
+    text: `${line}\n\nReview timesheets: ${p.url}`,
+  }
+}
+
+/** An approver approved or sent back a member's week. */
+export function timesheetReviewedEmail(p: {
+  to: string
+  workspaceName: string
+  reviewerName: string
+  week: string
+  approved: boolean
+  note: string | null
+  url: string
+}): EmailMessage {
+  const subject = p.approved
+    ? `Your timesheet for ${p.week} was approved`
+    : `Your timesheet for ${p.week} needs changes`
+  const line = p.approved
+    ? `${p.reviewerName} approved your time for ${p.week} in ${p.workspaceName}.`
+    : `${p.reviewerName} sent back your time for ${p.week} in ${p.workspaceName}. Make the changes, then submit the week again.`
+  const note = p.note
+    ? `${p.approved ? "Note" : "What to change"}: ${p.note}`
+    : ""
+  return {
+    to: p.to,
+    subject,
+    html: layout(
+      subject,
+      `<p>${esc(line)}</p>${note ? `<p style="padding:12px;background:#F3FAF5;border-radius:6px">${esc(note)}</p>` : ""}`,
+      { label: "Open your timesheet", url: p.url }
+    ),
+    text: `${line}${note ? `\n\n${note}` : ""}\n\nOpen your timesheet: ${p.url}`,
+  }
+}

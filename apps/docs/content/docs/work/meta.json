@@ -1,1 +1,9 @@
-{ "title": "Work", "pages": ["projects", "time-tracking", "rates-and-budgets"] }
+{
+  "title": "Work",
+  "pages": [
+    "projects",
+    "time-tracking",
+    "timesheet-approvals",
+    "rates-and-budgets"
+  ]
+}

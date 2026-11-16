@@ -5049,3 +5049,294 @@ describe("credit notes", () => {
     }
   })
 })
+
+describe("timesheet approvals", () => {
+  it("is Team-only, locks submitted weeks, emails both ways, and invoices only approved time", async () => {
+    const mail = t.app.get(MailService)
+    const sent: any[] = []
+    const spy = vi
+      .spyOn(mail, "send")
+      .mockImplementation(async (m) => void sent.push(m))
+    try {
+      const owner = new Client(t)
+      const { email: ownerEmail } = await owner.signUp("Approving Owner")
+      const ws = await owner.createWorkspace("Approval Studio")
+      await owner.patch("/v1/workspace", { timezone: "UTC" })
+
+      // Team plan only.
+      const free = await owner.patch("/v1/workspace", {
+        timesheetApprovals: true,
+      })
+      expect(free.status).toBe(403)
+      expect(free.body.code).toBe("feature_not_in_plan")
+      await t.db
+        .update(workspaceSubscriptions)
+        .set({ planKey: "team" })
+        .where(eq(workspaceSubscriptions.workspaceId, ws.id))
+
+      const roles = (await owner.get("/v1/roles")).body
+      const roleOf = (slug: string) =>
+        roles.find((r: { slug: string }) => r.slug === slug)
+      expect(roleOf("admin").permissions).toContain("time.approve")
+      expect(roleOf("member").permissions).not.toContain("time.approve")
+
+      const member = new Client(t)
+      const { email: memberEmail } = await member.signUp("Timesheet Member")
+      const inv = (
+        await owner.post("/v1/invitations", {
+          email: memberEmail,
+          roleId: roleOf("member").id,
+        })
+      ).body
+      await member.post("/api/auth/organization/accept-invitation", {
+        invitationId: inv.id,
+      })
+      member.workspaceId = ws.id
+
+      const client = (await owner.post("/v1/clients", { name: "Approved Co" }))
+        .body
+      const project = (
+        await owner.post("/v1/projects", {
+          name: "Approved work",
+          clientId: client.id,
+          currency: "USD",
+          hourlyRate: 10_000,
+        })
+      ).body
+
+      // Last week (Monday) — weeks are workspace dates, Monday first.
+      const now = new Date()
+      const dow = (now.getUTCDay() + 6) % 7
+      const monday = new Date(
+        Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()) -
+          (dow + 7) * 86_400_000
+      )
+        .toISOString()
+        .slice(0, 10)
+      const tuesday = new Date(Date.parse(monday) + 86_400_000)
+        .toISOString()
+        .slice(0, 10)
+      const log = (c: Client, minutes: number, date = tuesday) =>
+        c.post("/v1/time-entries", {
+          projectId: project.id,
+          entryDate: date,
+          durationMinutes: minutes,
+        })
+      const entry = (await log(member, 120)).body
+      expect(entry.approvalLocked).toBe(false)
+
+      // Off: submitting is refused and invoicing ignores approval.
+      expect(
+        (await member.post("/v1/timesheet-approvals/submit", { week: tuesday }))
+          .body.code
+      ).toBe("approvals_off")
+      expect(
+        (await owner.get(`/v1/projects/${project.id}/time-summary`)).body
+          .unapprovedSeconds
+      ).toBe(0)
+
+      expect(
+        (await owner.patch("/v1/workspace", { timesheetApprovals: true })).body
+          .timesheetApprovals
+      ).toBe(true)
+
+      // On: unapproved time can't be invoiced yet.
+      expect(
+        (await owner.get(`/v1/projects/${project.id}/time-summary`)).body
+          .unapprovedSeconds
+      ).toBe(7_200)
+      const early = await owner.post("/v1/invoices/from-time", {
+        projectId: project.id,
+      })
+      expect(early.status).toBe(400)
+      expect(early.body.code).toBe("no_approved_time")
+
+      // Nothing to submit in an empty week; no future weeks.
+      expect(
+        (
+          await member.post("/v1/timesheet-approvals/submit", {
+            week: new Date(Date.parse(monday) - 7 * 86_400_000)
+              .toISOString()
+              .slice(0, 10),
+          })
+        ).body.code
+      ).toBe("nothing_to_submit")
+      expect(
+        (
+          await member.post("/v1/timesheet-approvals/submit", {
+            week: new Date(Date.now() + 14 * 86_400_000)
+              .toISOString()
+              .slice(0, 10),
+          })
+        ).status
+      ).toBe(400)
+
+      // Submit → locked for the member; approvers are emailed.
+      sent.length = 0
+      const submitted = await member.post("/v1/timesheet-approvals/submit", {
+        week: tuesday,
+      })
+      expect(submitted.status).toBe(201)
+      expect(submitted.body).toMatchObject({
+        status: "submitted",
+        weekStart: monday,
+        totalSeconds: 7_200,
+        billableSeconds: 7_200,
+        memberName: "Timesheet Member",
+      })
+      expect(sent.map((m) => m.to)).toEqual([ownerEmail])
+      expect(sent[0].subject).toContain("Timesheet Member submitted")
+      expect(
+        (await member.post("/v1/timesheet-approvals/submit", { week: monday }))
+          .body.code
+      ).toBe("already_submitted")
+      const locked = await member.patch(`/v1/time-entries/${entry.id}`, {
+        description: "late change",
+      })
+      expect(locked.status).toBe(409)
+      expect(locked.body.code).toBe("timesheet_locked")
+      expect((await log(member, 30)).body.code).toBe("timesheet_locked")
+      expect((await member.del(`/v1/time-entries/${entry.id}`)).status).toBe(
+        409
+      )
+      const listed = (
+        await member.get(
+          `/v1/time-entries?from=${monday}&to=${tuesday}&memberId=me`
+        )
+      ).body.items
+      expect(listed[0].approvalLocked).toBe(true)
+      const sheet = (await member.get(`/v1/time/timesheet?week=${monday}`)).body
+      expect(sheet).toMatchObject({
+        approvalsEnabled: true,
+        locked: true,
+        approval: { status: "submitted" },
+      })
+      // Approvers can read the member's week; the member can't approve.
+      const theirs = await owner.get(
+        `/v1/time/timesheet?week=${monday}&memberId=${entry.memberId}`
+      )
+      expect(theirs.body.rows[0].seconds[1]).toBe(7_200)
+      expect(
+        (
+          await member.post(
+            `/v1/timesheet-approvals/${submitted.body.id}/approve`,
+            {}
+          )
+        ).status
+      ).toBe(403)
+
+      // Withdraw → editable → resubmit → sent back with a note.
+      expect(
+        (
+          await member.post("/v1/timesheet-approvals/withdraw", {
+            week: monday,
+          })
+        ).status
+      ).toBe(204)
+      expect((await log(member, 60)).status).toBe(201)
+      const again = (
+        await member.post("/v1/timesheet-approvals/submit", { week: monday })
+      ).body
+      expect(again.totalSeconds).toBe(10_800)
+      const list = (await owner.get("/v1/timesheet-approvals?status=submitted"))
+        .body
+      expect(list.pendingCount).toBe(1)
+      expect(list.items.map((a: { id: string }) => a.id)).toEqual([again.id])
+      expect(
+        (
+          await owner.post(`/v1/timesheet-approvals/${again.id}/reject`, {
+            note: "",
+          })
+        ).status
+      ).toBe(422)
+      sent.length = 0
+      const rejected = await owner.post(
+        `/v1/timesheet-approvals/${again.id}/reject`,
+        { note: "Split the 1h into design and review" }
+      )
+      expect(rejected.body).toMatchObject({
+        status: "rejected",
+        reviewedByName: "Approving Owner",
+        note: "Split the 1h into design and review",
+      })
+      expect(sent).toHaveLength(1)
+      expect(sent[0].to).toBe(memberEmail)
+      expect(sent[0].subject).toContain("needs changes")
+      expect(sent[0].text).toContain("Split the 1h")
+      // Sent back = open again.
+      expect(
+        (
+          await member.patch(`/v1/time-entries/${entry.id}`, {
+            description: "Design",
+          })
+        ).status
+      ).toBe(200)
+
+      // Resubmit and approve → invoiceable, still locked.
+      const third = (
+        await member.post("/v1/timesheet-approvals/submit", { week: monday })
+      ).body
+      expect(third).toMatchObject({ id: again.id, status: "submitted" })
+      sent.length = 0
+      const approved = await owner.post(
+        `/v1/timesheet-approvals/${third.id}/approve`,
+        {}
+      )
+      expect(approved.body.status).toBe("approved")
+      expect(sent[0].subject).toContain("was approved")
+      expect(
+        (
+          await member.post("/v1/timesheet-approvals/withdraw", {
+            week: monday,
+          })
+        ).body.code
+      ).toBe("not_submitted")
+      expect(
+        (
+          await member.patch(`/v1/time-entries/${entry.id}`, {
+            description: "x",
+          })
+        ).body.code
+      ).toBe("timesheet_locked")
+
+      // The owner's own unapproved time this week stays out of the invoice.
+      const thisWeek = new Date().toISOString().slice(0, 10)
+      expect((await log(owner, 45, thisWeek)).status).toBe(201)
+      expect(
+        (await owner.get(`/v1/projects/${project.id}/time-summary`)).body
+          .unapprovedSeconds
+      ).toBe(2_700)
+      const invoice = await owner.post("/v1/invoices/from-time", {
+        projectId: project.id,
+      })
+      expect(invoice.status).toBe(201)
+      expect(invoice.body.total).toBe(30_000) // 3 h × 100.00
+
+      // Reopening an approved week (reject with a note) unlocks it.
+      const reopened = await owner.post(
+        `/v1/timesheet-approvals/${third.id}/reject`,
+        { note: "Reopened to fix a typo" }
+      )
+      expect(reopened.body.status).toBe("rejected")
+      expect(
+        (
+          await owner.get(
+            `/v1/time/timesheet?week=${monday}&memberId=${entry.memberId}`
+          )
+        ).body.locked
+      ).toBe(false)
+
+      const audit = (await owner.get("/v1/audit?action=timesheet")).body
+      const actions = audit.items.map((a: { action: string }) => a.action)
+      for (const a of [
+        "timesheet.submitted",
+        "timesheet.withdrawn",
+        "timesheet.rejected",
+        "timesheet.approved",
+      ])
+        expect(actions).toContain(a)
+    } finally {
+      spy.mockRestore()
+    }
+  })
+})

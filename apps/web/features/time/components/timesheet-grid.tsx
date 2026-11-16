@@ -21,6 +21,7 @@ import { formatDate } from "@/lib/format"
 import { useSetTimesheetCell, useTimesheet } from "../api/reports"
 import { addDays, parseDuration, weekStart } from "../duration"
 import { ProjectPopover, type ProjectLabel } from "./project-popover"
+import { WeekApprovalBar } from "./week-approval-bar"
 
 type Row = Pick<
   TimesheetRow,
@@ -116,6 +117,15 @@ export function TimesheetGrid({ today }: { today: string }) {
         </span>
       </div>
 
+      {sheet.data ? (
+        <WeekApprovalBar
+          sheet={sheet.data}
+          today={today}
+          weekTotal={weekTotal}
+          locale={locale}
+        />
+      ) : null}
+
       {sheet.isPending ? (
         <Skeleton className="h-48 w-full" />
       ) : sheet.error ? (
@@ -173,6 +183,7 @@ export function TimesheetGrid({ today }: { today: string }) {
                       <DurationCell
                         seconds={r.seconds[i] ?? 0}
                         locked={r.lockedSeconds[i] ?? 0}
+                        readOnly={sheet.data?.locked}
                         label={`${r.projectName ?? "No project"}${r.taskTitle ? `: ${r.taskTitle}` : ""}, ${d}`}
                         onSave={(s) => save(r, i, s)}
                       />
@@ -197,19 +208,21 @@ export function TimesheetGrid({ today }: { today: string }) {
             <tfoot>
               <tr className="border-t bg-muted/40 text-xs">
                 <td className="px-3 py-2">
-                  <AddRow
-                    onAdd={(t, l) =>
-                      setExtra((xs) => [
-                        ...xs,
-                        {
-                          ...t,
-                          ...l,
-                          seconds: [0, 0, 0, 0, 0, 0, 0],
-                          lockedSeconds: [0, 0, 0, 0, 0, 0, 0],
-                        },
-                      ])
-                    }
-                  />
+                  {sheet.data?.locked ? null : (
+                    <AddRow
+                      onAdd={(t, l) =>
+                        setExtra((xs) => [
+                          ...xs,
+                          {
+                            ...t,
+                            ...l,
+                            seconds: [0, 0, 0, 0, 0, 0, 0],
+                            lockedSeconds: [0, 0, 0, 0, 0, 0, 0],
+                          },
+                        ])
+                      }
+                    />
+                  )}
                 </td>
                 {dayTotals.map((s, i) => (
                   <td
@@ -258,11 +271,14 @@ function AddRow({
 function DurationCell({
   seconds,
   locked,
+  readOnly,
   label,
   onSave,
 }: {
   seconds: number
   locked: number
+  /** The week is submitted or approved. */
+  readOnly?: boolean
   label: string
   /** Rejects when the API refuses; the cell then shows the old value. */
   onSave: (seconds: number) => Promise<unknown>
@@ -291,6 +307,7 @@ function DurationCell({
       value={value}
       inputMode="decimal"
       aria-label={label}
+      readOnly={readOnly}
       title={
         locked
           ? `${formatDuration(locked)} is invoiced and can't be reduced`
@@ -307,6 +324,7 @@ function DurationCell({
       }}
       className={cn(
         "h-8 w-16 rounded-md border border-transparent bg-transparent text-center tabular-nums outline-none hover:border-input focus:border-ring focus:ring-2 focus:ring-ring/30",
+        readOnly && "pointer-events-none text-muted-foreground",
         locked > 0 && "underline decoration-dotted underline-offset-4"
       )}
     />

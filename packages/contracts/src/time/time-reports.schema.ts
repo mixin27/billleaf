@@ -1,6 +1,7 @@
 import { z } from "zod"
 
 import { pageQuerySchema, paged, sortQuery } from "../common/pagination.js"
+import { timesheetApprovalSchema } from "./approvals.schema.js"
 import { timeEntrySchema } from "./time.schema.js"
 
 // ── Timesheet grid ────────────────────────────────────────
@@ -9,6 +10,8 @@ import { timeEntrySchema } from "./time.schema.js"
 export const timesheetQuerySchema = z.object({
   /** Any date in the week; the grid starts on that week's Monday. */
   week: z.iso.date(),
+  /** Someone else's week (needs `time.read` or `time.approve`); default you. */
+  memberId: z.uuid().optional(),
 })
 export type TimesheetQuery = z.input<typeof timesheetQuerySchema>
 
@@ -29,6 +32,12 @@ export const timesheetSchema = z.object({
   weekStart: z.iso.date(),
   days: z.array(z.iso.date()).length(7),
   rows: z.array(timesheetRowSchema),
+  /** Whether the workspace uses approvals (setting on and Team plan). */
+  approvalsEnabled: z.boolean(),
+  /** This week's approval, if it was submitted. */
+  approval: timesheetApprovalSchema.nullable(),
+  /** Submitted or approved: entries in this week can't change. */
+  locked: z.boolean(),
 })
 export type Timesheet = z.infer<typeof timesheetSchema>
 

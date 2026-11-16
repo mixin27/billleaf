@@ -34,6 +34,7 @@ import { ProjectsService } from "../projects/projects.service.js"
 import { RatesService } from "../rates/rates.service.js"
 import { WorkspaceProfileService } from "../workspace/workspace-profile.service.js"
 import { ProjectUsageService } from "./project-usage.service.js"
+import { TimesheetApprovalsService } from "./timesheet-approvals.service.js"
 import {
   type TagRow,
   TimeRepository,
@@ -59,7 +60,8 @@ export class TimeService {
     private readonly ctx: RequestContext,
     private readonly audit: AuditService,
     private readonly rates: RatesService,
-    private readonly projectUsage: ProjectUsageService
+    private readonly projectUsage: ProjectUsageService,
+    private readonly approvals: TimesheetApprovalsService
   ) {}
 
   private can(
@@ -69,6 +71,7 @@ export class TimeService {
       | "time.manage"
       | "invoice.create"
       | "rate.read"
+      | "time.approve"
   ) {
     return this.ctx.permissions.has(p)
   }
@@ -94,6 +97,7 @@ export class TimeService {
     invoiceNumber: e.invoiceNumber,
     isRunning: e.endedAt === null,
     isMine: e.memberId === this.ctx.memberId,
+    approvalLocked: false,
   })
 
   /** May the current member write entries owned by `memberId` (null = former member)? */
@@ -136,8 +140,16 @@ export class TimeService {
       uninvoiced: q.uninvoiced === "true",
     })
     const finished = rows.filter((r) => r.durationSeconds !== null)
+    const locked = await this.approvals.lockedWeeks(
+      [...new Set(rows.map((r) => r.memberId).filter((m) => m !== null))],
+      q.from,
+      q.to
+    )
     return {
-      items: rows.map(this.toDto),
+      items: rows.map((r) => ({
+        ...this.toDto(r),
+        approvalLocked: locked.has(`${r.memberId}|${mondayOf(r.entryDate)}`),
+      })),
       totalSeconds: finished.reduce((s, r) => s + r.durationSeconds!, 0),
       billableSeconds: finished
         .filter((r) => r.billable)
@@ -160,6 +172,7 @@ export class TimeService {
     const tagIds = await this.validateTags(input.tagIds)
     const now = new Date()
     const entryDate = await this.localDate(now)
+    await this.approvals.assertOpen(this.ctx.memberId, [entryDate])
     const memberName = (await this.repo.memberName(this.ctx.memberId)) ?? ""
     try {
       const id = await this.repo.database.transaction(async (tx) => {
@@ -218,6 +231,9 @@ export class TimeService {
         throw new BadRequestException("Timers can't run longer than 24 hours")
       values.startedAt = startedAt
       values.entryDate = await this.localDate(startedAt)
+      await this.approvals.assertOpen(running.memberId, [
+        values.entryDate as string,
+      ])
     }
     await this.repo.database.transaction(async (tx) => {
       await this.repo.update(tx, running.id, values)
@@ -244,6 +260,7 @@ export class TimeService {
     this.assertCanWrite(e.memberId)
     if (e.endedAt === null)
       throw new BadRequestException("Stop the timer before duplicating it")
+    await this.approvals.assertOpen(e.memberId, [e.entryDate])
     const newId = await this.repo.database.transaction(async (tx) => {
       const newId = await this.repo.insert(tx, {
         projectId: e.projectId,
@@ -271,8 +288,15 @@ export class TimeService {
   private async writable(ids: string[]) {
     const unique = [...new Set(ids)]
     const found = await this.repo.findMany(unique)
+    const dates = found.map((e) => e.entryDate).sort()
+    const locked = await this.approvals.lockedWeeks(
+      [...new Set(found.map((e) => e.memberId).filter((m) => m !== null))],
+      dates[0] ?? "1970-01-01",
+      dates[dates.length - 1] ?? "1970-01-01"
+    )
     const ok = found.filter((e) => {
       if (e.invoiceId) return false
+      if (locked.has(`${e.memberId}|${mondayOf(e.entryDate)}`)) return false
       if (e.memberId !== this.ctx.memberId && !this.can("time.read"))
         return false
       try {
@@ -414,16 +438,21 @@ export class TimeService {
   // ── Timesheet grid ───────────────────────────────────
 
   /** The member's own week as (project, task) rows × Mon–Sun. */
-  async timesheet(anyDate: string): Promise<Timesheet> {
-    if (!this.can("time.track") && !this.can("time.manage"))
-      throw new ForbiddenException("You can't track time")
+  async timesheet(anyDate: string, forMemberId?: string): Promise<Timesheet> {
+    const memberId = forMemberId ?? this.ctx.memberId
+    if (memberId === this.ctx.memberId) {
+      if (!this.can("time.track") && !this.can("time.manage"))
+        throw new ForbiddenException("You can't track time")
+    } else if (!this.can("time.read") && !this.can("time.approve")) {
+      throw new ForbiddenException("You can only see your own time")
+    }
     const start = mondayOf(anyDate)
     const days = Array.from({ length: 7 }, (_, i) => addDays(start, i))
-    const entries = await this.repo.list({
-      from: days[0]!,
-      to: days[6]!,
-      memberId: this.ctx.memberId,
-    })
+    const [entries, approvalsEnabled, approval] = await Promise.all([
+      this.repo.list({ from: days[0]!, to: days[6]!, memberId }),
+      this.approvals.enabled(),
+      this.approvals.forWeek(memberId, start),
+    ])
     const rows = new Map<string, TimesheetRow>()
     for (const e of entries) {
       if (e.durationSeconds === null) continue // running
@@ -445,6 +474,11 @@ export class TimeService {
     return {
       weekStart: start,
       days,
+      approvalsEnabled,
+      approval: approvalsEnabled ? approval : null,
+      locked:
+        approvalsEnabled &&
+        (approval?.status === "submitted" || approval?.status === "approved"),
       rows: [...rows.values()].sort(
         (a, b) =>
           (a.projectName ?? "\uffff").localeCompare(
@@ -460,6 +494,7 @@ export class TimeService {
    */
   async setTimesheetCell(input: SetTimesheetCellInput): Promise<Timesheet> {
     this.assertCanWrite(this.ctx.memberId)
+    await this.approvals.assertOpen(this.ctx.memberId, [input.date])
     const projectId = input.projectId ?? null
     const taskId = input.taskId ?? null
     const memberName = (await this.repo.memberName(this.ctx.memberId)) ?? ""
@@ -577,6 +612,7 @@ export class TimeService {
     const tagIds = await this.validateTags(input.tagIds)
     const { startedAt, endedAt, entryDate, hasTimes } =
       await this.resolveSpan(input)
+    await this.approvals.assertOpen(memberId, [entryDate])
     const id = await this.repo.database.transaction(async (tx) => {
       const id = await this.repo.insert(tx, {
         projectId: input.projectId ?? null,
@@ -602,6 +638,7 @@ export class TimeService {
   async update(id: string, input: UpdateTimeEntryInput): Promise<TimeEntry> {
     const entry = await this.require(id)
     this.assertCanWrite(entry.memberId)
+    await this.approvals.assertOpen(entry.memberId, [entry.entryDate])
     if (entry.invoiceId) {
       throw new ConflictException({
         message: `Already invoiced on ${entry.invoiceNumber ?? "a draft invoice"}`,
@@ -648,6 +685,7 @@ export class TimeService {
           input.durationMinutes ??
           Math.round((entry.durationSeconds ?? 0) / 60),
       })
+      await this.approvals.assertOpen(entry.memberId, [span.entryDate])
       Object.assign(values, {
         ...span,
         durationSeconds: Math.round(
@@ -665,6 +703,7 @@ export class TimeService {
   async remove(id: string) {
     const entry = await this.require(id)
     this.assertCanWrite(entry.memberId)
+    await this.approvals.assertOpen(entry.memberId, [entry.entryDate])
     if (entry.invoiceId) {
       throw new ConflictException({
         message: `Already invoiced on ${entry.invoiceNumber ?? "a draft invoice"}`,
@@ -688,6 +727,10 @@ export class TimeService {
       unratedSeconds: u.unratedSeconds,
       cost: u.cost,
       uncostedSeconds: u.uncostedSeconds,
+      unapprovedSeconds: await this.repo.unapprovedSeconds(
+        projectId,
+        await this.approvals.invoiceableCondition()
+      ),
       currency: project.currency,
     }
   }
@@ -717,12 +760,21 @@ export class TimeService {
         code: "no_hourly_rate",
       })
     }
-    const entries = await this.repo.unbilled(projectId, entryIds)
+    const approved = await this.approvals.invoiceableCondition()
+    const entries = await this.repo.unbilled(projectId, entryIds, approved)
     if (entries.length === 0)
-      throw new BadRequestException({
-        message: "No unbilled time to invoice",
-        code: "no_unbilled_time",
-      })
+      throw new BadRequestException(
+        approved
+          ? {
+              message:
+                "No approved, unbilled time to invoice. Time is invoiceable once its week's timesheet is approved.",
+              code: "no_approved_time",
+            }
+          : {
+              message: "No unbilled time to invoice",
+              code: "no_unbilled_time",
+            }
+      )
 
     // Price each entry: task → project → member → workspace default rate.
     const [book, tasks] = await Promise.all([

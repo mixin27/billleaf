@@ -239,7 +239,8 @@ export class TimeRepository {
   }
 
   /** Billable, finished, uninvoiced entries of a project (optionally a subset). */
-  async unbilled(projectId: string, ids?: string[]) {
+  /** Billable, finished, uninvoiced entries (only `onlyIf`-matching ones, e.g. approved). */
+  async unbilled(projectId: string, ids?: string[], onlyIf?: SQL | null) {
     const filters: SQL[] = [
       this.scope(),
       eq(timeEntries.projectId, projectId),
@@ -248,10 +249,32 @@ export class TimeRepository {
       isNotNull(timeEntries.endedAt),
     ]
     if (ids) filters.push(inArray(timeEntries.id, ids))
+    if (onlyIf) filters.push(onlyIf)
     return this.select()
       .where(and(...filters))
       .orderBy(asc(timeEntries.entryDate))
       .then((rows) => this.withTags(rows.map(TimeRepository.flatten)))
+  }
+
+  /** Unbilled billable seconds that don't meet `invoiceable` (0 without it). */
+  async unapprovedSeconds(projectId: string, invoiceable: SQL | null) {
+    if (!invoiceable) return 0
+    const [row] = await this.db
+      .select({
+        s: sql<number>`coalesce(sum(${timeEntries.durationSeconds}), 0)::int`,
+      })
+      .from(timeEntries)
+      .where(
+        and(
+          this.scope(),
+          eq(timeEntries.projectId, projectId),
+          eq(timeEntries.billable, true),
+          isNull(timeEntries.invoiceId),
+          isNotNull(timeEntries.endedAt),
+          sql`not (${invoiceable})`
+        )
+      )
+    return row?.s ?? 0
   }
 
   /** Claim entries for an invoice; returns how many were claimed (race-safe). */

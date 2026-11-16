@@ -76,6 +76,7 @@ export const PERMISSION_CATALOG = {
     read: "View all time entries",
     track: "Track own time",
     manage: "Edit anyone's time entries",
+    approve: "Approve or reject submitted timesheets",
   },
   invoice: {
     read: "View invoices",

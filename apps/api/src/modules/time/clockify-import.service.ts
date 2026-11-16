@@ -17,6 +17,10 @@ import {
   parseClockifyCsv,
   rowHash,
 } from "./clockify-csv.js"
+import {
+  TimesheetApprovalsService,
+  weekOf,
+} from "./timesheet-approvals.service.js"
 import { TimeRepository, type TimeValues } from "./time.repository.js"
 
 const MAX_ROWS = 50_000
@@ -37,7 +41,8 @@ export class ClockifyImportService {
     private readonly projects: ProjectsService,
     private readonly profile: WorkspaceProfileService,
     private readonly ctx: RequestContext,
-    private readonly audit: AuditService
+    private readonly audit: AuditService,
+    private readonly approvals: TimesheetApprovalsService
   ) {}
 
   private can(p: string) {
@@ -148,7 +153,22 @@ export class ClockifyImportService {
 
     const existing = await this.repo.existingHashes(prepared.map((p) => p.hash))
     duplicates += existing.size
-    const toImport = prepared.filter((p) => !existing.has(p.hash))
+    const fresh = prepared.filter((p) => !existing.has(p.hash))
+    // Weeks already submitted or approved for approval can't take new time.
+    const dates = fresh.map((p) => p.row.startDate).sort()
+    const locked = await this.approvals.lockedWeeks(
+      [...new Set(fresh.map((p) => p.memberId))],
+      dates[0] ?? "1970-01-01",
+      dates[dates.length - 1] ?? "1970-01-01"
+    )
+    const toImport = fresh.filter((p) => {
+      if (!locked.has(`${p.memberId}|${weekOf(p.row.startDate)}`)) return true
+      invalid.push({
+        line: p.row.line,
+        message: "That week's timesheet is submitted or approved",
+      })
+      return false
+    })
 
     // ── Resolve names → existing records, or plan to create them.
     const clientIdByName = new Map(

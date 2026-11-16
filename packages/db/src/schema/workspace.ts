@@ -2,7 +2,7 @@
  * Workspace business profile (1:1 with `organization`). Name/slug/logo stay on
  * Better Auth's `organization`; everything that appears on documents lives here.
  */
-import { integer, pgTable, text, uuid } from "drizzle-orm/pg-core"
+import { boolean, integer, pgTable, text, uuid } from "drizzle-orm/pg-core"
 
 import { timestamps } from "./_shared.js"
 import { organization } from "./auth.js"
@@ -37,6 +37,11 @@ export const workspaceProfiles = pgTable("workspace_profiles", {
    * for hourly projects without a more specific rate. Null = none.
    */
   defaultHourlyRate: integer(),
+  /**
+   * Team plan: members submit weeks for approval; approved weeks lock and
+   * only approved time can be invoiced.
+   */
+  timesheetApprovals: boolean().notNull().default(false),
   /** Basis points: 700 = 7.00% */
   defaultTaxRateBps: integer().notNull().default(0),
   documentFooter: text(),

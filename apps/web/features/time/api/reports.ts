@@ -20,13 +20,23 @@ import { env } from "@/lib/env"
 
 import { timeKeys } from "./queries"
 
-export function useTimesheet(week: string) {
+/** A week of your time, or another member's (`memberId`, for reviewers). */
+export function useTimesheet(week: string, memberId?: string, enabled = true) {
   const ws = useWorkspaceStore((s) => s.workspace?.id)
   return useQuery({
-    queryKey: [...timeKeys.all(ws), "timesheet", week],
+    queryKey: [
+      ...timeKeys.all(ws),
+      "timesheet",
+      week,
+      ...(memberId ? [memberId] : []),
+    ],
     queryFn: () =>
-      unwrap(api.GET("/v1/time/timesheet", { params: { query: { week } } })),
-    enabled: Boolean(ws),
+      unwrap(
+        api.GET("/v1/time/timesheet", {
+          params: { query: memberId ? { week, memberId } : { week } },
+        })
+      ),
+    enabled: Boolean(ws) && enabled,
     placeholderData: keepPreviousData,
   })
 }

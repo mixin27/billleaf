@@ -1,0 +1,32 @@
+---
+title: Timesheet approvals
+description: Members submit each week of time; an approver signs it off before it can be invoiced.
+---
+
+On the **Team** plan, you can have someone check each person's week of time before it's billed. Turn it on in **Settings → General → Timesheet approvals**.
+
+## How it works
+
+1. A member logs their week as usual: timer, calendar or timesheet.
+2. On **Time → Timesheet**, they press **Submit for approval**. Approvers get an email.
+3. An approver opens **Time → Approvals**, reviews the week, and either:
+   - **Approves** it, optionally with a note. The member gets an email.
+   - **Sends it back** with a note saying what to change. The member gets an email, fixes the week and submits it again.
+
+While a week is **waiting** or **approved**, its time is locked: nobody can add, change or delete entries in it, from the timer, calendar, timesheet or an import. A member can **withdraw** a week that's still waiting. To change an approved week, an approver **reopens** it (with a note), which sends it back to the member.
+
+You can't submit a week that hasn't started yet, a week with no time, or a week with a timer still running.
+
+## Invoicing
+
+With approvals on, **Invoice unbilled time** on a project only takes time from **approved** weeks. The project shows how much unbilled time is still waiting for approval. Time from people who have left the workspace counts as approved.
+
+If approvals are turned off, or the plan no longer includes them, weeks aren't locked and all time can be invoiced again. Past approvals are kept.
+
+## Who can approve
+
+**Owner** and **Admin** can approve by default. To let someone else approve, give their role the permission **Approve or reject submitted timesheets** in **Settings → Roles & permissions**. Approvers can approve their own week, so a solo owner is never stuck.
+
+## For developers
+
+Webhooks send `timesheet.submitted`, `timesheet.approved` and `timesheet.rejected` (sent back or reopened). See [Webhooks](/docs/developers/webhooks).

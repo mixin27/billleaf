@@ -6,6 +6,7 @@ import { InvoicesModule } from "../invoices/invoices.module.js"
 import { MailModule } from "../../mail/mail.module.js"
 import { ProjectsModule } from "../projects/projects.module.js"
 import { RatesModule } from "../rates/rates.module.js"
+import { WebhooksModule } from "../webhooks/webhooks.module.js"
 import { WorkspaceProfileModule } from "../workspace/workspace-profile.module.js"
 import { BudgetsService } from "./budgets.service.js"
 import { ClockifyImportService } from "./clockify-import.service.js"
@@ -15,6 +16,8 @@ import { TimeReportsService } from "./time-reports.service.js"
 import { TimeController } from "./time.controller.js"
 import { TimeRepository } from "./time.repository.js"
 import { TimeService } from "./time.service.js"
+import { TimesheetApprovalsController } from "./timesheet-approvals.controller.js"
+import { TimesheetApprovalsService } from "./timesheet-approvals.service.js"
 
 @Module({
   imports: [
@@ -25,8 +28,13 @@ import { TimeService } from "./time.service.js"
     RatesModule,
     MailModule,
     WorkspaceProfileModule,
+    WebhooksModule,
   ],
-  controllers: [TimeController, TimeReportsController],
+  controllers: [
+    TimeController,
+    TimeReportsController,
+    TimesheetApprovalsController,
+  ],
   providers: [
     TimeRepository,
     TimeService,
@@ -34,6 +42,7 @@ import { TimeService } from "./time.service.js"
     ClockifyImportService,
     ProjectUsageService,
     BudgetsService,
+    TimesheetApprovalsService,
   ],
   exports: [BudgetsService],
 })

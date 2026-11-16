@@ -29,6 +29,7 @@ type Plan = {
     timeTracking: boolean
     customRoles: boolean
     developerApi: boolean
+    timesheetApprovals: boolean
   }
 }
 
@@ -44,6 +45,7 @@ export const PLANS = {
       timeTracking: true,
       customRoles: false,
       developerApi: false,
+      timesheetApprovals: false,
     },
   },
   pro: {
@@ -62,6 +64,7 @@ export const PLANS = {
       timeTracking: true,
       customRoles: false,
       developerApi: true,
+      timesheetApprovals: false,
     },
   },
   team: {
@@ -80,6 +83,7 @@ export const PLANS = {
       timeTracking: true,
       customRoles: true,
       developerApi: true,
+      timesheetApprovals: true,
     },
   },
 } as const satisfies Record<PlanKey, Plan>
@@ -99,6 +103,7 @@ export const FEATURE_LABELS: Record<FeatureKey, string> = {
   timeTracking: "Time tracking",
   customRoles: "Custom roles & permissions",
   developerApi: "Developer API & webhooks",
+  timesheetApprovals: "Timesheet approvals",
 }
 
 export function isPlanKey(v: string): v is PlanKey {
