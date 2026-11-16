@@ -56,6 +56,11 @@ export const timeEntries = pgTable(
     /** Null while the timer runs. */
     endedAt: timestamp({ withTimezone: true }),
     durationSeconds: integer(),
+    /**
+     * False for entries logged as a date + duration (no clock times; they're
+     * anchored at 12:00 UTC). The calendar shows those apart from the hours.
+     */
+    hasTimes: boolean().notNull().default(true),
     billable: boolean().notNull().default(true),
     /** Set when pulled into an invoice; released (null) if that draft is deleted. */
     invoiceId: uuid().references(() => invoices.id, { onDelete: "set null" }),

@@ -64,6 +64,11 @@ export const timeEntrySchema = z.object({
   endedAt: z.iso.datetime().nullable(),
   /** Null while running. */
   durationSeconds: z.number().int().nullable(),
+  /**
+   * False when logged as a date + duration: there are no real clock times
+   * (`startedAt` is a placeholder at 12:00 UTC of `entryDate`).
+   */
+  hasTimes: z.boolean(),
   billable: z.boolean(),
   tags: z.array(tagSchema),
   invoiceId: z.string().nullable(),

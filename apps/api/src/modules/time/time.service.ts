@@ -87,6 +87,7 @@ export class TimeService {
     startedAt: e.startedAt.toISOString(),
     endedAt: e.endedAt?.toISOString() ?? null,
     durationSeconds: e.durationSeconds,
+    hasTimes: e.hasTimes,
     billable: e.billable,
     tags: e.tags.map(toTag),
     invoiceId: e.invoiceId,
@@ -502,6 +503,7 @@ export class TimeService {
           startedAt,
           endedAt: new Date(startedAt.getTime() + diff * 1000),
           durationSeconds: diff,
+          hasTimes: false,
           billable: defaultBillable(project),
         })
         return
@@ -573,7 +575,8 @@ export class TimeService {
       input.taskId ?? null
     )
     const tagIds = await this.validateTags(input.tagIds)
-    const { startedAt, endedAt, entryDate } = await this.resolveSpan(input)
+    const { startedAt, endedAt, entryDate, hasTimes } =
+      await this.resolveSpan(input)
     const id = await this.repo.database.transaction(async (tx) => {
       const id = await this.repo.insert(tx, {
         projectId: input.projectId ?? null,
@@ -584,6 +587,7 @@ export class TimeService {
         entryDate,
         startedAt,
         endedAt,
+        hasTimes,
         durationSeconds: Math.round(
           (endedAt.getTime() - startedAt.getTime()) / 1000
         ),
@@ -795,7 +799,12 @@ export class TimeService {
         throw new BadRequestException("End must be after start")
       if (endedAt.getTime() - startedAt.getTime() > 24 * 3600_000)
         throw new BadRequestException("Entries can't be longer than 24 hours")
-      return { startedAt, endedAt, entryDate: await this.localDate(startedAt) }
+      return {
+        startedAt,
+        endedAt,
+        entryDate: await this.localDate(startedAt),
+        hasTimes: true,
+      }
     }
     if (input.entryDate && input.durationMinutes) {
       // Duration-only entries are anchored at noon UTC of their date.
@@ -804,6 +813,7 @@ export class TimeService {
         startedAt,
         endedAt: new Date(startedAt.getTime() + input.durationMinutes * 60_000),
         entryDate: input.entryDate,
+        hasTimes: false,
       }
     }
     throw new BadRequestException(
