@@ -10,7 +10,7 @@ process.env.BETTER_AUTH_SECRET =
 process.env.API_URL = "http://localhost:4000"
 process.env.WEB_URL = "http://localhost:3000"
 process.env.TRUSTED_ORIGINS = ""
-process.env.SMTP_URL = "smtp://localhost:1025"
+process.env.SMTP_URL = "smtp://127.0.0.1:1025"
 process.env.SENTRY_DSN = ""
 process.env.PLATFORM_ADMIN_EMAILS =
   "platform.admin@example.test,billing.admin@example.test"
