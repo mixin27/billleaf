@@ -107,7 +107,7 @@ export function invitationEmail(p: {
 /** A quote, invoice, receipt or contract sent to a client, with the PDF attached. */
 export function documentEmail(p: {
   to: string
-  kind: "Invoice" | "Quote" | "Receipt" | "Contract"
+  kind: "Invoice" | "Quote" | "Receipt" | "Contract" | "Credit note"
   number: string
   workspaceName: string
   /** Formatted amount; for contracts, the contract title. */
@@ -128,7 +128,9 @@ export function documentEmail(p: {
         ? `Please find contract ${p.number}, "${p.amount}", for your review and signature.`
         : p.kind === "Receipt"
           ? `Thank you for your payment of ${p.amount}${p.dueOrValid ? ` received on ${p.dueOrValid}` : ""}. Receipt ${p.number} is attached.`
-          : `Please find quote ${p.number} for ${p.amount}${p.dueOrValid ? `, valid until ${p.dueOrValid}` : ""}.`
+          : p.kind === "Credit note"
+            ? `Please find credit note ${p.number} for ${p.amount}${p.dueOrValid ? `, against invoice ${p.dueOrValid}` : ""}.`
+            : `Please find quote ${p.number} for ${p.amount}${p.dueOrValid ? `, valid until ${p.dueOrValid}` : ""}.`
   const message = p.message
     ? `<p style="white-space:pre-line">${esc(p.message)}</p>`
     : ""
@@ -137,7 +139,7 @@ export function documentEmail(p: {
       ? "View quote"
       : p.kind === "Contract"
         ? "View contract"
-        : p.kind === "Receipt"
+        : p.kind === "Receipt" || p.kind === "Credit note"
           ? "View your account"
           : "View invoice"
   const howToPay = p.paymentInstructions?.length

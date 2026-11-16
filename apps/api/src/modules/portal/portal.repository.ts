@@ -207,6 +207,7 @@ export class PortalRepository {
         currency: invoices.currency,
         total: invoices.total,
         amountPaid: invoices.amountPaid,
+        amountCredited: invoices.amountCredited,
       })
       .from(invoices)
       .where(

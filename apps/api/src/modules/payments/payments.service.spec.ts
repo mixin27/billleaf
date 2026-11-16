@@ -13,6 +13,7 @@ const invoice = (over: Record<string, unknown> = {}) => ({
   currency: "USD",
   total: 10_000,
   amountPaid: 0,
+  amountCredited: 0,
   clientSnapshot: { name: "Acme", addressLines: [] },
   issuerSnapshot: { name: "Studio", addressLines: [] },
   ...over,

@@ -183,6 +183,13 @@
       "when": 1794835054334,
       "tag": "0025_colossal_proudstar",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1794836200678,
+      "tag": "0026_lumpy_the_executioner",
+      "breakpoints": true
     }
   ]
 }

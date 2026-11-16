@@ -12,8 +12,8 @@ import {
 
 /**
  * Stored lifecycle: draft → issued → void.
- * Payment state is derived from `amountPaid` (Payments module):
- *   unpaid → partially_paid → paid. "Overdue" = issued, not fully paid,
+ * Payment state is derived from `amountPaid` (Payments module) and
+ * `amountCredited` (issued credit notes): unpaid → partially_paid → paid. "Overdue" = issued, not fully paid,
  *   dueDate before today (workspace timezone).
  * Issuing assigns the number (INV-0001, gap-free per workspace) and freezes
  * client/issuer snapshots; issued invoices are never edited, only voided.
@@ -59,6 +59,8 @@ export const invoiceSummarySchema = z.object({
   taxTotal: z.number().int(),
   total: z.number().int(),
   amountPaid: z.number().int(),
+  /** Issued credit notes applied to the balance. */
+  amountCredited: z.number().int(),
   amountDue: z.number().int(),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
@@ -90,6 +92,18 @@ export const invoiceSchema = invoiceSummarySchema.extend({
   ),
   clientSnapshot: partySnapshotSchema.nullable(),
   issuerSnapshot: partySnapshotSchema.nullable(),
+  /** Credit notes issued against it (incl. void), oldest first. */
+  creditNotes: z.array(
+    z.object({
+      id: z.string(),
+      number: z.string(),
+      status: z.enum(["issued", "void"]),
+      issueDate: isoDate,
+      total: z.number().int(),
+      appliedAmount: z.number().int(),
+      refundAmount: z.number().int(),
+    })
+  ),
 })
 export type Invoice = z.infer<typeof invoiceSchema>
 
@@ -161,16 +175,14 @@ export function invoiceState(
     status: InvoiceStatus
     total: number
     amountPaid: number
+    amountCredited?: number
     dueDate: string | null
   },
   today: string
 ) {
+  const settled = inv.amountPaid + (inv.amountCredited ?? 0)
   const paymentStatus: InvoicePaymentStatus =
-    inv.amountPaid <= 0
-      ? "unpaid"
-      : inv.amountPaid >= inv.total
-        ? "paid"
-        : "partially_paid"
+    settled <= 0 ? "unpaid" : settled >= inv.total ? "paid" : "partially_paid"
   const isOverdue =
     inv.status === "issued" &&
     paymentStatus !== "paid" &&
@@ -192,7 +204,7 @@ export function invoiceState(
     paymentStatus,
     isOverdue,
     displayStatus,
-    amountDue: Math.max(0, inv.total - inv.amountPaid),
+    amountDue: Math.max(0, inv.total - settled),
   }
 }
 

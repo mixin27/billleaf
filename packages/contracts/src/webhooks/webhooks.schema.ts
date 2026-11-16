@@ -23,6 +23,7 @@ export const WEBHOOK_EVENTS = {
   "invoice.sent": "An invoice is emailed",
   "invoice.paid": "An invoice is paid in full",
   "invoice.voided": "An invoice is voided",
+  "credit_note.issued": "A credit note is issued",
   "payment.recorded": "A payment is recorded",
   "payment_proof.submitted": "A client uploads a payment proof",
 } as const

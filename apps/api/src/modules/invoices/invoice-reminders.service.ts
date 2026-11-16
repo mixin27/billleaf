@@ -102,7 +102,7 @@ export class InvoiceRemindersService {
           eq(invoices.status, "issued"),
           eq(invoices.remindersPaused, false),
           isNotNull(invoices.dueDate),
-          gt(invoices.total, invoices.amountPaid),
+          sql`${invoices.total} > ${invoices.amountPaid} + ${invoices.amountCredited}`,
           // Due dates that some offset maps into the window ending today.
           gte(
             invoices.dueDate,

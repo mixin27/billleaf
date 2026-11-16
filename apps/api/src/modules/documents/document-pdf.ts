@@ -29,6 +29,8 @@ export interface DocumentPdfData {
   total: number
   /** Invoices: amount already paid and balance due. */
   amountPaid?: number
+  /** Invoices: issued credit notes applied to the balance. */
+  amountCredited?: number
   amountDue?: number
   /** Replace the standard Subtotal/Tax/Total block (e.g. receipts). */
   totals?: { label: string; amount: number; bold?: boolean }[]
@@ -344,6 +346,8 @@ export function renderDocumentPdf(d: DocumentPdfData): Promise<Buffer> {
     totalRow(`Total (${d.currency})`, money(d.total), true)
     if (d.amountPaid !== undefined && d.amountPaid > 0)
       totalRow("Paid", money(d.amountPaid))
+    if (d.amountCredited !== undefined && d.amountCredited > 0)
+      totalRow("Credited", money(d.amountCredited))
     if (d.amountDue !== undefined)
       totalRow("Amount due", money(d.amountDue), true)
   }

@@ -238,8 +238,11 @@ export class PortalService {
         currency: i.currency,
         total: i.total,
         amountPaid: i.amountPaid,
+        amountCredited: i.amountCredited,
         amountDue:
-          i.status === "void" ? 0 : Math.max(0, i.total - i.amountPaid),
+          i.status === "void"
+            ? 0
+            : Math.max(0, i.total - i.amountPaid - i.amountCredited),
       }
     })
   }
@@ -312,6 +315,7 @@ export class PortalService {
       currency: i.currency,
       total: i.total,
       amountPaid: i.amountPaid,
+      amountCredited: i.amountCredited,
       amountDue: i.status === "void" ? 0 : i.amountDue,
       subtotal: i.subtotal,
       taxTotal: i.taxTotal,

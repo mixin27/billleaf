@@ -250,3 +250,12 @@ See [webhooks](webhooks.md).
 **Billing expenses:** `POST /v1/invoices/from-expenses` turns a client's billable, uninvoiced expenses (one currency) into a draft invoice, one line per expense at its full amount, and claims them atomically. Deleting the draft (FK set null) or voiding the invoice releases them; invoiced expenses can't change amount, currency, client or billable, or be deleted.
 
 **Profit & loss** (`GET /v1/reports/profit-loss`, `payment.read` + `expense.read`): income = payments by paid date minus refunds by refund date; expenses by spent date; per month and currency (no conversion); expenses by category; tax on invoices issued in the period vs `tax_amount` of expenses.
+
+### Credit notes (`invoices.ts`)
+
+| Table               | Notes                                                                                                                                                                                                                                                                                           |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `credit_notes`      | `invoice_id` / `client_id` (restrict), `number` (CN-0001, gap-free, scope `credit_note`), `status` (issued / void), `issue_date`, `reason`, `currency`, `subtotal`, `tax_total`, `total`, `applied_amount`, `refund_amount`, client/issuer snapshots, `voided_at`, `void_reason`, `last_sent_*` |
+| `credit_note_lines` | Same shape as invoice lines                                                                                                                                                                                                                                                                     |
+
+Credit notes are issued immediately against an **issued** invoice and never edited (void to undo). The credit can't exceed the invoice total minus credit notes already issued. It first lowers what's still owed (`applied_amount`, added to `invoices.amount_credited`); the rest is a refund due (`refund_amount`), settled outside Billleaf. Invoice balance and status use `amount_paid + amount_credited`. An invoice with issued credit notes can't be voided. Creating or voiding needs `invoice.void`, emailing `invoice.send`. The tax summary subtracts credit notes' tax.

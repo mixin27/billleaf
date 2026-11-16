@@ -29,6 +29,7 @@ const invoice = (over: Partial<InvoiceWithRefs> = {}): InvoiceWithRefs => ({
   taxTotal: 0,
   total: 10_000,
   amountPaid: 0,
+  amountCredited: 0,
   clientSnapshot: null,
   issuerSnapshot: null,
   issuedAt: null,
@@ -96,6 +97,8 @@ function setup(
     delete: vi.fn(),
     releaseTime: vi.fn(),
     releaseExpenses: vi.fn(),
+    hasIssuedCreditNotes: vi.fn().mockResolvedValue(false),
+    creditNotes: vi.fn().mockResolvedValue([]),
   } as unknown as InvoicesRepository
   const clients = {
     findById: vi.fn().mockResolvedValue({

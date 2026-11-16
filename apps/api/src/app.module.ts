@@ -26,6 +26,7 @@ import { RatesModule } from "./modules/rates/rates.module.js"
 import { TimeModule } from "./modules/time/time.module.js"
 import { WebhooksModule } from "./modules/webhooks/webhooks.module.js"
 import { ExpensesModule } from "./modules/expenses/expenses.module.js"
+import { CreditNotesModule } from "./modules/credit-notes/credit-notes.module.js"
 import { AppThrottlerGuard } from "./iam/api-keys/api-key-throttler.guard.js"
 import { AppAuthGuard } from "./iam/api-keys/app-auth.guard.js"
 import { ContractsModule } from "./modules/contracts/contracts.module.js"
@@ -57,6 +58,7 @@ import { WorkspaceProfileModule } from "./modules/workspace/workspace-profile.mo
     QuotesModule,
     ContractsModule,
     InvoicesModule,
+    CreditNotesModule,
     RecurringModule,
     PaymentsModule,
     ExpensesModule,

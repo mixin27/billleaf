@@ -1,6 +1,12 @@
 import { BadRequestException, Injectable } from "@nestjs/common"
 import type { ProfitLoss } from "@workspace/contracts"
-import { expenseCategories, expenses, invoices, payments } from "@workspace/db"
+import {
+  creditNotes,
+  expenseCategories,
+  expenses,
+  invoices,
+  payments,
+} from "@workspace/db"
 import { and, eq, gte, inArray, lte, sql } from "drizzle-orm"
 
 import { RequestContext } from "../../common/context/request-context.js"
@@ -29,7 +35,7 @@ export class ProfitLossService {
     const ws = this.ctx.workspaceId
     const month = (col: unknown) => sql<string>`to_char(${col}, 'YYYY-MM')`
 
-    const [paid, refunded, spent, byCategory, collected, taxPaid] =
+    const [paid, refunded, spent, byCategory, collected, taxPaid, credited] =
       await Promise.all([
         this.db
           .select({
@@ -129,6 +135,22 @@ export class ProfitLossService {
             )
           )
           .groupBy(expenses.currency),
+        // Credit notes issued in the period take back the tax they credit.
+        this.db
+          .select({
+            currency: creditNotes.currency,
+            amount: sql<string>`sum(${creditNotes.taxTotal})`,
+          })
+          .from(creditNotes)
+          .where(
+            and(
+              eq(creditNotes.workspaceId, ws),
+              eq(creditNotes.status, "issued"),
+              gte(creditNotes.issueDate, from),
+              lte(creditNotes.issueDate, to)
+            )
+          )
+          .groupBy(creditNotes.currency),
       ])
 
     type Cell = { income: number; expenses: number }
@@ -174,6 +196,10 @@ export class ProfitLossService {
         collected: Number(r.amount),
         paid: taxBy.get(r.currency)?.paid ?? 0,
       })
+    for (const r of credited) {
+      const t = taxBy.get(r.currency) ?? { collected: 0, paid: 0 }
+      taxBy.set(r.currency, { ...t, collected: t.collected - Number(r.amount) })
+    }
     for (const r of taxPaid)
       taxBy.set(r.currency, {
         collected: taxBy.get(r.currency)?.collected ?? 0,

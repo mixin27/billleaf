@@ -40,6 +40,7 @@ class HistoryDto extends createZodDto(
       period: z.string().nullable(),
       total: z.number().int(),
       amountPaid: z.number().int(),
+      amountCredited: z.number().int(),
       currency: z.string(),
       dueDate: z.string().nullable(),
     })

@@ -164,14 +164,23 @@ export function InvoicesList() {
             />
           }
           actions={
-            <Can permission="invoice.create">
+            <div className="flex flex-wrap gap-2">
               <Button
+                variant="outline"
                 nativeButton={false}
-                render={<Link href={`/${slug}/invoices/new`} />}
+                render={<Link href={`/${slug}/invoices/credit-notes`} />}
               >
-                New invoice
+                Credit notes
               </Button>
-            </Can>
+              <Can permission="invoice.create">
+                <Button
+                  nativeButton={false}
+                  render={<Link href={`/${slug}/invoices/new`} />}
+                >
+                  New invoice
+                </Button>
+              </Can>
+            </div>
           }
         />
       )}
