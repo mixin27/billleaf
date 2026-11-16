@@ -26,6 +26,11 @@
     "time-reports-summary",
     "time-reports-detailed",
     "time-reports-detailed-csv",
-    "time-reports-import-clockify"
+    "time-reports-import-clockify",
+    "timesheet-approvals-list",
+    "timesheet-approvals-submit",
+    "timesheet-approvals-withdraw",
+    "timesheet-approvals-approve",
+    "timesheet-approvals-reject"
   ]
 }

@@ -182,6 +182,12 @@ export function ProjectTime({
             ) : null}
           </div>
         ) : null}
+        {s && s.unapprovedSeconds > 0 ? (
+          <p className="mt-3 text-xs text-muted-foreground">
+            {hoursLabel(s.unapprovedSeconds)} of unbilled time is waiting for
+            timesheet approval and isn&apos;t invoiced yet.
+          </p>
+        ) : null}
         {s && s.unratedSeconds > 0 ? (
           <p className="mt-3 text-xs text-muted-foreground">
             {hoursLabel(s.unratedSeconds)} of unbilled time has no hourly rate.

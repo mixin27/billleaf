@@ -15,6 +15,7 @@ Work we've agreed to do later, with enough detail to pick up without re-research
 - **Account deletion:** users delete their own login once they aren't the only owner of a workspace.
 - **Credit notes:** corrections and partial refunds for issued invoices (full or partial, numbered CN-0001), lowering the balance first and showing any refund due; PDF, email, void, a list page, and credits in the portal, dashboard and tax summary.
 - **Expenses:** spending with receipts (photo or PDF) and categories; billable expenses onto a client's draft invoice (released if the draft is deleted or the invoice voided); Reports → profit & loss per month, expenses by category, and a tax summary.
+- **Timesheet approvals (Team):** members submit weeks; approvers approve or send back with a note (emails and webhooks both ways); submitted/approved weeks lock; only approved time is invoiced.
 - **Time calendar:** a week/day calendar of your own time (workspace time zone) where you drag to log, move and resize entries; duration-only entries wait in a "No set time" row until placed.
 - **Rates and budgets:** billable rates per task, project, member and workspace default (the most specific wins; invoiced time keeps its rate), member cost rates with cost and profit on projects and reports, time and money estimates with progress bars, a dashboard card, and owner alerts at 80% / 100%.
 - **Developer API:** workspace API keys (Settings → API keys) that act as their creator with chosen permissions, a public API reference at `/docs/api`, per-key rate limits and audit; Pro and Team ([ADR-0015](../adr/0015-workspace-api-keys.md)).
@@ -50,7 +51,7 @@ When a provider serves the operating country (a Merchant of Record for subscript
 
 - **Integrations:** Zapier/Make templates built on the webhooks and API keys.
 - **OAuth applications:** third-party apps that other workspaces connect with a consent screen (client ID/secret, redirect URLs, per-app revocation), reusing API-key scopes.
-- **Teams/agencies:** per-seat pricing, timesheet approvals.
+- **Teams/agencies:** per-seat pricing.
 - **i18n:** translated UI, emails and PDFs, if a market needs it.
 
 ### Time tracking, later tier

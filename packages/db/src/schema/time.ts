@@ -122,3 +122,43 @@ export const timeEntryTags = pgTable(
   },
   (t) => [primaryKey({ columns: [t.entryId, t.tagId] }), index().on(t.tagId)]
 )
+
+/**
+ * A member's week sent for approval (Team plan, when the workspace turns
+ * approvals on). No row = open. `submitted` and `approved` lock that
+ * member's entries dated in the week; `rejected` reopens it with a note.
+ */
+export const timesheetApprovals = pgTable(
+  "timesheet_approvals",
+  {
+    id: id(),
+    workspaceId: uuid()
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    memberId: uuid()
+      .notNull()
+      .references(() => member.id, { onDelete: "cascade" }),
+    /** Monday of the week (workspace-local dates, like `entry_date`). */
+    weekStart: date({ mode: "string" }).notNull(),
+    status: text({ enum: ["submitted", "approved", "rejected"] }).notNull(),
+    /** Total and billable seconds when submitted (for the approvals list). */
+    totalSeconds: integer().notNull().default(0),
+    billableSeconds: integer().notNull().default(0),
+    submittedAt: timestamp({ withTimezone: true }).notNull(),
+    reviewedAt: timestamp({ withTimezone: true }),
+    reviewedByMemberId: uuid().references(() => member.id, {
+      onDelete: "set null",
+    }),
+    /** Reviewer's note: required when rejecting. */
+    note: text(),
+    ...timestamps,
+  },
+  (t) => [
+    uniqueIndex("timesheet_approvals_member_week_unique").on(
+      t.workspaceId,
+      t.memberId,
+      t.weekStart
+    ),
+    index().on(t.workspaceId, t.status),
+  ]
+)

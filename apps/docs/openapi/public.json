@@ -4672,6 +4672,16 @@
               "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
               "type": "string"
             }
+          },
+          {
+            "name": "memberId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -5297,6 +5307,202 @@
         },
         "tags": ["time"],
         "summary": "Import clockify",
+        "security": [
+          {
+            "apiKey": []
+          }
+        ]
+      }
+    },
+    "/v1/timesheet-approvals": {
+      "get": {
+        "operationId": "timesheet-approvals-list",
+        "parameters": [
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["submitted", "approved", "rejected"]
+            }
+          },
+          {
+            "name": "memberId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalListDto_Output"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["time"],
+        "summary": "List timesheet approvals",
+        "security": [
+          {
+            "apiKey": []
+          }
+        ]
+      }
+    },
+    "/v1/timesheet-approvals/submit": {
+      "post": {
+        "operationId": "timesheet-approvals-submit",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WeekDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalDto_Output"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["time"],
+        "summary": "Submit (timesheet approvals)",
+        "security": [
+          {
+            "apiKey": []
+          }
+        ]
+      }
+    },
+    "/v1/timesheet-approvals/withdraw": {
+      "post": {
+        "operationId": "timesheet-approvals-withdraw",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WeekDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "tags": ["time"],
+        "summary": "Withdraw (timesheet approvals)",
+        "security": [
+          {
+            "apiKey": []
+          }
+        ]
+      }
+    },
+    "/v1/timesheet-approvals/{id}/approve": {
+      "post": {
+        "operationId": "timesheet-approvals-approve",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalDto_Output"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["time"],
+        "summary": "Approve (timesheet approvals)",
+        "security": [
+          {
+            "apiKey": []
+          }
+        ]
+      }
+    },
+    "/v1/timesheet-approvals/{id}/reject": {
+      "post": {
+        "operationId": "timesheet-approvals-reject",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RejectDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalDto_Output"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["time"],
+        "summary": "Reject timesheet approval",
         "security": [
           {
             "apiKey": []
@@ -11351,6 +11557,9 @@
                 },
                 "isMine": {
                   "type": "boolean"
+                },
+                "approvalLocked": {
+                  "type": "boolean"
                 }
               },
               "required": [
@@ -11373,7 +11582,8 @@
                 "invoiceId",
                 "invoiceNumber",
                 "isRunning",
-                "isMine"
+                "isMine",
+                "approvalLocked"
               ],
               "additionalProperties": false
             }
@@ -11505,6 +11715,9 @@
               },
               "isMine": {
                 "type": "boolean"
+              },
+              "approvalLocked": {
+                "type": "boolean"
               }
             },
             "required": [
@@ -11527,7 +11740,8 @@
               "invoiceId",
               "invoiceNumber",
               "isRunning",
-              "isMine"
+              "isMine",
+              "approvalLocked"
             ],
             "additionalProperties": false,
             "nullable": true
@@ -11680,6 +11894,9 @@
           },
           "isMine": {
             "type": "boolean"
+          },
+          "approvalLocked": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -11702,7 +11919,8 @@
           "invoiceId",
           "invoiceNumber",
           "isRunning",
-          "isMine"
+          "isMine",
+          "approvalLocked"
         ],
         "additionalProperties": false
       },
@@ -12188,6 +12406,11 @@
             "minimum": -9007199254740991,
             "maximum": 9007199254740991
           },
+          "unapprovedSeconds": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
           "currency": {
             "type": "string"
           }
@@ -12201,6 +12424,7 @@
           "unratedSeconds",
           "cost",
           "uncostedSeconds",
+          "unapprovedSeconds",
           "currency"
         ],
         "additionalProperties": false
@@ -12361,9 +12585,89 @@
               ],
               "additionalProperties": false
             }
+          },
+          "approvalsEnabled": {
+            "type": "boolean"
+          },
+          "approval": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "memberId": {
+                "type": "string"
+              },
+              "memberName": {
+                "type": "string"
+              },
+              "weekStart": {
+                "type": "string",
+                "format": "date",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+              },
+              "status": {
+                "type": "string",
+                "enum": ["submitted", "approved", "rejected"]
+              },
+              "totalSeconds": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "billableSeconds": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "submittedAt": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+              },
+              "reviewedAt": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                "nullable": true
+              },
+              "reviewedByName": {
+                "type": "string",
+                "nullable": true
+              },
+              "note": {
+                "type": "string",
+                "nullable": true
+              }
+            },
+            "required": [
+              "id",
+              "memberId",
+              "memberName",
+              "weekStart",
+              "status",
+              "totalSeconds",
+              "billableSeconds",
+              "submittedAt",
+              "reviewedAt",
+              "reviewedByName",
+              "note"
+            ],
+            "additionalProperties": false,
+            "nullable": true
+          },
+          "locked": {
+            "type": "boolean"
           }
         },
-        "required": ["weekStart", "days", "rows"],
+        "required": [
+          "weekStart",
+          "days",
+          "rows",
+          "approvalsEnabled",
+          "approval",
+          "locked"
+        ],
         "additionalProperties": false
       },
       "SetTimesheetCellDto": {
@@ -12699,6 +13003,9 @@
                 },
                 "isMine": {
                   "type": "boolean"
+                },
+                "approvalLocked": {
+                  "type": "boolean"
                 }
               },
               "required": [
@@ -12721,7 +13028,8 @@
                 "invoiceId",
                 "invoiceNumber",
                 "isRunning",
-                "isMine"
+                "isMine",
+                "approvalLocked"
               ],
               "additionalProperties": false
             }
@@ -12890,6 +13198,190 @@
           "members"
         ],
         "additionalProperties": false
+      },
+      "ApprovalListDto_Output": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "memberId": {
+                  "type": "string"
+                },
+                "memberName": {
+                  "type": "string"
+                },
+                "weekStart": {
+                  "type": "string",
+                  "format": "date",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": ["submitted", "approved", "rejected"]
+                },
+                "totalSeconds": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "billableSeconds": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "submittedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                },
+                "reviewedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                  "nullable": true
+                },
+                "reviewedByName": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "note": {
+                  "type": "string",
+                  "nullable": true
+                }
+              },
+              "required": [
+                "id",
+                "memberId",
+                "memberName",
+                "weekStart",
+                "status",
+                "totalSeconds",
+                "billableSeconds",
+                "submittedAt",
+                "reviewedAt",
+                "reviewedByName",
+                "note"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "pendingCount": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "available": {
+            "type": "boolean"
+          },
+          "enabled": {
+            "type": "boolean"
+          }
+        },
+        "required": ["items", "pendingCount", "available", "enabled"],
+        "additionalProperties": false
+      },
+      "WeekDto": {
+        "type": "object",
+        "properties": {
+          "week": {
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+          }
+        },
+        "required": ["week"]
+      },
+      "ApprovalDto_Output": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "memberId": {
+            "type": "string"
+          },
+          "memberName": {
+            "type": "string"
+          },
+          "weekStart": {
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["submitted", "approved", "rejected"]
+          },
+          "totalSeconds": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "billableSeconds": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "submittedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          },
+          "reviewedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+            "nullable": true
+          },
+          "reviewedByName": {
+            "type": "string",
+            "nullable": true
+          },
+          "note": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "memberId",
+          "memberName",
+          "weekStart",
+          "status",
+          "totalSeconds",
+          "billableSeconds",
+          "submittedAt",
+          "reviewedAt",
+          "reviewedByName",
+          "note"
+        ],
+        "additionalProperties": false
+      },
+      "ReviewDto": {
+        "type": "object",
+        "properties": {
+          "note": {
+            "type": "string",
+            "maxLength": 1000
+          }
+        }
+      },
+      "RejectDto": {
+        "type": "object",
+        "properties": {
+          "note": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 1000
+          }
+        },
+        "required": ["note"]
       }
     },
     "securitySchemes": {

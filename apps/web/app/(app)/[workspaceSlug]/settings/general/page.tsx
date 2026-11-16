@@ -4,6 +4,7 @@ import {
   InvoiceReminderSettings,
   WorkspaceProfileForm,
 } from "@/features/workspace"
+import { TimesheetApprovalSettings } from "@/features/time"
 
 export const metadata: Metadata = { title: "Workspace settings" }
 
@@ -12,6 +13,7 @@ export default function GeneralSettingsPage() {
     <div className="flex flex-col gap-6">
       <WorkspaceProfileForm />
       <InvoiceReminderSettings />
+      <TimesheetApprovalSettings />
     </div>
   )
 }

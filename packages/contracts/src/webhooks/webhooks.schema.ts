@@ -26,6 +26,9 @@ export const WEBHOOK_EVENTS = {
   "credit_note.issued": "A credit note is issued",
   "payment.recorded": "A payment is recorded",
   "payment_proof.submitted": "A client uploads a payment proof",
+  "timesheet.submitted": "A member submits a week of time for approval",
+  "timesheet.approved": "A submitted week is approved",
+  "timesheet.rejected": "A submitted week is sent back",
 } as const
 export type WebhookEventType = keyof typeof WEBHOOK_EVENTS
 export const WEBHOOK_EVENT_TYPES = Object.keys(

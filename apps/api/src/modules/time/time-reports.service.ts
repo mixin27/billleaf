@@ -287,6 +287,7 @@ export class TimeReportsService {
       invoiceNumber: e.invoiceNumber,
       isRunning: e.endedAt === null,
       isMine: e.memberId === this.ctx.memberId,
+      approvalLocked: false,
     }
   }
 }

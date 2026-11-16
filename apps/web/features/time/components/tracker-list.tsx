@@ -151,6 +151,7 @@ export function TrackerList({ today }: { today: string }) {
   const canWrite = React.useCallback(
     (e: TimeEntry) =>
       !e.invoiceId &&
+      !e.approvalLocked &&
       (e.isMine ? can("time.track") || can("time.manage") : can("time.manage")),
     [can]
   )

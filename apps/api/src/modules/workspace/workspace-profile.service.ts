@@ -38,6 +38,7 @@ export function toProfileDto(
     locale: r.locale,
     paymentTermsDays: r.paymentTermsDays,
     invoiceReminderOffsets: r.invoiceReminderOffsets,
+    timesheetApprovals: r.timesheetApprovals,
     defaultTaxRateBps: r.defaultTaxRateBps,
     documentFooter: r.documentFooter,
     brandColor: r.brandColor,
@@ -144,6 +145,8 @@ export class WorkspaceProfileService {
     if (profile.timezone && !isValidTimeZone(profile.timezone)) {
       throw new BadRequestException("Unknown timezone")
     }
+    if (profile.timesheetApprovals === true)
+      await this.entitlements.assertFeature("timesheetApprovals")
     const row = await this.repo.update(name, profile as never)
     await this.audit.record("workspace.profile_updated", {
       resourceType: "workspace",

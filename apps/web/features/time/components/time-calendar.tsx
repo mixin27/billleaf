@@ -28,6 +28,7 @@ import { formatDate } from "@/lib/format"
 
 import { useSaveTimeEntry } from "../api/mutations"
 import { useTimeEntries } from "../api/queries"
+import { useTimesheet } from "../api/reports"
 import { addDays, weekStart } from "../duration"
 import { hhmm, zonedParts, zonedToUtc } from "../zoned"
 import { CalendarEntryDialog, type Slot } from "./calendar-entry-dialog"
@@ -133,6 +134,9 @@ export function TimeCalendar({ today }: { today: string }) {
       ? Array.from({ length: 7 }, (_, i) => addDays(start, i))
       : [day]
 
+  // A submitted or approved week (timesheet approvals) takes no new time.
+  const weekLocked = useTimesheet(start).data?.locked ?? false
+  const canLog = canTrack && !weekLocked
   const entries = useTimeEntries({
     from: start,
     to: addDays(start, 6),
@@ -149,6 +153,7 @@ export function TimeCalendar({ today }: { today: string }) {
   const canWrite = React.useCallback(
     (e: TimeEntry) =>
       !e.invoiceId &&
+      !e.approvalLocked &&
       !e.isRunning &&
       (e.isMine ? canTrack : can("time.manage")),
     [can, canTrack]
@@ -327,7 +332,7 @@ export function TimeCalendar({ today }: { today: string }) {
   }
 
   const startCreate = (ev: React.PointerEvent, date: string) => {
-    if (!canTrack || ev.button !== 0 || ev.target !== ev.currentTarget) return
+    if (!canLog || ev.button !== 0 || ev.target !== ev.currentTarget) return
     const { minute } = pointAt(ev.clientX, ev.clientY)
     const m = clamp(Math.floor(minute / SNAP) * SNAP, 0, DAY - SNAP)
     beginDrag({
@@ -451,7 +456,7 @@ export function TimeCalendar({ today }: { today: string }) {
               <TabsTrigger value="day">Day</TabsTrigger>
             </TabsList>
           </Tabs>
-          {canTrack ? (
+          {canLog ? (
             <Button
               size="sm"
               onClick={() => {
@@ -595,7 +600,7 @@ export function TimeCalendar({ today }: { today: string }) {
                         role="presentation"
                         className={cn(
                           "relative border-l",
-                          canTrack && "cursor-crosshair",
+                          canLog && "cursor-crosshair",
                           d === today && "bg-primary/[0.03]"
                         )}
                         style={{
@@ -678,6 +683,12 @@ export function TimeCalendar({ today }: { today: string }) {
         </div>
       )}
 
+      {weekLocked ? (
+        <p className="text-sm text-muted-foreground">
+          This week&apos;s timesheet is submitted or approved, so its time is
+          locked. See the Timesheet tab.
+        </p>
+      ) : null}
       <p className="text-xs text-muted-foreground">
         Times are in the workspace time zone ({tz}). Drag on empty space to log
         time, drag a block to move it, or drag its bottom edge to change its

@@ -75,6 +75,8 @@ export const timeEntrySchema = z.object({
   invoiceNumber: z.string().nullable(),
   isRunning: z.boolean(),
   isMine: z.boolean(),
+  /** In a week that's submitted or approved, so it can't change. */
+  approvalLocked: z.boolean(),
 })
 export type TimeEntry = z.infer<typeof timeEntrySchema>
 
@@ -240,6 +242,11 @@ export const projectTimeSummarySchema = z.object({
   cost: z.number().int().nullable(),
   /** Seconds whose member has no cost rate in the project currency. */
   uncostedSeconds: z.number().int(),
+  /**
+   * With timesheet approvals on: unbilled billable seconds in weeks not yet
+   * approved (they can't be invoiced yet). 0 when approvals are off.
+   */
+  unapprovedSeconds: z.number().int(),
   currency: z.string(),
 })
 export type ProjectTimeSummary = z.infer<typeof projectTimeSummarySchema>

@@ -35,6 +35,8 @@ export const workspaceProfileSchema = z.object({
   paymentTermsDays: z.number().int(),
   /** Payment reminder days relative to the due date; empty = off. */
   invoiceReminderOffsets: z.array(z.number().int()),
+  /** Members submit weeks for approval; only approved time is invoiced (Team). */
+  timesheetApprovals: z.boolean(),
   defaultTaxRateBps: z.number().int(),
   documentFooter: z.string().nullable(),
   brandColor: z.string().nullable(),
@@ -80,6 +82,7 @@ export const updateWorkspaceProfileSchema = z
       )
       .max(REMINDER_OFFSETS.length)
       .transform((v) => [...new Set(v)].sort((a, b) => a - b)),
+    timesheetApprovals: z.boolean(),
     defaultTaxRateBps: z.number().int().min(0).max(10_000),
     documentFooter: optionalText(1000),
     brandColor: z

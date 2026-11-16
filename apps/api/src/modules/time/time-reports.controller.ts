@@ -62,7 +62,7 @@ export class TimeReportsController {
   @Get("timesheet")
   @ZodResponse({ status: 200, type: TimesheetDto })
   timesheet(@Query() q: TimesheetQueryDto) {
-    return this.time.timesheet(q.week)
+    return this.time.timesheet(q.week, q.memberId)
   }
 
   @Put("timesheet/cell")

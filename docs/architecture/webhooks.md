@@ -4,20 +4,23 @@ Workspaces on Pro and Team can have Billleaf POST events to their own URLs (Sett
 
 ## Events
 
-| Type                      | When                                         | `data.object` |
-| ------------------------- | -------------------------------------------- | ------------- |
-| `client.created`          | A client is added                            | Client        |
-| `quote.accepted`          | A quote is accepted (in the app or portal)   | Quote         |
-| `quote.declined`          | A quote is declined                          | Quote         |
-| `contract.signed`         | A contract is signed                         | Contract      |
-| `invoice.issued`          | An invoice is issued                         | Invoice       |
-| `invoice.sent`            | An invoice is emailed                        | Invoice       |
-| `invoice.paid`            | A payment settles the invoice in full        | Invoice       |
-| `invoice.voided`          | An invoice is voided                         | Invoice       |
-| `credit_note.issued`      | A credit note is issued                      | Credit note   |
-| `payment.recorded`        | A payment is recorded (or a proof confirmed) | Payment       |
-| `payment_proof.submitted` | A client uploads a payment proof             | Proof summary |
-| `ping`                    | "Send test event"                            | `{ message }` |
+| Type                      | When                                         | `data.object`      |
+| ------------------------- | -------------------------------------------- | ------------------ |
+| `client.created`          | A client is added                            | Client             |
+| `quote.accepted`          | A quote is accepted (in the app or portal)   | Quote              |
+| `quote.declined`          | A quote is declined                          | Quote              |
+| `contract.signed`         | A contract is signed                         | Contract           |
+| `invoice.issued`          | An invoice is issued                         | Invoice            |
+| `invoice.sent`            | An invoice is emailed                        | Invoice            |
+| `invoice.paid`            | A payment settles the invoice in full        | Invoice            |
+| `invoice.voided`          | An invoice is voided                         | Invoice            |
+| `credit_note.issued`      | A credit note is issued                      | Credit note        |
+| `payment.recorded`        | A payment is recorded (or a proof confirmed) | Payment            |
+| `payment_proof.submitted` | A client uploads a payment proof             | Proof summary      |
+| `timesheet.submitted`     | A member submits a week for approval         | Timesheet approval |
+| `timesheet.approved`      | A submitted week is approved                 | Timesheet approval |
+| `timesheet.rejected`      | A week is sent back or reopened              | Timesheet approval |
+| `ping`                    | "Send test event"                            | `{ message }`      |
 
 Objects have the same shape as the REST API's responses (see `/docs`), frozen when the event happened.
 
