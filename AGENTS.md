@@ -22,7 +22,7 @@ Read `docs/README.md` (product + architecture + ADRs) before non-trivial work.
 | `apps/api`                         | NestJS 12 (Fastify, ESM) REST API + BullMQ worker. See `apps/api/AGENTS.md`                   |
 | `apps/docs`                        | Public docs site (Fumadocs, static export): help pages + developer docs + API reference       |
 | `apps/e2e`                         | Playwright end-to-end journeys (own ports/DB; see `apps/e2e/README.md`)                       |
-| `apps/mobile`                      | _Reserved_ — Expo app (Phase 4), reuses `contracts` + `api-client`                            |
+| `apps/mobile`                      | Expo (SDK 58) iOS/Android app: sign in so far. See `apps/mobile/README.md`, ADR-0017          |
 | `packages/db`                      | Drizzle schema, migrations, client. See `packages/db/AGENTS.md`                               |
 | `packages/contracts`               | Zod schemas, shared types, **permission catalog**                                             |
 | `packages/api-client`              | Typed client generated from the API's OpenAPI                                                 |
