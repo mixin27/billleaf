@@ -7,9 +7,10 @@ Decisions: [ADR-0004 Better Auth](../adr/0004-better-auth.md) · [ADR-0005 Dynam
 - Mounted in the Nest API at **`/api/auth/*`** via `@thallesp/nestjs-better-auth` (`apps/api/src/auth/`). Plugins are defined in `auth.plugins.ts`; `pnpm --filter api auth:generate` derives `packages/db/src/schema/auth.ts` from them.
 - Role changes through Better Auth's `/organization/update-member-role` are disabled — use `PUT /v1/members/:id/roles`. On join, Better Auth's `member.role` string is used once as the slug of the workspace role to grant.
 - **Drizzle adapter**; auth tables live in `packages/db`.
-- **Plugins:** email + password, email verification, magic link / email OTP, Google OAuth, `twoFactor`, `admin` (platform staff), **`organization` as the workspace primitive** (workspaces, members, invitations, active workspace on session). Later: passkey, `expo` (mobile).
-- **Cookies** on the parent domain (`COOKIE_DOMAIN=.billleaf.com`) so `app.` and `api.` share the session. `TRUSTED_ORIGINS` restricts credentialed origins (CSRF protection).
-- Web uses `better-auth/react`; mobile will use the Expo client.
+- **Plugins:** email + password, email verification, magic link / email OTP, Google OAuth, `twoFactor`, `admin` (platform staff), **`organization` as the workspace primitive** (workspaces, members, invitations, active workspace on session), **`expo`** (mobile app: maps `expo-origin` to `Origin`; [ADR-0017](../adr/0017-mobile-app-expo-native-auth.md)). Later: passkey.
+- **Cookies** on the parent domain (`COOKIE_DOMAIN=.billleaf.com`) so `app.` and `api.` share the session. Trusted origins (`WEB_URL`, the app scheme `billleaf://`, plus `TRUSTED_ORIGINS`) restrict credentialed requests (CSRF protection). The origin check is forced on in every environment (`advanced.disableOriginCheck: false`; Better Auth would skip it under `NODE_ENV=test`).
+- Web uses `better-auth/react`; the mobile app uses `@better-auth/expo/client`, keeps the session cookie in the device keychain and sends it as a `Cookie` header with `expo-origin: billleaf://`.
+- **Password reset:** `/forgot-password` → email link → `/reset-password?token=` (web).
 
 ## Three separate concerns
 

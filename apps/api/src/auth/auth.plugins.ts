@@ -11,6 +11,7 @@ import {
   organization,
   twoFactor,
 } from "better-auth/plugins"
+import { expo } from "@better-auth/expo"
 import { APIError } from "better-auth/api"
 
 export interface AuthPluginDeps {
@@ -91,6 +92,11 @@ export function buildAuthPlugins(deps: AuthPluginDeps) {
     // over HTTP; everything else goes through /v1/admin (2FA + audit).
     admin({ impersonationSessionDuration: 60 * 60 }),
     openAPI(),
+    // The mobile app (apps/mobile) sends no Origin; the Expo client sends
+    // `expo-origin: billleaf://` instead, which this maps to Origin so
+    // Better Auth's CSRF/origin check can match a trusted origin. Browsers
+    // can't set it cross-site (CORS doesn't allow the header).
+    expo(),
   ]
 }
 

@@ -5,6 +5,8 @@ const PUBLIC_PATHS = [
   "/sign-in",
   "/sign-up",
   "/verify-email",
+  "/forgot-password",
+  "/reset-password",
   "/accept-invitation",
   // Client portal: its own emailed-link session, checked by the API.
   "/portal",

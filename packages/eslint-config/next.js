@@ -15,6 +15,8 @@ export const nextJsConfig = [
   globalIgnores([
     // Default ignores of eslint-config-next:
     ".next/**",
+    // The e2e production build (apps/e2e, NEXT_DIST_DIR).
+    ".next-e2e/**",
     "out/**",
     "build/**",
     "next-env.d.ts",
