@@ -15,6 +15,7 @@ Work we've agreed to do later, with enough detail to pick up without re-research
 - **Account deletion:** users delete their own login once they aren't the only owner of a workspace.
 - **Credit notes:** corrections and partial refunds for issued invoices (full or partial, numbered CN-0001), lowering the balance first and showing any refund due; PDF, email, void, a list page, and credits in the portal, dashboard and tax summary.
 - **Expenses:** spending with receipts (photo or PDF) and categories; billable expenses onto a client's draft invoice (released if the draft is deleted or the invoice voided); Reports → profit & loss per month, expenses by category, and a tax summary.
+- **Import history with undo:** Time → Import lists past imports (app, file, who, counts); Undo deletes an import's entries except invoiced or locked ones, and can be run again once they're freed.
 - **CJK PDF fonts:** Chinese (Simplified/Traditional), Japanese and Korean on every PDF; fonts fetched on first use (pinned, checksummed, cached in a volume) so the image stays small.
 - **Toggl Track and Harvest imports:** next to Clockify in Time → Import (one `import/{source}` endpoint); Harvest rows come in as duration-only entries; people matched by email or unique name.
 - **Time rules:** per-entry rounding (up / nearest / down to 1–60 min) on invoices, project amounts and reports (with an exact-time toggle), and a lock date before which time can't change.
@@ -61,7 +62,6 @@ When a provider serves the operating country (a Merchant of Record for subscript
 ### Time tracking, later tier
 
 - **Reminders:** idle detection and reminders (needs a browser extension or desktop app).
-- **Imports:** import history with undo.
 
 ## Small follow-ups
 

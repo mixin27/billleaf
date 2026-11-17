@@ -2036,6 +2036,38 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  "/v1/time/imports": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["TimeReportsController_imports_v1"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/time/imports/{id}/undo": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["TimeReportsController_undoImport_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   "/v1/time/import/{source}": {
     parameters: {
       query?: never
@@ -5793,6 +5825,45 @@ export interface components {
         mode: "off" | "up" | "nearest" | "down"
         minutes: number
       } | null
+    }
+    TimeImportBatchListDto_Output: {
+      items: {
+        id: string
+        /** @enum {string} */
+        source: "clockify" | "toggl" | "harvest"
+        filename: string
+        importedCount: number
+        duplicateCount: number
+        invalidCount: number
+        createdByName: string | null
+        /** Format: date-time */
+        createdAt: string
+        remainingCount: number
+        removedCount: number
+        /** Format: date-time */
+        undoneAt: string | null
+      }[]
+    }
+    UndoTimeImportResultDto_Output: {
+      removed: number
+      keptInvoiced: number
+      keptLocked: number
+      batch: {
+        id: string
+        /** @enum {string} */
+        source: "clockify" | "toggl" | "harvest"
+        filename: string
+        importedCount: number
+        duplicateCount: number
+        invalidCount: number
+        createdByName: string | null
+        /** Format: date-time */
+        createdAt: string
+        remainingCount: number
+        removedCount: number
+        /** Format: date-time */
+        undoneAt: string | null
+      }
     }
     ClockifyImportResultDto_Output: {
       dryRun: boolean
@@ -10778,6 +10849,46 @@ export interface operations {
           [name: string]: unknown
         }
         content?: never
+      }
+    }
+  }
+  TimeReportsController_imports_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["TimeImportBatchListDto_Output"]
+        }
+      }
+    }
+  }
+  TimeReportsController_undoImport_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["UndoTimeImportResultDto_Output"]
+        }
       }
     }
   }

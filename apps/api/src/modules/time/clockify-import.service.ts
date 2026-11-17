@@ -1,9 +1,15 @@
 import {
+  NotFoundException,
   BadRequestException,
   ForbiddenException,
   Injectable,
 } from "@nestjs/common"
-import { type ClockifyImportResult, TAG_COLORS } from "@workspace/contracts"
+import {
+  type ClockifyImportResult,
+  TAG_COLORS,
+  type TimeImportBatch,
+  type UndoTimeImportResult,
+} from "@workspace/contracts"
 
 import { RequestContext } from "../../common/context/request-context.js"
 import { zonedToUtc } from "../../common/time-zone.js"
@@ -377,6 +383,86 @@ export class ClockifyImportService {
       batchId,
       imported: inserted,
       duplicates: duplicates + (values.length - inserted),
+    }
+  }
+
+  // ── History and undo ────────────────────────────────────
+
+  private toBatch(
+    r: Awaited<ReturnType<TimeRepository["importBatches"]>>[number]
+  ): TimeImportBatch {
+    return {
+      id: r.batch.id,
+      source: r.batch.source,
+      filename: r.batch.filename,
+      importedCount: r.batch.importedCount,
+      duplicateCount: r.batch.duplicateCount,
+      invalidCount: r.batch.invalidCount,
+      createdByName: r.createdByName,
+      createdAt: r.batch.createdAt.toISOString(),
+      remainingCount: r.remainingCount,
+      removedCount: r.batch.removedCount,
+      undoneAt: r.batch.undoneAt?.toISOString() ?? null,
+    }
+  }
+
+  /** Past imports in this workspace, newest first. */
+  async history(): Promise<TimeImportBatch[]> {
+    if (!this.can("time.manage"))
+      throw new ForbiddenException("Import history needs time.manage")
+    return (await this.repo.importBatches()).map((r) => this.toBatch(r))
+  }
+
+  /**
+   * Remove an import's entries. Invoiced ones and ones dated in a locked
+   * period or a submitted/approved week stay (and are counted); run it
+   * again once they're freed. Created clients, projects, tasks and tags
+   * are kept.
+   */
+  async undo(batchId: string): Promise<UndoTimeImportResult> {
+    if (!this.can("time.manage"))
+      throw new ForbiddenException("Undoing an import needs time.manage")
+    const known = (await this.repo.importBatches(1_000)).find(
+      (r) => r.batch.id === batchId
+    )
+    if (!known) throw new NotFoundException("Import not found")
+
+    const entries = await this.repo.batchEntries(batchId)
+    const dates = entries.map((e) => e.entryDate).sort()
+    const [lockedBefore, lockedWeeks] = await Promise.all([
+      this.approvals.lockedBefore(),
+      this.approvals.lockedWeeks(
+        [...new Set(entries.map((e) => e.memberId).filter((m) => m !== null))],
+        dates[0] ?? "1970-01-01",
+        dates[dates.length - 1] ?? "1970-01-01"
+      ),
+    ])
+    let keptInvoiced = 0
+    let keptLocked = 0
+    const remove: string[] = []
+    for (const e of entries) {
+      if (e.invoiceId) keptInvoiced++
+      else if (
+        (lockedBefore && e.entryDate < lockedBefore) ||
+        lockedWeeks.has(`${e.memberId}|${weekOf(e.entryDate)}`)
+      )
+        keptLocked++
+      else remove.push(e.id)
+    }
+    await this.repo.undoImport(batchId, remove)
+    await this.audit.record("time.import_undone", {
+      resourceType: "time_import_batch",
+      resourceId: batchId,
+      metadata: { removed: remove.length, keptInvoiced, keptLocked },
+    })
+    const batch = (await this.repo.importBatches(1_000)).find(
+      (r) => r.batch.id === batchId
+    )!
+    return {
+      removed: remove.length,
+      keptInvoiced,
+      keptLocked,
+      batch: this.toBatch(batch),
     }
   }
 }

@@ -26,6 +26,8 @@
     "time-reports-summary",
     "time-reports-detailed",
     "time-reports-detailed-csv",
+    "time-reports-imports",
+    "time-reports-undo-import",
     "time-reports-import-time",
     "timesheet-approvals-list",
     "timesheet-approvals-submit",

@@ -155,3 +155,30 @@ export function useClockifyImport() {
     },
   })
 }
+
+/** Past imports, newest first (time.manage). */
+export function useTimeImports() {
+  const ws = useWorkspaceStore((s) => s.workspace?.id)
+  return useQuery({
+    queryKey: [...timeKeys.all(ws), "imports"],
+    queryFn: async () => (await unwrap(api.GET("/v1/time/imports"))).items,
+    enabled: Boolean(ws),
+  })
+}
+
+/** Remove an import's entries (invoiced or locked ones stay). */
+export function useUndoImport() {
+  const qc = useQueryClient()
+  const ws = useWorkspaceStore((s) => s.workspace?.id)
+  return useMutation({
+    mutationFn: (id: string) =>
+      unwrap(
+        api.POST("/v1/time/imports/{id}/undo", { params: { path: { id } } })
+      ),
+    onSuccess: () =>
+      Promise.all([
+        qc.invalidateQueries({ queryKey: timeKeys.all(ws) }),
+        qc.invalidateQueries({ queryKey: ["projects", ws] }),
+      ]),
+  })
+}

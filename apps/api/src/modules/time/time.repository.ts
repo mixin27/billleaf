@@ -810,6 +810,74 @@ export class TimeRepository {
       )
   }
 
+  /** Past imports, newest first, with how many of their entries remain. */
+  async importBatches(limit = 50) {
+    const remaining = this.db
+      .select({
+        batchId: timeEntries.importBatchId,
+        n: sql<number>`count(*)::int`.as("n"),
+      })
+      .from(timeEntries)
+      .where(and(this.scope(), isNotNull(timeEntries.importBatchId)))
+      .groupBy(timeEntries.importBatchId)
+      .as("remaining")
+    return this.db
+      .select({
+        batch: timeImportBatches,
+        createdByName: user.name,
+        remainingCount: sql<number>`coalesce(${remaining.n}, 0)::int`,
+      })
+      .from(timeImportBatches)
+      .leftJoin(member, eq(member.id, timeImportBatches.createdByMemberId))
+      .leftJoin(user, eq(user.id, member.userId))
+      .leftJoin(remaining, eq(remaining.batchId, timeImportBatches.id))
+      .where(eq(timeImportBatches.workspaceId, this.ctx.workspaceId))
+      .orderBy(desc(timeImportBatches.createdAt))
+      .limit(limit)
+  }
+
+  /** Entries still linked to an import (for undo). */
+  async batchEntries(batchId: string) {
+    return this.db
+      .select({
+        id: timeEntries.id,
+        memberId: timeEntries.memberId,
+        entryDate: timeEntries.entryDate,
+        invoiceId: timeEntries.invoiceId,
+      })
+      .from(timeEntries)
+      .where(and(this.scope(), eq(timeEntries.importBatchId, batchId)))
+  }
+
+  /** Delete some of an import's entries and record the undo. */
+  async undoImport(batchId: string, entryIds: string[]) {
+    await this.db.transaction(async (tx) => {
+      // Chunked: imports can hold up to 50,000 entries.
+      for (const ids of chunks(entryIds, 5_000))
+        await tx
+          .delete(timeEntries)
+          .where(
+            and(
+              this.scope(),
+              eq(timeEntries.importBatchId, batchId),
+              inArray(timeEntries.id, ids)
+            )
+          )
+      await tx
+        .update(timeImportBatches)
+        .set({
+          undoneAt: new Date(),
+          removedCount: sql`${timeImportBatches.removedCount} + ${entryIds.length}`,
+        })
+        .where(
+          and(
+            eq(timeImportBatches.id, batchId),
+            eq(timeImportBatches.workspaceId, this.ctx.workspaceId)
+          )
+        )
+    })
+  }
+
   /** Insert imported entries; rows whose fingerprint exists are skipped. */
   async insertImported(
     tx: Database | Transaction,
