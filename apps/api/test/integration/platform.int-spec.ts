@@ -5616,3 +5616,148 @@ describe("time rules", () => {
     expect((await log("2026-11-02", "13:00", "14:00")).status).toBe(201)
   })
 })
+
+describe("Toggl Track and Harvest imports", () => {
+  const importCsv = async (
+    c: Client,
+    source: string,
+    csv: string,
+    query = ""
+  ): Promise<{ status: number; body: any }> => {
+    const boundary = "----billleaf-import"
+    const res = await t.app.inject({
+      method: "POST",
+      url: `/v1/time/import/${source}${query}`,
+      headers: {
+        ...c.headers(),
+        "content-type": `multipart/form-data; boundary=${boundary}`,
+      },
+      payload: Buffer.concat([
+        Buffer.from(
+          `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="${source}.csv"\r\nContent-Type: text/csv\r\n\r\n`
+        ),
+        Buffer.from(csv),
+        Buffer.from(`\r\n--${boundary}--\r\n`),
+      ]),
+    })
+    return { status: res.statusCode, body: JSON.parse(res.body) }
+  }
+
+  it("imports both formats, matches people by email or name, and skips duplicates", async () => {
+    const owner = new Client(t)
+    const { email } = await owner.signUp("Importer")
+    const ws = await owner.createWorkspace("Multi Import")
+    await owner.patch("/v1/workspace", { timezone: "UTC" })
+    await t.db
+      .update(workspaceSubscriptions)
+      .set({ planKey: "team" })
+      .where(eq(workspaceSubscriptions.workspaceId, ws.id))
+    // A member Harvest names (no email in Harvest files).
+    const roles = (await owner.get("/v1/roles")).body
+    const memberRole = roles.find((r: { slug: string }) => r.slug === "member")
+    const person = new Client(t)
+    const { email: personEmail } = await person.signUp("Harvest Person")
+    const inv = (
+      await owner.post("/v1/invitations", {
+        email: personEmail,
+        roleId: memberRole.id,
+      })
+    ).body
+    await person.post("/api/auth/organization/accept-invitation", {
+      invitationId: inv.id,
+    })
+
+    expect(
+      (await importCsv(owner, "kimai", "a,b\n1,2", "?dryRun=true")).status
+    ).toBe(404)
+
+    // Toggl Track: clock times, matched by email.
+    const toggl = readFileSync(
+      new URL("../fixtures/toggl-detailed.csv", import.meta.url),
+      "utf8"
+    ).replaceAll("IMPORTER_EMAIL", email)
+    const preview = await importCsv(owner, "toggl", toggl, "?dryRun=true")
+    expect(preview.status).toBe(201)
+    expect(preview.body).toMatchObject({
+      dryRun: true,
+      rows: 4,
+      imported: 3,
+      invalid: [{ line: 5, message: "End is not after start" }],
+      dateFormat: "YMD",
+      totalSeconds: (1.25 + 0.75 + 1) * 3600,
+    })
+    expect(preview.body.members).toEqual([
+      { name: "Importer", email, matched: true, entries: 2 },
+      {
+        name: "Someone Else",
+        email: "someone@elsewhere.test",
+        matched: false,
+        entries: 1,
+      },
+    ])
+    expect((await importCsv(owner, "toggl", toggl)).body.imported).toBe(3)
+    const again = await importCsv(owner, "toggl", toggl)
+    expect(again.body).toMatchObject({ imported: 0, duplicates: 3 })
+    const toggled = (
+      await owner.get("/v1/time-entries?from=2026-11-04&to=2026-11-05")
+    ).body.items
+    expect(toggled).toHaveLength(3)
+    expect(toggled.every((e: { hasTimes: boolean }) => e.hasTimes)).toBe(true)
+    const logo = toggled.find(
+      (e: { description: string }) => e.description === "Logo concepts"
+    )
+    expect(logo).toMatchObject({
+      startedAt: "2026-11-04T09:00:00.000Z",
+      durationSeconds: 4_500,
+      taskTitle: "Sketching",
+      projectName: "Brand refresh",
+      clientName: "Northwind",
+    })
+    expect(logo.tags.map((t: { name: string }) => t.name).sort()).toEqual([
+      "Deep work",
+      "Design",
+    ])
+
+    // Harvest: dates + hours (no clock times), matched by unique name.
+    const harvest = readFileSync(
+      new URL("../fixtures/harvest-detailed.csv", import.meta.url),
+      "utf8"
+    )
+    const hp = await importCsv(owner, "harvest", harvest, "?dryRun=true")
+    expect(hp.body).toMatchObject({
+      rows: 4,
+      imported: 3,
+      invalid: [{ line: 5, message: "No hours" }],
+      totalSeconds: (1.5 + 0.25 + 2) * 3600,
+    })
+    expect(hp.body.members).toEqual([
+      { name: "Harvest Person", email: null, matched: true, entries: 2 },
+      { name: "Unknown Contractor", email: null, matched: false, entries: 1 },
+    ])
+    const done = await importCsv(owner, "harvest", harvest)
+    expect(done.body.imported).toBe(3)
+    expect((await importCsv(owner, "harvest", harvest)).body.duplicates).toBe(3)
+    const harvested = (
+      await owner.get("/v1/time-entries?from=2026-11-06&to=2026-11-07")
+    ).body.items
+    expect(harvested).toHaveLength(3)
+    expect(harvested.every((e: { hasTimes: boolean }) => !e.hasTimes)).toBe(
+      true
+    )
+    const moodboard = harvested.find(
+      (e: { description: string }) => e.description === "Moodboard"
+    )
+    expect(moodboard).toMatchObject({
+      memberName: "Harvest Person",
+      entryDate: "2026-11-06",
+      durationSeconds: 5_400,
+      billable: true,
+      taskTitle: "Design",
+    })
+
+    // The old Clockify path still works.
+    expect(
+      (await importCsv(owner, "clockify", "Foo\n1", "?dryRun=true")).body.code
+    ).toBe("invalid_csv")
+  })
+})

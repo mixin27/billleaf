@@ -67,6 +67,18 @@ Entries on an invoice show a lock and can't be moved. A running timer shows up t
 
 On an hourly project, **Invoice unbilled time** creates a draft invoice with one line per task and rate. Invoiced entries are locked; deleting the draft (or voiding the invoice) releases them again.
 
-## Importing from Clockify
+## Importing from Clockify, Toggl Track or Harvest
 
-Export a **Detailed report** CSV from Clockify and upload it in **Time → Import**. You'll see a preview first: new clients, projects, tasks and tags it will create, and any rows it can't read. Importing the same file twice adds nothing twice.
+In **Time → Import** (needs permission to edit anyone's time), pick the app, then upload its CSV export:
+
+| App | Where to export |
+| --- | --- |
+| **Clockify** | Reports → Detailed → Export → Save as CSV |
+| **Toggl Track** | Reports → Detailed → Export → Download CSV |
+| **Harvest** | Reports → Time → Detailed report → Export → CSV |
+
+You'll see a preview first: how many entries, new clients, projects, tasks and tags it will create, who the time belongs to, and any rows it can't read. Importing the same file twice adds nothing twice.
+
+- **People** are matched to members by email (Clockify, Toggl), or by name when the file has no email (Harvest; the name must be unique in the workspace). Anyone not matched is assigned to you.
+- **Times** from Clockify and Toggl are read in the workspace's time zone. Harvest exports hours per day without clock times, so those entries show under **No set time** in the calendar until you drag them onto it.
+- Rows in a [locked period](#time-rules) or an approved week are skipped and listed.

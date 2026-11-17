@@ -37,6 +37,15 @@ export function parseCsv(text: string, delimiter = ","): string[][] {
 
 export type DateFormat = "MDY" | "DMY" | "YMD"
 
+/** Where an import file comes from (each has its own export format). */
+export type ImportSource = "clockify" | "toggl" | "harvest"
+
+export const SOURCE_LABELS: Record<ImportSource, string> = {
+  clockify: "Clockify detailed report",
+  toggl: "Toggl Track detailed report",
+  harvest: "Harvest detailed time report",
+}
+
 export interface ClockifyRow {
   /** 1-based line in the file (header = 1). */
   line: number
@@ -53,6 +62,11 @@ export interface ClockifyRow {
   startTime: string
   endDate: string
   endTime: string
+  /**
+   * Set for sources with no clock times (Harvest): the entry is a date +
+   * duration, and start/end times are placeholders.
+   */
+  seconds?: number
 }
 
 export interface ParsedClockify {
@@ -66,7 +80,7 @@ const COLUMNS = {
   client: ["client"],
   description: ["description"],
   task: ["task"],
-  user: ["user"],
+  user: ["user", "member"],
   email: ["email"],
   tags: ["tags", "tag"],
   billable: ["billable"],
@@ -80,17 +94,37 @@ const COLUMNS = {
 
 export class ClockifyFormatError extends Error {}
 
-/** Clockify "Detailed report" CSV → rows with wall-clock times. */
-export function parseClockifyCsv(
-  text: string,
-  dateFormat: DateFormat | "auto" = "auto"
-): ParsedClockify {
+function splitFile(text: string) {
   const firstLine = text.slice(0, text.search(/\r?\n/) >>> 0)
   const delimiter =
     (firstLine.match(/;/g)?.length ?? 0) > (firstLine.match(/,/g)?.length ?? 0)
       ? ";"
       : ","
-  const [header, ...body] = parseCsv(text, delimiter)
+  return parseCsv(text, delimiter)
+}
+
+/** Parse an export from any supported source into the same rows. */
+export function parseImportCsv(
+  source: ImportSource,
+  text: string,
+  dateFormat: DateFormat | "auto" = "auto"
+): ParsedClockify {
+  return source === "harvest"
+    ? parseHarvestCsv(text, dateFormat)
+    : parseClockifyCsv(text, dateFormat, source)
+}
+
+/**
+ * Clockify "Detailed report" CSV → rows with wall-clock times. Toggl
+ * Track's detailed report has the same columns (User, Email, Start date,
+ * Start time, End date, End time, Duration, Tags…), so it parses here too.
+ */
+export function parseClockifyCsv(
+  text: string,
+  dateFormat: DateFormat | "auto" = "auto",
+  source: ImportSource = "clockify"
+): ParsedClockify {
+  const [header, ...body] = splitFile(text)
   if (!header) throw new ClockifyFormatError("The file is empty")
   const names = header.map((h) => h.trim().toLowerCase())
   const col = Object.fromEntries(
@@ -101,7 +135,7 @@ export function parseClockifyCsv(
   ) as Record<keyof typeof COLUMNS, number>
   if (col.startDate < 0 || col.startTime < 0)
     throw new ClockifyFormatError(
-      "This doesn't look like a Clockify detailed report: no Start Date / Start Time columns"
+      `This doesn't look like a ${SOURCE_LABELS[source]}: no Start Date / Start Time columns`
     )
   if ((col.endDate < 0 || col.endTime < 0) && col.duration < 0)
     throw new ClockifyFormatError(
@@ -173,6 +207,85 @@ export function parseClockifyCsv(
   return { rows, invalid, dateFormat: format }
 }
 
+const HARVEST_COLUMNS = {
+  date: ["date", "spent date"],
+  client: ["client"],
+  project: ["project"],
+  task: ["task"],
+  notes: ["notes"],
+  hours: ["hours"],
+  billable: ["billable?", "billable"],
+  firstName: ["first name"],
+  lastName: ["last name"],
+} as const
+
+/**
+ * Harvest "Detailed time report" CSV: a date and decimal Hours per row, no
+ * clock times, so rows become date + duration entries. People are named
+ * (First Name / Last Name), not emailed.
+ */
+export function parseHarvestCsv(
+  text: string,
+  dateFormat: DateFormat | "auto" = "auto"
+): ParsedClockify {
+  const [header, ...body] = splitFile(text)
+  if (!header) throw new ClockifyFormatError("The file is empty")
+  const names = header.map((h) => h.trim().toLowerCase())
+  const col = Object.fromEntries(
+    Object.entries(HARVEST_COLUMNS).map(([k, aliases]) => [
+      k,
+      names.findIndex((n) => (aliases as readonly string[]).includes(n)),
+    ])
+  ) as Record<keyof typeof HARVEST_COLUMNS, number>
+  if (col.date < 0 || col.hours < 0)
+    throw new ClockifyFormatError(
+      `This doesn't look like a ${SOURCE_LABELS.harvest}: no Date / Hours columns`
+    )
+  const get = (r: string[], k: keyof typeof HARVEST_COLUMNS) =>
+    col[k] >= 0 ? (r[col[k]] ?? "").trim() : ""
+  const opt = (v: string) => (v === "" ? null : v)
+  const format =
+    dateFormat === "auto"
+      ? guessDateFormat(body.map((r) => get(r, "date")))
+      : dateFormat
+
+  const rows: ClockifyRow[] = []
+  const invalid: ParsedClockify["invalid"] = []
+  body.forEach((r, i) => {
+    const line = i + 2
+    try {
+      const date = parseDate(get(r, "date"), format)
+      const seconds =
+        parseDecimalHours(get(r, "hours")) ?? parseDurationCell(get(r, "hours"))
+      if (!seconds) throw new Error("No hours")
+      if (seconds > 24 * 3600)
+        throw new Error("Entries can't be longer than 24 hours")
+      const user =
+        [get(r, "firstName"), get(r, "lastName")].filter(Boolean).join(" ") ||
+        null
+      rows.push({
+        line,
+        project: opt(get(r, "project")),
+        client: opt(get(r, "client")),
+        description: opt(get(r, "notes")),
+        task: opt(get(r, "task")),
+        user,
+        email: null,
+        tags: [],
+        billable: /^(yes|true|1|billable)$/i.test(get(r, "billable")),
+        startDate: date,
+        startTime: "12:00:00",
+        endDate: date,
+        endTime: "12:00:00",
+        seconds,
+      })
+    } catch (e) {
+      invalid.push({ line, message: (e as Error).message })
+    }
+  })
+  return { rows, invalid, dateFormat: format }
+}
+
 /** Pick MDY vs DMY from values like 03/14/2026 (YMD when year comes first). */
 export function guessDateFormat(values: string[]): DateFormat {
   let dmy = false
@@ -235,8 +348,12 @@ function parseDecimalHours(v: string): number | null {
   return v && Number.isFinite(n) && n > 0 ? Math.round(n * 3600) : null
 }
 
-/** Stable fingerprint of a source row (who, when, what). */
+/**
+ * Stable fingerprint of a source row (who, when, what). Clockify rows keep
+ * their original fingerprint so files imported before still match.
+ */
 export function rowHash(r: {
+  source?: ImportSource
   who: string
   startedAt: Date
   endedAt: Date
@@ -248,7 +365,7 @@ export function rowHash(r: {
   return createHash("sha256")
     .update(
       [
-        "clockify",
+        r.source ?? "clockify",
         r.who.toLowerCase(),
         r.startedAt.toISOString(),
         r.endedAt.toISOString(),

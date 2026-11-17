@@ -2036,7 +2036,7 @@ export interface paths {
     patch?: never
     trace?: never
   }
-  "/v1/time/import/clockify": {
+  "/v1/time/import/{source}": {
     parameters: {
       query?: never
       header?: never
@@ -2045,7 +2045,7 @@ export interface paths {
     }
     get?: never
     put?: never
-    post: operations["TimeReportsController_importClockify_v1"]
+    post: operations["TimeReportsController_importTime_v1"]
     delete?: never
     options?: never
     head?: never
@@ -10781,14 +10781,16 @@ export interface operations {
       }
     }
   }
-  TimeReportsController_importClockify_v1: {
+  TimeReportsController_importTime_v1: {
     parameters: {
       query?: {
         dryRun?: "true" | "false"
         dateFormat?: "auto" | "MDY" | "DMY" | "YMD"
       }
       header?: never
-      path?: never
+      path: {
+        source: string
+      }
       cookie?: never
     }
     requestBody?: never

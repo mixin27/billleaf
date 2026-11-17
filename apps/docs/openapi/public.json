@@ -5296,10 +5296,18 @@
         ]
       }
     },
-    "/v1/time/import/clockify": {
+    "/v1/time/import/{source}": {
       "post": {
-        "operationId": "time-reports-import-clockify",
+        "operationId": "time-reports-import-time",
         "parameters": [
+          {
+            "name": "source",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "name": "dryRun",
             "required": false,
@@ -5333,7 +5341,7 @@
           }
         },
         "tags": ["time"],
-        "summary": "Import clockify",
+        "summary": "Import time",
         "security": [
           {
             "apiKey": []
