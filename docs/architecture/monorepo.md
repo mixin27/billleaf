@@ -10,7 +10,7 @@ billleaf/
 │  ├─ web/          Next.js 16 — app.billleaf.com
 │  ├─ api/          NestJS — api.billleaf.com (+ worker entrypoint)
 │  ├─ docs/         Fumadocs → Vercel, docs.billleaf.com   [placeholder]
-│  └─ mobile/       Expo — FUTURE (reserved, not created)
+│  └─ mobile/       Expo SDK 58 iOS/Android app (expo-router)
 ├─ packages/
 │  ├─ ui/                 shadcn primitives (web)
 │  ├─ db/                 Drizzle schema, migrations, seed, client factory
@@ -35,14 +35,14 @@ billleaf/
 
 ## Who imports what
 
-| Package      | web | api | worker | mobile (future) |
-| ------------ | --- | --- | ------ | --------------- |
-| `ui`         | ✓   |     |        |                 |
-| `db`         |     | ✓   | ✓      |                 |
-| `contracts`  | ✓   | ✓   | ✓      | ✓               |
-| `api-client` | ✓   |     |        | ✓               |
-| `env`        | ✓   | ✓   | ✓      | ✓               |
-| `emails`     |     |     | ✓      |                 |
+| Package      | web | api | worker | mobile |
+| ------------ | --- | --- | ------ | ------ |
+| `ui`         | ✓   |     |        |        |
+| `db`         |     | ✓   | ✓      |        |
+| `contracts`  | ✓   | ✓   | ✓      | ✓      |
+| `api-client` | ✓   |     |        | ✓      |
+| `env`        | ✓   | ✓   | ✓      |        |
+| `emails`     |     |     | ✓      |        |
 
 ## Common commands
 

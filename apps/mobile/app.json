@@ -1,0 +1,45 @@
+{
+  "expo": {
+    "name": "Billleaf",
+    "slug": "billleaf",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "../../packages/brand/assets/app-icon-1024.png",
+    "scheme": "billleaf",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "bundleIdentifier": "com.billleaf.app",
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.billleaf.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#FFFFFF",
+        "foregroundImage": "../../packages/brand/assets/adaptive-foreground-1024.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-web-browser",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#FFFFFF",
+          "image": "../../packages/brand/assets/splash-icon.png",
+          "imageWidth": 120,
+          "dark": {
+            "backgroundColor": "#0F1A1A",
+            "image": "../../packages/brand/assets/splash-icon.png"
+          }
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": false,
+      "reactCompiler": true
+    },
+    "platforms": ["ios", "android"]
+  }
+}
