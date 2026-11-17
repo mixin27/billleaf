@@ -4,7 +4,7 @@ import {
   parseContractText,
 } from "@workspace/contracts"
 
-import { createPdf, INK, MUTED, RULE } from "./document-pdf.js"
+import { cjkFontsFor, createPdf, INK, MUTED, RULE } from "./document-pdf.js"
 
 export interface ContractPdfData {
   title: string
@@ -30,15 +30,18 @@ export interface ContractPdfData {
   footer?: string | null
   brandColor?: string | null
   logo?: Buffer | null
+  /** Workspace locale: picks the Chinese font style for Han-only text. */
+  locale?: string
 }
 
 const BOTTOM = 70
 
 /** Render a contract: header, parties, body text, then a signature block. */
-export function renderContractPdf(d: ContractPdfData): Promise<Buffer> {
+export async function renderContractPdf(d: ContractPdfData): Promise<Buffer> {
+  const cjk = await cjkFontsFor(d, d.locale)
   const { doc, done, write, left, width } = createPdf(
     `${d.title} ${d.number ?? ""}`.trim(),
-    { bufferPages: true }
+    { bufferPages: true, cjk }
   )
   const accent = d.brandColor ?? INK
   const bottom = () => doc.page.height - BOTTOM

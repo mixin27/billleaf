@@ -69,6 +69,8 @@ services:
       valkey: { condition: service_healthy }
     restart: unless-stopped
     stop_grace_period: 30s
+    # CJK PDF fonts, fetched on first use (see apps/api cjk-fonts.ts).
+    volumes: [pdffonts:/app/.font-cache]
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:4000/health/live"]
       interval: 15s
@@ -89,6 +91,7 @@ services:
       migrate: { condition: service_completed_successfully }
       valkey: { condition: service_healthy }
     restart: unless-stopped
+    volumes: [pdffonts:/app/.font-cache]
     # Let in-flight jobs (emails, PDFs) finish on deploys.
     stop_grace_period: 60s
     # No HTTP here: the worker touches this file every 30 s.
@@ -194,3 +197,4 @@ services:
 volumes:
   pgdata:
   valkeydata:
+  pdffonts:

@@ -22,7 +22,7 @@ Phases are scope buckets, not dates. Each phase ends with a production deploy. C
 - ✅ Payments (manual recording, refunds) & receipts (PDF, email).
 - ✅ Dashboard: outstanding & overdue, aging, received this month vs last, 6-month revenue, open quotes, most overdue, recent payments — per currency, filtered by permission.
 
-**Exit:** a freelancer can run their invoicing on Billleaf end-to-end. Remaining before calling Phase 1 shipped: production deploy (VPS + Dokploy + R2 bucket). PDFs embed Noto Sans (Latin/Greek/Cyrillic/Vietnamese), Noto Sans Thai and Noto Sans Myanmar; CJK fonts are a follow-up.
+**Exit:** a freelancer can run their invoicing on Billleaf end-to-end. Remaining before calling Phase 1 shipped: production deploy (VPS + Dokploy + R2 bucket). PDFs embed Noto Sans (Latin/Greek/Cyrillic/Vietnamese), Noto Sans Thai and Noto Sans Myanmar, plus Noto Sans CJK (SC/TC/JP/KR) fetched on first use.
 
 ## Phase 2 — Connected work _(in progress)_
 

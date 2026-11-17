@@ -15,6 +15,7 @@ Work we've agreed to do later, with enough detail to pick up without re-research
 - **Account deletion:** users delete their own login once they aren't the only owner of a workspace.
 - **Credit notes:** corrections and partial refunds for issued invoices (full or partial, numbered CN-0001), lowering the balance first and showing any refund due; PDF, email, void, a list page, and credits in the portal, dashboard and tax summary.
 - **Expenses:** spending with receipts (photo or PDF) and categories; billable expenses onto a client's draft invoice (released if the draft is deleted or the invoice voided); Reports → profit & loss per month, expenses by category, and a tax summary.
+- **CJK PDF fonts:** Chinese (Simplified/Traditional), Japanese and Korean on every PDF; fonts fetched on first use (pinned, checksummed, cached in a volume) so the image stays small.
 - **Toggl Track and Harvest imports:** next to Clockify in Time → Import (one `import/{source}` endpoint); Harvest rows come in as duration-only entries; people matched by email or unique name.
 - **Time rules:** per-entry rounding (up / nearest / down to 1–60 min) on invoices, project amounts and reports (with an exact-time toggle), and a lock date before which time can't change.
 - **Faster time entry:** favourites (pinned entries started in one click or with keys 1–9) and keyboard shortcuts (S timer, N log time, arrows/T/W on the calendar and timesheet, ? for the list).
@@ -66,5 +67,4 @@ When a provider serves the operating country (a Merchant of Record for subscript
 
 | Item                    | Notes                                                                       | Size |
 | ----------------------- | --------------------------------------------------------------------------- | ---- |
-| CJK PDF fonts           | Noto Sans SC/JP/KR subsets on demand; keep the image size in check          | S    |
 | Past-due banner (other) | For a future online provider's `past_due` status (manual plans have theirs) | S    |
