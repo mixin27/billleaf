@@ -10,6 +10,7 @@ import { BillingModule } from "./billing/billing.module.js"
 import { ProblemDetailsFilter } from "./common/filters/problem-details.filter.js"
 import { CoreModule } from "./core/core.module.js"
 import { REDIS } from "./core/cache/redis.module.js"
+import { ENV, type Env } from "./core/config/env.js"
 import { RedisThrottlerStorage } from "./core/cache/redis-throttler.storage.js"
 import { HealthModule } from "./health/health.module.js"
 import { IamModule } from "./iam/iam.module.js"
@@ -41,9 +42,9 @@ import { WorkspaceProfileModule } from "./modules/workspace/workspace-profile.mo
     CoreModule,
     // Counters live in Redis/Valkey so every API instance shares them.
     ThrottlerModule.forRootAsync({
-      inject: [REDIS],
-      useFactory: (redis: Redis) => ({
-        throttlers: [{ ttl: 60_000, limit: 300 }],
+      inject: [REDIS, ENV],
+      useFactory: (redis: Redis, env: Env) => ({
+        throttlers: [{ ttl: 60_000, limit: env.THROTTLE_LIMIT }],
         storage: new RedisThrottlerStorage(redis),
       }),
     }),

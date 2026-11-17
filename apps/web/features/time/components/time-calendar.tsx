@@ -613,6 +613,7 @@ export function TimeCalendar({ today }: { today: string }) {
                       <div
                         key={d}
                         role="presentation"
+                        data-day={d}
                         className={cn(
                           "relative border-l",
                           canLog && !dayLocked(d) && "cursor-crosshair",

@@ -21,6 +21,7 @@ Read `docs/README.md` (product + architecture + ADRs) before non-trivial work.
 | `apps/web`                         | Next.js 16 product app (App Router, feature folders). See `apps/web/AGENTS.md`                |
 | `apps/api`                         | NestJS 12 (Fastify, ESM) REST API + BullMQ worker. See `apps/api/AGENTS.md`                   |
 | `apps/docs`                        | Public docs site (Fumadocs, static export): help pages + developer docs + API reference       |
+| `apps/e2e`                         | Playwright end-to-end journeys (own ports/DB; see `apps/e2e/README.md`)                       |
 | `apps/mobile`                      | _Reserved_ — Expo app (Phase 4), reuses `contracts` + `api-client`                            |
 | `packages/db`                      | Drizzle schema, migrations, client. See `packages/db/AGENTS.md`                               |
 | `packages/contracts`               | Zod schemas, shared types, **permission catalog**                                             |
@@ -41,6 +42,7 @@ pnpm dev                       # web :3000, api :4000 (+ package watchers)
 pnpm --filter api dev:worker   # background jobs (emails)
 pnpm lint && pnpm typecheck && pnpm test && pnpm build
 pnpm test:integration          # API against real Postgres/Valkey (needs infra:up)
+pnpm test:e2e                  # Playwright journeys (needs infra:up; once: pnpm --filter e2e browsers)
 pnpm gen:api-client            # after changing API routes/DTOs
 pnpm db:generate               # after changing packages/db/src/schema
 ```

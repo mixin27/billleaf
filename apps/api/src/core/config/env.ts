@@ -22,6 +22,8 @@ export const envSchema = z.object({
 
   BETTER_AUTH_SECRET: z.string().min(32),
   API_URL: z.url(),
+  /** Requests per minute per IP (API keys have their own limit). */
+  THROTTLE_LIMIT: z.coerce.number().int().positive().default(300),
   WEB_URL: z.url(),
   TRUSTED_ORIGINS: csv,
   /**
