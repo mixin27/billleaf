@@ -15,6 +15,7 @@ import {
   type SetTimesheetCellInput,
   type Timesheet,
   type TimesheetRow,
+  roundSeconds,
   secondsToHours,
   type StartTimerInput,
   type Tag,
@@ -98,6 +99,7 @@ export class TimeService {
     isRunning: e.endedAt === null,
     isMine: e.memberId === this.ctx.memberId,
     approvalLocked: false,
+    periodLocked: false,
   })
 
   /** May the current member write entries owned by `memberId` (null = former member)? */
@@ -140,15 +142,19 @@ export class TimeService {
       uninvoiced: q.uninvoiced === "true",
     })
     const finished = rows.filter((r) => r.durationSeconds !== null)
-    const locked = await this.approvals.lockedWeeks(
-      [...new Set(rows.map((r) => r.memberId).filter((m) => m !== null))],
-      q.from,
-      q.to
-    )
+    const [locked, lockedBefore] = await Promise.all([
+      this.approvals.lockedWeeks(
+        [...new Set(rows.map((r) => r.memberId).filter((m) => m !== null))],
+        q.from,
+        q.to
+      ),
+      this.approvals.lockedBefore(),
+    ])
     return {
       items: rows.map((r) => ({
         ...this.toDto(r),
         approvalLocked: locked.has(`${r.memberId}|${mondayOf(r.entryDate)}`),
+        periodLocked: lockedBefore !== null && r.entryDate < lockedBefore,
       })),
       totalSeconds: finished.reduce((s, r) => s + r.durationSeconds!, 0),
       billableSeconds: finished
@@ -289,13 +295,17 @@ export class TimeService {
     const unique = [...new Set(ids)]
     const found = await this.repo.findMany(unique)
     const dates = found.map((e) => e.entryDate).sort()
-    const locked = await this.approvals.lockedWeeks(
-      [...new Set(found.map((e) => e.memberId).filter((m) => m !== null))],
-      dates[0] ?? "1970-01-01",
-      dates[dates.length - 1] ?? "1970-01-01"
-    )
+    const [locked, lockedBefore] = await Promise.all([
+      this.approvals.lockedWeeks(
+        [...new Set(found.map((e) => e.memberId).filter((m) => m !== null))],
+        dates[0] ?? "1970-01-01",
+        dates[dates.length - 1] ?? "1970-01-01"
+      ),
+      this.approvals.lockedBefore(),
+    ])
     const ok = found.filter((e) => {
       if (e.invoiceId) return false
+      if (lockedBefore && e.entryDate < lockedBefore) return false
       if (locked.has(`${e.memberId}|${mondayOf(e.entryDate)}`)) return false
       if (e.memberId !== this.ctx.memberId && !this.can("time.read"))
         return false
@@ -448,11 +458,13 @@ export class TimeService {
     }
     const start = mondayOf(anyDate)
     const days = Array.from({ length: 7 }, (_, i) => addDays(start, i))
-    const [entries, approvalsEnabled, approval] = await Promise.all([
-      this.repo.list({ from: days[0]!, to: days[6]!, memberId }),
-      this.approvals.enabled(),
-      this.approvals.forWeek(memberId, start),
-    ])
+    const [entries, approvalsEnabled, approval, lockedBefore] =
+      await Promise.all([
+        this.repo.list({ from: days[0]!, to: days[6]!, memberId }),
+        this.approvals.enabled(),
+        this.approvals.forWeek(memberId, start),
+        this.approvals.lockedBefore(),
+      ])
     const rows = new Map<string, TimesheetRow>()
     for (const e of entries) {
       if (e.durationSeconds === null) continue // running
@@ -479,6 +491,7 @@ export class TimeService {
       locked:
         approvalsEnabled &&
         (approval?.status === "submitted" || approval?.status === "approved"),
+      lockedBefore,
       rows: [...rows.values()].sort(
         (a, b) =>
           (a.projectName ?? "\uffff").localeCompare(
@@ -801,10 +814,21 @@ export class TimeService {
     }
 
     const profile = await this.profile.get()
+    // Each entry rounds on its own (workspace rule); zero-length lines drop.
+    const rule = await this.approvals.rounding()
     const groups = groupLines(
-      priced as (TimeEntryWithRefs & { rate: number })[],
+      (priced as (TimeEntryWithRefs & { rate: number })[]).map((e) => ({
+        ...e,
+        durationSeconds: roundSeconds(e.durationSeconds ?? 0, rule),
+      })),
       project.name
-    )
+    ).filter((g) => g.seconds > 0)
+    if (groups.length === 0)
+      throw new BadRequestException({
+        message:
+          "This time rounds down to nothing. Change the rounding in Settings → General, or add more time.",
+        code: "rounds_to_zero",
+      })
     const lines = groups.map((g) => ({
       description: g.description,
       quantity: Math.max(0.01, secondsToHours(g.seconds)),

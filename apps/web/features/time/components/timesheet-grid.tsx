@@ -187,7 +187,13 @@ export function TimesheetGrid({ today }: { today: string }) {
                       <DurationCell
                         seconds={r.seconds[i] ?? 0}
                         locked={r.lockedSeconds[i] ?? 0}
-                        readOnly={sheet.data?.locked}
+                        readOnly={
+                          sheet.data?.locked ||
+                          Boolean(
+                            sheet.data?.lockedBefore &&
+                            d < sheet.data.lockedBefore
+                          )
+                        }
                         label={`${r.projectName ?? "No project"}${r.taskTitle ? `: ${r.taskTitle}` : ""}, ${d}`}
                         onSave={(s) => save(r, i, s)}
                       />

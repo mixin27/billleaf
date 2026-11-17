@@ -2,7 +2,12 @@ import { z } from "zod"
 
 import { pageQuerySchema, paged, sortQuery } from "../common/pagination.js"
 import { timesheetApprovalSchema } from "./approvals.schema.js"
-import { timeEntrySchema } from "./time.schema.js"
+import { TIME_ROUNDING_MODES, timeEntrySchema } from "./time.schema.js"
+
+const roundingRuleSchema = z.object({
+  mode: z.enum(TIME_ROUNDING_MODES),
+  minutes: z.number().int(),
+})
 
 // ── Timesheet grid ────────────────────────────────────────
 
@@ -38,6 +43,8 @@ export const timesheetSchema = z.object({
   approval: timesheetApprovalSchema.nullable(),
   /** Submitted or approved: entries in this week can't change. */
   locked: z.boolean(),
+  /** Days before this date are in the locked period (read-only). */
+  lockedBefore: z.iso.date().nullable(),
 })
 export type Timesheet = z.infer<typeof timesheetSchema>
 
@@ -87,6 +94,8 @@ export const reportFiltersSchema = z.object({
   withoutProject: z.enum(["true"]).optional(),
   billable: z.enum(["true", "false"]).optional(),
   q: z.string().trim().max(200).optional(),
+  /** Apply the workspace's rounding per entry (default: on when it's set). */
+  rounded: z.enum(["true", "false"]).optional(),
 })
 export type ReportFilters = z.input<typeof reportFiltersSchema>
 
@@ -134,6 +143,8 @@ export const summaryReportSchema = z.object({
     })
   ),
   groups: z.array(reportGroupSchema),
+  /** The rounding applied per entry, or null for exact time. */
+  rounding: roundingRuleSchema.nullable(),
 })
 export type SummaryReport = z.infer<typeof summaryReportSchema>
 
@@ -146,6 +157,8 @@ export type DetailedReportQuery = z.input<typeof detailedReportQuerySchema>
 export const detailedReportSchema = paged(timeEntrySchema).extend({
   totalSeconds: z.number().int(),
   billableSeconds: z.number().int(),
+  /** The rounding applied to each entry's duration, or null for exact time. */
+  rounding: roundingRuleSchema.nullable(),
 })
 export type DetailedReport = z.infer<typeof detailedReportSchema>
 

@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common"
 import { amountForSeconds, type ProjectUsage } from "@workspace/contracts"
 
 import { RatesService } from "../rates/rates.service.js"
+import { TimesheetApprovalsService } from "./timesheet-approvals.service.js"
 import { TimeRepository } from "./time.repository.js"
 
 type ProjectRef = {
@@ -19,15 +20,21 @@ type ProjectRef = {
 export class ProjectUsageService {
   constructor(
     private readonly repo: TimeRepository,
-    private readonly rates: RatesService
+    private readonly rates: RatesService,
+    private readonly rules: TimesheetApprovalsService
   ) {}
 
   async usage(
     projects: ProjectRef[],
     opts: { cost: boolean }
   ): Promise<Map<string, ProjectUsage>> {
+    // Amounts use the workspace's rounding (like invoices); hours stay exact.
+    const rule = await this.rules.rounding()
     const [rows, book] = await Promise.all([
-      this.repo.usageRows(projects.map((p) => p.id)),
+      this.repo.usageRows(
+        projects.map((p) => p.id),
+        rule
+      ),
       this.rates.book(),
     ])
     const out = new Map<string, ProjectUsage>(
@@ -71,7 +78,7 @@ export class ProjectUsageService {
           if (rate === null) {
             if (!r.invoiced) u.unratedSeconds += s
           } else {
-            const amount = amountForSeconds(s, rate)
+            const amount = amountForSeconds(r.billedSeconds, rate)
             u.billableAmount! += amount
             if (!r.invoiced) u.unbilledAmount! += amount
           }

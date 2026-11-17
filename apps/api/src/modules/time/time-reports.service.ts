@@ -9,10 +9,12 @@ import {
   fromMinorUnits,
   type ReportGroup,
   type ReportGroupRow,
+  roundSeconds,
   secondsToHours,
   type SummaryReport,
   type Tag,
   type TimeEntry,
+  type TimeRounding,
 } from "@workspace/contracts"
 
 import { RequestContext } from "../../common/context/request-context.js"
@@ -25,6 +27,7 @@ import {
   TimeRepository,
   type TimeEntryWithRefs,
 } from "./time.repository.js"
+import { TimesheetApprovalsService } from "./timesheet-approvals.service.js"
 
 export interface ReportQuery {
   from: string
@@ -36,6 +39,8 @@ export interface ReportQuery {
   withoutProject?: "true"
   billable?: "true" | "false"
   q?: string
+  /** "false" = exact time even when the workspace rounds. */
+  rounded?: "true" | "false"
 }
 
 const MAX_DAYS = 366
@@ -52,8 +57,16 @@ export class TimeReportsService {
     private readonly repo: TimeRepository,
     private readonly profile: WorkspaceProfileService,
     private readonly ctx: RequestContext,
-    private readonly rates: RatesService
+    private readonly rates: RatesService,
+    private readonly rules: TimesheetApprovalsService
   ) {}
+
+  /** The rounding to apply, or null for exact time. */
+  private async ruleFor(q: ReportQuery): Promise<TimeRounding | null> {
+    if (q.rounded === "false") return null
+    const rule = await this.rules.rounding()
+    return rule.mode === "off" ? null : rule
+  }
 
   /** Billable rate and cost rate of one report row. */
   private price(r: Row, book: RateBook, withCost: boolean) {
@@ -110,9 +123,10 @@ export class TimeReportsService {
       addDays(f.from, i)
     )
     const dayIndex = new Map(days.map((d, i) => [d, i]))
-    const [rows, book] = await Promise.all([
+    const [rows, book, rule] = await Promise.all([
       this.repo.reportRows(f),
       this.rates.book(),
+      this.ruleFor(q),
     ])
     const withCost = this.ctx.permissions.has("rate.read")
     const tagsByEntry = new Map<string, Tag[]>()
@@ -130,7 +144,9 @@ export class TimeReportsService {
     const total = new Acc(days.length)
     const groups = new Map<string, { row: Acc; meta: GroupMeta }>()
     for (const r of rows) {
-      const seconds = r.seconds ?? 0
+      const seconds = rule
+        ? roundSeconds(r.seconds ?? 0, rule)
+        : (r.seconds ?? 0)
       const i = dayIndex.get(r.entryDate) ?? 0
       const { rate, cost } = this.price(r, book, withCost)
       total.add(seconds, r.billable, i, rate, cost)
@@ -173,26 +189,35 @@ export class TimeReportsService {
         billableSeconds: total.byDayBillable[i]!,
       })),
       groups: groupRows,
+      rounding: rule,
     }
   }
 
   async detailed(
     q: ReportQuery & { page: number; pageSize: number; sort?: string }
   ): Promise<DetailedReport> {
-    const r = await this.repo.detailed(this.filter(q), q)
+    const rule = await this.ruleFor(q)
+    const r = await this.repo.detailed(this.filter(q), q, rule ?? undefined)
     return {
-      items: r.items.map((e) => this.toDto(e)),
+      items: r.items.map((e) => {
+        const dto = this.toDto(e)
+        return rule && dto.durationSeconds !== null
+          ? { ...dto, durationSeconds: roundSeconds(dto.durationSeconds, rule) }
+          : dto
+      }),
       total: r.total,
       page: q.page,
       pageSize: q.pageSize,
       totalSeconds: r.seconds,
       billableSeconds: r.billableSeconds,
+      rounding: rule,
     }
   }
 
   /** Detailed report as CSV (all matching rows, up to 50,000). */
   async detailedCsv(q: ReportQuery & { sort?: string }): Promise<string> {
     const { timezone } = await this.profile.get()
+    const rule = await this.ruleFor(q)
     const r = await this.repo.detailed(this.filter(q), null)
     const [rates, book] = await Promise.all([
       this.repo.reportRows(this.filter(q), 50_000),
@@ -224,7 +249,9 @@ export class TimeReportsService {
     for (const e of r.items) {
       const start = localParts(e.startedAt, timezone)
       const end = localParts(e.endedAt!, timezone)
-      const seconds = e.durationSeconds ?? 0
+      const seconds = rule
+        ? roundSeconds(e.durationSeconds ?? 0, rule)
+        : (e.durationSeconds ?? 0)
       const p = rateById.get(e.id)
       const priced = p ? this.price(p, book, withCost) : null
       const hourly = priced?.rate?.rate ?? null
@@ -288,6 +315,7 @@ export class TimeReportsService {
       isRunning: e.endedAt === null,
       isMine: e.memberId === this.ctx.memberId,
       approvalLocked: false,
+      periodLocked: false,
     }
   }
 }

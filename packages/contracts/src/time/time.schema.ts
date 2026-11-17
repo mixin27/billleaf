@@ -77,6 +77,8 @@ export const timeEntrySchema = z.object({
   isMine: z.boolean(),
   /** In a week that's submitted or approved, so it can't change. */
   approvalLocked: z.boolean(),
+  /** Dated before the workspace's locked period ends, so it can't change. */
+  periodLocked: z.boolean(),
 })
 export type TimeEntry = z.infer<typeof timeEntrySchema>
 
@@ -312,3 +314,36 @@ export const reorderTimeFavoritesSchema = z.object({
 export type ReorderTimeFavoritesInput = z.input<
   typeof reorderTimeFavoritesSchema
 >
+
+// ── Time rules (workspace) ────────────────────────────────
+
+/**
+ * Rounding for billing and reports: each entry's duration is rounded to a
+ * step (up, to the nearest, or down). Tracked time itself stays exact.
+ */
+export const TIME_ROUNDING_MODES = ["off", "up", "nearest", "down"] as const
+export type TimeRoundingMode = (typeof TIME_ROUNDING_MODES)[number]
+export const TIME_ROUNDING_STEPS = [1, 5, 6, 10, 15, 30, 60] as const
+export type TimeRounding = { mode: TimeRoundingMode; minutes: number }
+
+/** One entry's seconds after rounding (entries never round to zero going up). */
+export function roundSeconds(seconds: number, rule: TimeRounding): number {
+  if (rule.mode === "off" || rule.minutes <= 0 || seconds <= 0) return seconds
+  const step = rule.minutes * 60
+  const n = seconds / step
+  const steps =
+    rule.mode === "up"
+      ? Math.ceil(n)
+      : rule.mode === "down"
+        ? Math.floor(n)
+        : Math.floor(n + 0.5)
+  return steps * step
+}
+
+/** "Up to 15 min", "Nearest 6 min", "Down to 30 min". */
+export function roundingLabel(rule: TimeRounding): string {
+  if (rule.mode === "off") return "No rounding"
+  const verb =
+    rule.mode === "up" ? "Up to" : rule.mode === "down" ? "Down to" : "Nearest"
+  return `${verb} ${rule.minutes} min`
+}

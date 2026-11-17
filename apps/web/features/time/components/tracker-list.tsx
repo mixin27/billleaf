@@ -153,6 +153,7 @@ export function TrackerList({ today }: { today: string }) {
     (e: TimeEntry) =>
       !e.invoiceId &&
       !e.approvalLocked &&
+      !e.periodLocked &&
       (e.isMine ? can("time.track") || can("time.manage") : can("time.manage")),
     [can]
   )
