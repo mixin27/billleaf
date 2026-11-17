@@ -5509,6 +5509,160 @@
           }
         ]
       }
+    },
+    "/v1/time-favorites": {
+      "get": {
+        "operationId": "time-favorites-list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FavoriteListDto_Output"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["time"],
+        "summary": "List time favorites",
+        "security": [
+          {
+            "apiKey": []
+          }
+        ]
+      },
+      "post": {
+        "operationId": "time-favorites-create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateFavoriteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FavoriteDto_Output"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["time"],
+        "summary": "Create time favorite",
+        "security": [
+          {
+            "apiKey": []
+          }
+        ]
+      }
+    },
+    "/v1/time-favorites/order": {
+      "put": {
+        "operationId": "time-favorites-reorder",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReorderFavoritesDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FavoriteListDto_Output"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["time"],
+        "summary": "Reorder (time favorites)",
+        "security": [
+          {
+            "apiKey": []
+          }
+        ]
+      }
+    },
+    "/v1/time-favorites/{id}/start": {
+      "post": {
+        "operationId": "time-favorites-start",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimeEntryDto_Output"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["time"],
+        "summary": "Start (time favorites)",
+        "security": [
+          {
+            "apiKey": []
+          }
+        ]
+      }
+    },
+    "/v1/time-favorites/{id}": {
+      "delete": {
+        "operationId": "time-favorites-remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "tags": ["time"],
+        "summary": "Remove time favorite",
+        "security": [
+          {
+            "apiKey": []
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -13382,6 +13536,226 @@
           }
         },
         "required": ["note"]
+      },
+      "FavoriteListDto_Output": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "projectId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "projectName": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "clientName": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "taskId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "taskTitle": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "tags": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "color": {
+                        "type": "string",
+                        "enum": [
+                          "gray",
+                          "green",
+                          "teal",
+                          "blue",
+                          "violet",
+                          "pink",
+                          "red",
+                          "orange",
+                          "amber",
+                          null
+                        ],
+                        "nullable": true
+                      }
+                    },
+                    "required": ["id", "name", "color"],
+                    "additionalProperties": false
+                  }
+                },
+                "billable": {
+                  "type": "boolean",
+                  "nullable": true
+                }
+              },
+              "required": [
+                "id",
+                "description",
+                "projectId",
+                "projectName",
+                "clientName",
+                "taskId",
+                "taskTitle",
+                "tags",
+                "billable"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": ["items"],
+        "additionalProperties": false
+      },
+      "CreateFavoriteDto": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string",
+            "maxLength": 500,
+            "nullable": true
+          },
+          "projectId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "nullable": true
+          },
+          "taskId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "nullable": true
+          },
+          "tagIds": {
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          "billable": {
+            "type": "boolean",
+            "nullable": true
+          }
+        }
+      },
+      "FavoriteDto_Output": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "projectId": {
+            "type": "string",
+            "nullable": true
+          },
+          "projectName": {
+            "type": "string",
+            "nullable": true
+          },
+          "clientName": {
+            "type": "string",
+            "nullable": true
+          },
+          "taskId": {
+            "type": "string",
+            "nullable": true
+          },
+          "taskTitle": {
+            "type": "string",
+            "nullable": true
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "color": {
+                  "type": "string",
+                  "enum": [
+                    "gray",
+                    "green",
+                    "teal",
+                    "blue",
+                    "violet",
+                    "pink",
+                    "red",
+                    "orange",
+                    "amber",
+                    null
+                  ],
+                  "nullable": true
+                }
+              },
+              "required": ["id", "name", "color"],
+              "additionalProperties": false
+            }
+          },
+          "billable": {
+            "type": "boolean",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "description",
+          "projectId",
+          "projectName",
+          "clientName",
+          "taskId",
+          "taskTitle",
+          "tags",
+          "billable"
+        ],
+        "additionalProperties": false
+      },
+      "ReorderFavoritesDto": {
+        "type": "object",
+        "properties": {
+          "ids": {
+            "maxItems": 12,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        },
+        "required": ["ids"]
       }
     },
     "securitySchemes": {

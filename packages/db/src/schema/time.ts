@@ -162,3 +162,29 @@ export const timesheetApprovals = pgTable(
     index().on(t.workspaceId, t.status),
   ]
 )
+
+/**
+ * A member's pinned entry ("favourite"): what to start in one click.
+ * Ordered by `position`; private to the member.
+ */
+export const timeFavorites = pgTable(
+  "time_favorites",
+  {
+    id: id(),
+    workspaceId: uuid()
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    memberId: uuid()
+      .notNull()
+      .references(() => member.id, { onDelete: "cascade" }),
+    description: text(),
+    projectId: uuid().references(() => projects.id, { onDelete: "cascade" }),
+    taskId: uuid().references(() => tasks.id, { onDelete: "set null" }),
+    tagIds: uuid().array().notNull().default([]),
+    /** Null = follow the project's billing. */
+    billable: boolean(),
+    position: integer().notNull().default(0),
+    ...timestamps,
+  },
+  (t) => [index().on(t.workspaceId, t.memberId, t.position)]
+)
