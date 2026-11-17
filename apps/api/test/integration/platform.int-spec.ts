@@ -1864,7 +1864,9 @@ describe("Clockify-style tracker", () => {
     expect(bulk.body).toEqual({ updated: 3, skipped: 1 })
     const list = (
       await owner.get(
-        `/v1/time-entries?from=${today}&to=${today}&tagId=${deep.body.id}`
+        // From the timer's start date: just after midnight UTC, "ten minutes
+        // ago" is yesterday.
+        `/v1/time-entries?from=${tenMinAgo.slice(0, 10)}&to=${today}&tagId=${deep.body.id}`
       )
     ).body.items
     expect(list).toHaveLength(3)
