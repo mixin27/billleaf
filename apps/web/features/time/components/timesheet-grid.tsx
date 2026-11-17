@@ -16,6 +16,7 @@ import { toast } from "sonner"
 
 import { useWorkspaceProfile } from "@/features/workspace"
 import { errorMessage } from "@/lib/api"
+import { useShortcut } from "@/lib/shortcuts"
 import { formatDate } from "@/lib/format"
 
 import { useSetTimesheetCell, useTimesheet } from "../api/reports"
@@ -43,6 +44,9 @@ export function TimesheetGrid({ today }: { today: string }) {
     parseAsString.withDefault(weekStart(today))
   )
   const start = weekStart(week)
+  useShortcut("ArrowLeft", () => void setWeek(addDays(start, -7)))
+  useShortcut("ArrowRight", () => void setWeek(addDays(start, 7)))
+  useShortcut("t", () => void setWeek(null))
   const sheet = useTimesheet(start)
   const setCell = useSetTimesheetCell()
   const [extra, setExtra] = React.useState<Row[]>([])

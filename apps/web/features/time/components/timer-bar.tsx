@@ -17,6 +17,7 @@ import {
   Clock01Icon,
   DollarCircleIcon,
   ListViewIcon,
+  StarIcon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { cn } from "@workspace/ui/lib/utils"
@@ -25,6 +26,7 @@ import { toast } from "sonner"
 
 import { errorMessage } from "@/lib/api"
 
+import { useCreateFavorite } from "../api/favorites"
 import {
   useSaveTimeEntry,
   useStartTimer,
@@ -210,6 +212,8 @@ function TimerFields({ entry }: { entry: TimeEntry | null }) {
   const { stop, pending: stopping } = useStopTimerAction()
   const elapsed = useElapsed(entry?.startedAt)
   const inputRef = React.useRef<HTMLInputElement>(null)
+  const pin = useCreateFavorite()
+  const canPin = Boolean(s.description.trim() || s.target.projectId)
 
   const onError = (err: unknown) => toast.error(errorMessage(err))
   /** While running, save each change to the timer immediately. */
@@ -304,6 +308,34 @@ function TimerFields({ entry }: { entry: TimeEntry | null }) {
             save({ billable: v })
           }}
         />
+        <button
+          type="button"
+          aria-label="Add to favourites"
+          title={
+            canPin
+              ? "Add to favourites"
+              : "Type a description or pick a project to pin it"
+          }
+          disabled={!canPin || pin.isPending}
+          onClick={() =>
+            pin.mutate(
+              {
+                description: s.description,
+                projectId: s.target.projectId,
+                taskId: s.target.taskId,
+                tagIds: s.tags.map((t) => t.id),
+                billable: s.billable,
+              },
+              {
+                onSuccess: () => toast.success("Added to favourites"),
+                onError,
+              }
+            )
+          }
+          className="flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground/70 outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-40"
+        >
+          <HugeiconsIcon icon={StarIcon} size={17} strokeWidth={1.8} />
+        </button>
         <span
           className={cn(
             "ml-auto w-20 text-right font-mono text-base tabular-nums sm:ml-2",
@@ -369,6 +401,7 @@ function DescriptionInput({
     <div className="relative min-w-0 flex-1">
       <Input
         ref={inputRef}
+        id="timer-description"
         value={value}
         placeholder="What are you working on?"
         aria-label="What are you working on?"

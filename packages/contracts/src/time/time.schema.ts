@@ -268,3 +268,47 @@ export function formatDuration(seconds: number): string {
   const total = Math.max(0, Math.round(seconds / 60))
   return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`
 }
+
+// ── Favourites ────────────────────────────────────────────
+
+/** Most favourites a member can pin (shortcuts 1–9 start the first nine). */
+export const MAX_TIME_FAVORITES = 12
+
+/** A pinned entry: start it in one click (or with keys 1–9). */
+export const timeFavoriteSchema = z.object({
+  id: z.string(),
+  description: z.string().nullable(),
+  projectId: z.string().nullable(),
+  projectName: z.string().nullable(),
+  clientName: z.string().nullable(),
+  taskId: z.string().nullable(),
+  taskTitle: z.string().nullable(),
+  tags: z.array(tagSchema),
+  /** Null = follow the project's billing. */
+  billable: z.boolean().nullable(),
+})
+export type TimeFavorite = z.infer<typeof timeFavoriteSchema>
+export const timeFavoriteListSchema = z.object({
+  items: z.array(timeFavoriteSchema),
+})
+
+export const createTimeFavoriteSchema = z
+  .object({
+    description: optionalText(500),
+    projectId: nullableUuid,
+    taskId: nullableUuid,
+    tagIds: tagIds.optional(),
+    billable: z.boolean().nullish(),
+  })
+  .refine((v) => v.description || v.projectId, {
+    message: "Give it a description or a project",
+    path: ["description"],
+  })
+export type CreateTimeFavoriteInput = z.input<typeof createTimeFavoriteSchema>
+
+export const reorderTimeFavoritesSchema = z.object({
+  ids: z.array(z.uuid()).max(MAX_TIME_FAVORITES),
+})
+export type ReorderTimeFavoritesInput = z.input<
+  typeof reorderTimeFavoritesSchema
+>

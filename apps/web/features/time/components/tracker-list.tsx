@@ -54,6 +54,7 @@ import {
   useDuplicateEntry,
   useSaveTimeEntry,
 } from "../api/mutations"
+import { useCreateFavorite } from "../api/favorites"
 import { useTimeEntries } from "../api/queries"
 import { addDays, weekStart } from "../duration"
 import { ProjectPopover } from "./project-popover"
@@ -473,6 +474,7 @@ function EntryRow({
   const slug = useWorkspaceStore((s) => s.workspace?.slug)
   const save = useSaveTimeEntry()
   const cont = useContinueEntry()
+  const pin = useCreateFavorite()
   const duplicate = useDuplicateEntry()
   const remove = useDeleteTimeEntry()
   const [description, setDescription] = React.useState(e.description ?? "")
@@ -599,6 +601,27 @@ function EntryRow({
               >
                 Duplicate
               </DropdownMenuItem>
+              {e.isMine ? (
+                <DropdownMenuItem
+                  onClick={() =>
+                    pin.mutate(
+                      {
+                        description: e.description,
+                        projectId: e.projectId,
+                        taskId: e.taskId,
+                        tagIds: e.tags.map((t) => t.id),
+                        billable: e.billable,
+                      },
+                      {
+                        onSuccess: () => toast.success("Added to favourites"),
+                        onError,
+                      }
+                    )
+                  }
+                >
+                  Add to favourites
+                </DropdownMenuItem>
+              ) : null}
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 variant="destructive"

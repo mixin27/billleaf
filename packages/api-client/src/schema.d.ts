@@ -2132,6 +2132,70 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  "/v1/time-favorites": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["TimeFavoritesController_list_v1"]
+    put?: never
+    post: operations["TimeFavoritesController_create_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/time-favorites/order": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put: operations["TimeFavoritesController_reorder_v1"]
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/time-favorites/{id}/start": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["TimeFavoritesController_start_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/time-favorites/{id}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    delete: operations["TimeFavoritesController_remove_v1"]
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   "/v1/rates": {
     parameters: {
       query?: never
@@ -5779,6 +5843,72 @@ export interface components {
     }
     RejectDto: {
       note: string
+    }
+    FavoriteListDto_Output: {
+      items: {
+        id: string
+        description: string | null
+        projectId: string | null
+        projectName: string | null
+        clientName: string | null
+        taskId: string | null
+        taskTitle: string | null
+        tags: {
+          id: string
+          name: string
+          /** @enum {string|null} */
+          color:
+            | "gray"
+            | "green"
+            | "teal"
+            | "blue"
+            | "violet"
+            | "pink"
+            | "red"
+            | "orange"
+            | "amber"
+            | null
+        }[]
+        billable: boolean | null
+      }[]
+    }
+    CreateFavoriteDto: {
+      description?: string | null
+      /** Format: uuid */
+      projectId?: string | null
+      /** Format: uuid */
+      taskId?: string | null
+      tagIds?: string[]
+      billable?: boolean | null
+    }
+    FavoriteDto_Output: {
+      id: string
+      description: string | null
+      projectId: string | null
+      projectName: string | null
+      clientName: string | null
+      taskId: string | null
+      taskTitle: string | null
+      tags: {
+        id: string
+        name: string
+        /** @enum {string|null} */
+        color:
+          | "gray"
+          | "green"
+          | "teal"
+          | "blue"
+          | "violet"
+          | "pink"
+          | "red"
+          | "orange"
+          | "amber"
+          | null
+      }[]
+      billable: boolean | null
+    }
+    ReorderFavoritesDto: {
+      ids: string[]
     }
     WorkspaceRatesDto_Output: {
       currency: string
@@ -10757,6 +10887,111 @@ export interface operations {
         content: {
           "application/json": components["schemas"]["ApprovalDto_Output"]
         }
+      }
+    }
+  }
+  TimeFavoritesController_list_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["FavoriteListDto_Output"]
+        }
+      }
+    }
+  }
+  TimeFavoritesController_create_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateFavoriteDto"]
+      }
+    }
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["FavoriteDto_Output"]
+        }
+      }
+    }
+  }
+  TimeFavoritesController_reorder_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ReorderFavoritesDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["FavoriteListDto_Output"]
+        }
+      }
+    }
+  }
+  TimeFavoritesController_start_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["TimeEntryDto_Output"]
+        }
+      }
+    }
+  }
+  TimeFavoritesController_remove_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
       }
     }
   }

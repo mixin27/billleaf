@@ -5340,3 +5340,132 @@ describe("timesheet approvals", () => {
     }
   })
 })
+
+describe("time favourites", () => {
+  it("pins private favourites, keeps their order, starts timers from them, and caps the list", async () => {
+    const owner = new Client(t)
+    await owner.signUp("Favourite Owner")
+    const ws = await owner.createWorkspace("Favourite Studio")
+    await t.db
+      .update(workspaceSubscriptions)
+      .set({ planKey: "team" })
+      .where(eq(workspaceSubscriptions.workspaceId, ws.id))
+    const client = (await owner.post("/v1/clients", { name: "Fav Co" })).body
+    const project = (
+      await owner.post("/v1/projects", {
+        name: "Fav work",
+        clientId: client.id,
+        currency: "USD",
+      })
+    ).body
+    const task = (
+      await owner.post(`/v1/projects/${project.id}/tasks`, { title: "Design" })
+    ).body
+    const tag = (await owner.post("/v1/tags", { name: "deep work" })).body
+
+    expect(
+      (await owner.post("/v1/time-favorites", { description: "  " })).status
+    ).toBe(422)
+    const a = await owner.post("/v1/time-favorites", {
+      description: "Design review",
+      projectId: project.id,
+      taskId: task.id,
+      tagIds: [tag.id],
+      billable: false,
+    })
+    expect(a.status).toBe(201)
+    expect(a.body).toMatchObject({
+      description: "Design review",
+      projectName: "Fav work",
+      clientName: "Fav Co",
+      taskTitle: "Design",
+      tags: [{ id: tag.id, name: "deep work" }],
+      billable: false,
+    })
+    expect(
+      (
+        await owner.post("/v1/time-favorites", {
+          description: "Design review",
+          projectId: project.id,
+          taskId: task.id,
+        })
+      ).body.code
+    ).toBe("favorite_exists")
+    const b = (await owner.post("/v1/time-favorites", { description: "Email" }))
+      .body
+    expect(b).toMatchObject({ projectId: null, billable: null })
+
+    // Order: as created, then as reordered.
+    const ids = async () =>
+      (await owner.get("/v1/time-favorites")).body.items.map(
+        (f: { id: string }) => f.id
+      )
+    expect(await ids()).toEqual([a.body.id, b.id])
+    const reordered = await owner.put("/v1/time-favorites/order", {
+      ids: [b.id, a.body.id],
+    })
+    expect(reordered.body.items.map((f: { id: string }) => f.id)).toEqual([
+      b.id,
+      a.body.id,
+    ])
+
+    // Start: a running timer with the favourite's fields.
+    const started = await owner.post(`/v1/time-favorites/${a.body.id}/start`)
+    expect(started.status).toBe(201)
+    expect(started.body).toMatchObject({
+      isRunning: true,
+      description: "Design review",
+      projectId: project.id,
+      taskId: task.id,
+      billable: false,
+      tags: [{ id: tag.id }],
+    })
+    // Starting another stops the first.
+    await owner.post(`/v1/time-favorites/${b.id}/start`)
+    expect(
+      (await owner.get("/v1/time-entries/running")).body.entry.description
+    ).toBe("Email")
+    await owner.post("/v1/time-entries/stop")
+
+    // Private: another member sees none and can't start or delete them.
+    const roles = (await owner.get("/v1/roles")).body
+    const memberRole = roles.find((r: { slug: string }) => r.slug === "member")
+    const other = new Client(t)
+    const { email } = await other.signUp("Other Favourite")
+    const inv = (
+      await owner.post("/v1/invitations", { email, roleId: memberRole.id })
+    ).body
+    await other.post("/api/auth/organization/accept-invitation", {
+      invitationId: inv.id,
+    })
+    other.workspaceId = ws.id
+    expect((await other.get("/v1/time-favorites")).body.items).toEqual([])
+    expect(
+      (await other.post(`/v1/time-favorites/${a.body.id}/start`)).status
+    ).toBe(404)
+    expect((await other.del(`/v1/time-favorites/${a.body.id}`)).status).toBe(
+      404
+    )
+
+    // A deleted tag drops out; the favourite stays.
+    await owner.del(`/v1/tags/${tag.id}`)
+    const afterTag = (await owner.get("/v1/time-favorites")).body.items.find(
+      (f: { id: string }) => f.id === a.body.id
+    )
+    expect(afterTag.tags).toEqual([])
+
+    // Capped at 12.
+    for (let i = 0; i < 10; i++)
+      expect(
+        (await owner.post("/v1/time-favorites", { description: `Item ${i}` }))
+          .status
+      ).toBe(201)
+    const full = await owner.post("/v1/time-favorites", {
+      description: "One too many",
+    })
+    expect(full.body.code).toBe("favorites_full")
+
+    expect((await owner.del(`/v1/time-favorites/${b.id}`)).status).toBe(204)
+    expect((await owner.get("/v1/time-favorites")).body.items).toHaveLength(11)
+  })
+})

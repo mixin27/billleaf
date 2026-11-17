@@ -24,6 +24,7 @@ import { toast } from "sonner"
 import { usePermissions } from "@/components/permissions/can"
 import { useWorkspaceProfile } from "@/features/workspace"
 import { errorMessage } from "@/lib/api"
+import { useShortcut } from "@/lib/shortcuts"
 import { formatDate } from "@/lib/format"
 
 import { useSaveTimeEntry } from "../api/mutations"
@@ -407,6 +408,10 @@ export function TimeCalendar({ today }: { today: string }) {
   })
   const nowParts = zonedParts(now, tz)
   const step = mode === "week" ? 7 : 1
+  useShortcut("ArrowLeft", () => void setDay(addDays(day, -step)))
+  useShortcut("ArrowRight", () => void setDay(addDays(day, step)))
+  useShortcut("t", () => void setDay(null))
+  useShortcut("w", () => void setView(mode === "week" ? "day" : "week"))
   const rangeLabel =
     mode === "week"
       ? `${formatDate(start, locale)} – ${formatDate(addDays(start, 6), locale)}`

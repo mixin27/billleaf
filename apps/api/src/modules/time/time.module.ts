@@ -15,6 +15,8 @@ import { TimeReportsController } from "./time-reports.controller.js"
 import { TimeReportsService } from "./time-reports.service.js"
 import { TimeController } from "./time.controller.js"
 import { TimeRepository } from "./time.repository.js"
+import { TimeFavoritesController } from "./time-favorites.controller.js"
+import { TimeFavoritesService } from "./time-favorites.service.js"
 import { TimeService } from "./time.service.js"
 import { TimesheetApprovalsController } from "./timesheet-approvals.controller.js"
 import { TimesheetApprovalsService } from "./timesheet-approvals.service.js"
@@ -34,6 +36,7 @@ import { TimesheetApprovalsService } from "./timesheet-approvals.service.js"
     TimeController,
     TimeReportsController,
     TimesheetApprovalsController,
+    TimeFavoritesController,
   ],
   providers: [
     TimeRepository,
@@ -43,6 +46,7 @@ import { TimesheetApprovalsService } from "./timesheet-approvals.service.js"
     ProjectUsageService,
     BudgetsService,
     TimesheetApprovalsService,
+    TimeFavoritesService,
   ],
   exports: [BudgetsService],
 })

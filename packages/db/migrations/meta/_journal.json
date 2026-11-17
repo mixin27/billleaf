@@ -204,6 +204,13 @@
       "when": 1794844135073,
       "tag": "0028_broad_puff_adder",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1794873150296,
+      "tag": "0029_happy_thundra",
+      "breakpoints": true
     }
   ]
 }

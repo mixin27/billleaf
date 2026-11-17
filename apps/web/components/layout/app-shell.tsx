@@ -8,6 +8,7 @@ import { PlanEndingBanner } from "@/features/billing"
 import { AppSidebar } from "./app-sidebar"
 import { AppTopbar } from "./app-topbar"
 import { CommandMenu } from "./command-menu"
+import { KeyboardShortcuts } from "./keyboard-shortcuts"
 
 /**
  * Authenticated workspace layout: inset sidebar (collapses to icons on
@@ -30,6 +31,7 @@ export function AppShell({
         <div className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8">{children}</div>
       </SidebarInset>
       <CommandMenu />
+      <KeyboardShortcuts />
     </SidebarProvider>
   )
 }

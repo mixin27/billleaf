@@ -31,6 +31,11 @@
     "timesheet-approvals-submit",
     "timesheet-approvals-withdraw",
     "timesheet-approvals-approve",
-    "timesheet-approvals-reject"
+    "timesheet-approvals-reject",
+    "time-favorites-list",
+    "time-favorites-create",
+    "time-favorites-reorder",
+    "time-favorites-start",
+    "time-favorites-remove"
   ]
 }

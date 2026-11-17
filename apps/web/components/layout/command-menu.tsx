@@ -7,6 +7,7 @@ import {
   PlayIcon,
   StopIcon,
   Sun03Icon,
+  KeyboardIcon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react"
 import type { Permission } from "@workspace/contracts"
@@ -33,6 +34,7 @@ import {
 
 import { usePermissions } from "../permissions/can"
 import { useCommandMenu } from "./command-store"
+import { useShortcutsHelp } from "./keyboard-shortcuts"
 import { useNav } from "./use-nav"
 
 const CREATE: {
@@ -81,6 +83,7 @@ export function CommandMenu() {
   const running = useRunningTimer(canTrack)
   const openTimer = useTimerDialog((s) => s.setOpen)
   const { stop } = useStopTimerAction()
+  const openShortcuts = useShortcutsHelp((s) => s.setOpen)
 
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -156,6 +159,14 @@ export function CommandMenu() {
           ) : null}
           <CommandSeparator />
           <CommandGroup heading="Preferences">
+            <CommandItem
+              value="keyboard shortcuts keys help"
+              onSelect={() => run(() => openShortcuts(true))}
+            >
+              <HugeiconsIcon icon={KeyboardIcon} strokeWidth={1.8} />
+              Keyboard shortcuts
+              <CommandShortcut>?</CommandShortcut>
+            </CommandItem>
             {THEMES.map((t) => (
               <CommandItem
                 key={t.value}
