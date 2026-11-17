@@ -5861,3 +5861,122 @@ describe("import history and undo", () => {
     ).toBe(404)
   })
 })
+
+describe("mobile (Expo) sign-in", () => {
+  // Native apps send no Origin; the Expo client sends `expo-origin` with the
+  // app scheme, and keeps the session cookie itself (sent as `Cookie`).
+  const inject = (opts: {
+    method: "GET" | "POST"
+    url: string
+    headers?: Record<string, string>
+    body?: unknown
+  }) =>
+    t.app.inject({
+      method: opts.method,
+      url: opts.url,
+      headers: {
+        ...(opts.body !== undefined
+          ? { "content-type": "application/json" }
+          : {}),
+        ...opts.headers,
+      },
+      payload: opts.body === undefined ? undefined : JSON.stringify(opts.body),
+    })
+  const cookiesFrom = (res: { headers: Record<string, unknown> }) => {
+    const raw = res.headers["set-cookie"]
+    const list = Array.isArray(raw) ? raw : raw ? [String(raw)] : []
+    return list.map((c) => String(c).split(";")[0]!).join("; ")
+  }
+
+  it("signs in with expo-origin, calls the API with the cookie, and keeps the CSRF check", async () => {
+    const owner = new Client(t)
+    const { email } = await owner.signUp("Mobile Owner")
+    const ws = await owner.createWorkspace("Mobile Studio")
+    const password = "integration-password-123"
+
+    const signIn = await inject({
+      method: "POST",
+      url: "/api/auth/sign-in/email",
+      headers: { "expo-origin": "billleaf://" },
+      body: { email, password },
+    })
+    expect(signIn.statusCode).toBe(200)
+    const cookie = cookiesFrom(signIn)
+    expect(cookie).toContain("billleaf.session_token=")
+
+    const me = await inject({
+      method: "GET",
+      url: "/v1/me",
+      headers: { cookie, "x-workspace-id": ws.id },
+    })
+    expect(me.statusCode).toBe(200)
+    expect(JSON.parse(me.body).user.email).toBe(email)
+
+    // The app switches workspace (cookie-bearing auth POST, no Origin) …
+    const withExpo = await inject({
+      method: "POST",
+      url: "/api/auth/organization/set-active",
+      headers: { cookie, "expo-origin": "billleaf://" },
+      body: { organizationId: ws.id },
+    })
+    expect(withExpo.statusCode).toBe(200)
+    // … but without the app origin, or with an untrusted scheme, it's refused.
+    const bare = await inject({
+      method: "POST",
+      url: "/api/auth/organization/set-active",
+      headers: { cookie },
+      body: { organizationId: ws.id },
+    })
+    expect(bare.statusCode).toBe(403)
+    const other = await inject({
+      method: "POST",
+      url: "/api/auth/organization/set-active",
+      headers: { cookie, "expo-origin": "evilapp://" },
+      body: { organizationId: ws.id },
+    })
+    expect(other.statusCode).toBe(403)
+
+    // Sign out from the app ends the session for /v1 too.
+    const out = await inject({
+      method: "POST",
+      url: "/api/auth/sign-out",
+      headers: { cookie, "expo-origin": "billleaf://" },
+      body: {},
+    })
+    expect(out.statusCode).toBe(200)
+    const sessionOnly = cookie
+      .split("; ")
+      .filter((c) => c.startsWith("billleaf.session_token="))
+      .join("; ")
+    expect(
+      (
+        await inject({
+          method: "GET",
+          url: "/v1/me",
+          headers: { cookie: sessionOnly, "x-workspace-id": ws.id },
+        })
+      ).statusCode
+    ).toBe(401)
+  })
+
+  it("asks a two-factor user for a code before any session", async () => {
+    const owner = new Client(t)
+    const { email } = await owner.signUp("Mobile Two Factor")
+    await t.db
+      .update(userTable)
+      .set({ twoFactorEnabled: true })
+      .where(eq(userTable.email, email))
+    const res = await inject({
+      method: "POST",
+      url: "/api/auth/sign-in/email",
+      headers: { "expo-origin": "billleaf://" },
+      body: { email, password: "integration-password-123" },
+    })
+    expect(res.statusCode).toBe(200)
+    expect(JSON.parse(res.body)).toMatchObject({ twoFactorRedirect: true })
+    const cookie = cookiesFrom(res)
+    expect(cookie).toMatch(/billleaf\.two_factor=[^;]+/)
+    // The session cookie is cleared (empty), not issued.
+    expect(cookie).not.toMatch(/billleaf\.session_token=[^;]+/)
+  })
+})

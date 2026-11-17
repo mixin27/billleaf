@@ -52,7 +52,7 @@ Phases are scope buckets, not dates. Each phase ends with a production deploy. C
 
 ## Phase 4 — Mobile
 
-- Expo / React Native app in `apps/mobile`, reusing `packages/contracts`, `packages/api-client`, and Better Auth's Expo client — no API changes.
+- Expo / React Native app in `apps/mobile`, reusing `packages/contracts`, `packages/api-client`, and Better Auth's Expo client. The API adds one auth plugin (`expo`) and trusts the app scheme ([ADR-0017](../adr/0017-mobile-app-expo-native-auth.md)).
 - Focus: timers, quick invoices, notifications.
 
 Related: [Modules](modules.md) · [Business model](business-model.md)

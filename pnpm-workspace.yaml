@@ -15,6 +15,7 @@ allowBuilds:
 
 minimumReleaseAgeExclude:
   - "@better-auth/core@1.7.25"
+  - "@better-auth/expo@1.7.25"
   - "@better-auth/drizzle-adapter@1.7.25"
   - "@better-auth/kysely-adapter@1.7.25"
   - "@better-auth/memory-adapter@1.7.25"

@@ -52,6 +52,9 @@ const DISABLED_ADMIN_PATHS = [
   "/admin/has-permission",
 ]
 
+/** Origin the mobile app sends (`expo-origin`); matches its `scheme`. */
+export const MOBILE_APP_ORIGIN = "billleaf://"
+
 /**
  * Better Auth instance. Billleaf terminology: organization == workspace.
  *
@@ -67,7 +70,13 @@ export function createAuth({
   beforeDeleteUser,
   ...hooks
 }: AuthDeps) {
-  const trustedOrigins = [env.WEB_URL, ...env.TRUSTED_ORIGINS]
+  // The mobile app's scheme (apps/mobile, `expo-origin` via the expo plugin).
+  // Not a CORS origin: native requests don't go through CORS.
+  const trustedOrigins = [
+    env.WEB_URL,
+    MOBILE_APP_ORIGIN,
+    ...env.TRUSTED_ORIGINS,
+  ]
 
   return betterAuth({
     appName: "Billleaf",
@@ -77,6 +86,9 @@ export function createAuth({
     trustedOrigins,
     database: drizzleAdapter(db, { provider: "pg", schema }),
     advanced: {
+      // Better Auth skips its origin (CSRF) check when NODE_ENV=test; keep it
+      // on everywhere so tests prove what production enforces.
+      disableOriginCheck: false,
       database: AUTH_ADVANCED_DATABASE,
       cookiePrefix: "billleaf",
       ...(env.COOKIE_DOMAIN

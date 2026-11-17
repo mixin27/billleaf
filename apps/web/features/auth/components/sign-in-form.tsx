@@ -77,7 +77,15 @@ export function SignInForm() {
           />
         </div>
         <div className="flex flex-col gap-2">
-          <Label htmlFor="password">Password</Label>
+          <div className="flex items-baseline justify-between">
+            <Label htmlFor="password">Password</Label>
+            <Link
+              href={`/forgot-password${form.watch("email") ? `?email=${encodeURIComponent(form.watch("email"))}` : ""}`}
+              className="text-xs text-muted-foreground underline-offset-2 hover:underline"
+            >
+              Forgot password?
+            </Link>
+          </div>
           <Input
             id="password"
             type="password"

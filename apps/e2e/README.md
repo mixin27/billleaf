@@ -2,13 +2,14 @@
 
 Critical journeys in a real browser against the real stack:
 
-| Test                  | Journey                                                                                                                |
-| --------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `auth.spec.ts`        | Sign up → verification email (Mailpit) → workspace → sign out and in                                                   |
-| `invoicing.spec.ts`   | Client → quote → mark sent → email → client accepts in the portal → invoice → issue + email → record payment → receipt |
-| `time.spec.ts`        | Timer start/stop → calendar drag-to-create → timesheet total → invoice unbilled time                                   |
-| `permissions.spec.ts` | Invite by email → invitee signs up and joins as Member → owner-only settings hidden, API returns 403                   |
-| `mobile.spec.ts`      | Phone width (Pixel 7): main pages don't scroll sideways, drawer menu, calendar in day view                             |
+| Test                     | Journey                                                                                                                   |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
+| `auth.spec.ts`           | Sign up → verification email (Mailpit) → workspace → sign out and in                                                      |
+| `password-reset.spec.ts` | Forgot password → reset email (Mailpit) → new password → sign in; the link works once; unknown emails get the same answer |
+| `invoicing.spec.ts`      | Client → quote → mark sent → email → client accepts in the portal → invoice → issue + email → record payment → receipt    |
+| `time.spec.ts`           | Timer start/stop → calendar drag-to-create → timesheet total → invoice unbilled time                                      |
+| `permissions.spec.ts`    | Invite by email → invitee signs up and joins as Member → owner-only settings hidden, API returns 403                      |
+| `mobile.spec.ts`         | Phone width (Pixel 7): main pages don't scroll sideways, drawer menu, calendar in day view                                |
 
 ## Run
 

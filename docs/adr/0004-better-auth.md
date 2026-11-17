@@ -10,7 +10,7 @@ We need email/password, verification, magic link/OTP, Google OAuth, 2FA, platfor
 
 ## Decision
 
-Use **Better Auth** mounted in the Nest API at `/api/auth/*` with the **Drizzle adapter**. Plugins: email+password, email verification, magic link / email OTP, Google, `twoFactor`, `admin` (platform staff), and **`organization` as the workspace primitive** (workspaces, members, invitations, active workspace on session). Passkey and `expo` plugins later. Session cookies on `.billleaf.com` shared by `app.` and `api.`; trusted origins configured.
+Use **Better Auth** mounted in the Nest API at `/api/auth/*` with the **Drizzle adapter**. Plugins: email+password, email verification, magic link / email OTP, Google, `twoFactor`, `admin` (platform staff), and **`organization` as the workspace primitive** (workspaces, members, invitations, active workspace on session). Passkey plugin later; `expo` added for the mobile app in [ADR-0017](0017-mobile-app-expo-native-auth.md). Session cookies on `.billleaf.com` shared by `app.` and `api.`; trusted origins configured.
 
 ## Consequences
 

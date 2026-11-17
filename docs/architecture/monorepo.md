@@ -31,7 +31,7 @@ billleaf/
 - **Apps are thin composition; shared truth lives in packages.** If two apps need it, it is a package.
 - **Dependency direction:** `apps/* → packages/*`. Packages never import apps. `ui` never imports `db`. `contracts` has no runtime deps beyond Zod.
 - **Package names:** `@workspace/<name>` (e.g. `@workspace/db`, `@workspace/contracts`).
-- Mobile later reuses `contracts`, `api-client` and Better Auth's Expo client unchanged.
+- Mobile reuses `contracts`, `api-client` and Better Auth's Expo client; the API only adds the `expo` auth plugin ([ADR-0017](../adr/0017-mobile-app-expo-native-auth.md)).
 
 ## Who imports what
 
