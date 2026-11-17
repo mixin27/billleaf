@@ -136,7 +136,11 @@ export function TimeCalendar({ today }: { today: string }) {
       : [day]
 
   // A submitted or approved week (timesheet approvals) takes no new time.
-  const weekLocked = useTimesheet(start).data?.locked ?? false
+  const weekSheet = useTimesheet(start).data
+  const weekLocked = weekSheet?.locked ?? false
+  /** Days before this are in the workspace's locked period. */
+  const lockedBefore = weekSheet?.lockedBefore ?? null
+  const dayLocked = (d: string) => lockedBefore !== null && d < lockedBefore
   const canLog = canTrack && !weekLocked
   const entries = useTimeEntries({
     from: start,
@@ -155,6 +159,7 @@ export function TimeCalendar({ today }: { today: string }) {
     (e: TimeEntry) =>
       !e.invoiceId &&
       !e.approvalLocked &&
+      !e.periodLocked &&
       !e.isRunning &&
       (e.isMine ? canTrack : can("time.manage")),
     [can, canTrack]
@@ -228,6 +233,10 @@ export function TimeCalendar({ today }: { today: string }) {
 
   const commit = React.useCallback(
     (entry: TimeEntry, span: Span) => {
+      if (lockedBefore && span.date < lockedBefore) {
+        toast.error(`Time before ${lockedBefore} is locked`)
+        return
+      }
       setPending((p) => ({ ...p, [entry.id]: span }))
       save.mutate(
         {
@@ -245,7 +254,7 @@ export function TimeCalendar({ today }: { today: string }) {
         }
       )
     },
-    [save, tz]
+    [save, tz, lockedBefore]
   )
 
   // Latest values for the window listeners of an ongoing drag.
@@ -334,6 +343,7 @@ export function TimeCalendar({ today }: { today: string }) {
 
   const startCreate = (ev: React.PointerEvent, date: string) => {
     if (!canLog || ev.button !== 0 || ev.target !== ev.currentTarget) return
+    if (dayLocked(date)) return
     const { minute } = pointAt(ev.clientX, ev.clientY)
     const m = clamp(Math.floor(minute / SNAP) * SNAP, 0, DAY - SNAP)
     beginDrag({
@@ -605,9 +615,15 @@ export function TimeCalendar({ today }: { today: string }) {
                         role="presentation"
                         className={cn(
                           "relative border-l",
-                          canLog && "cursor-crosshair",
-                          d === today && "bg-primary/[0.03]"
+                          canLog && !dayLocked(d) && "cursor-crosshair",
+                          d === today && "bg-primary/[0.03]",
+                          dayLocked(d) && "bg-muted/50"
                         )}
+                        title={
+                          dayLocked(d)
+                            ? `Time before ${lockedBefore} is locked`
+                            : undefined
+                        }
                         style={{
                           backgroundImage:
                             "linear-gradient(to bottom, var(--border) 1px, transparent 1px)",

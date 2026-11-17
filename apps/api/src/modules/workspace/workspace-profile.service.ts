@@ -4,6 +4,7 @@ import type {
   WorkspaceProfile,
 } from "@workspace/contracts"
 
+import { todayIn } from "../documents/party-snapshot.js"
 import { EntitlementsService } from "../../billing/entitlements.service.js"
 import { AuditService } from "../../iam/audit/audit.service.js"
 import { FilesService } from "../files/files.service.js"
@@ -39,6 +40,9 @@ export function toProfileDto(
     paymentTermsDays: r.paymentTermsDays,
     invoiceReminderOffsets: r.invoiceReminderOffsets,
     timesheetApprovals: r.timesheetApprovals,
+    timeRoundingMode: r.timeRoundingMode,
+    timeRoundingMinutes: r.timeRoundingMinutes,
+    timeLockedBefore: r.timeLockedBefore,
     defaultTaxRateBps: r.defaultTaxRateBps,
     documentFooter: r.documentFooter,
     brandColor: r.brandColor,
@@ -147,6 +151,13 @@ export class WorkspaceProfileService {
     }
     if (profile.timesheetApprovals === true)
       await this.entitlements.assertFeature("timesheetApprovals")
+    if (profile.timeLockedBefore) {
+      const tz = profile.timezone ?? (await this.repo.getOrCreate()).timezone
+      if (profile.timeLockedBefore > todayIn(tz))
+        throw new BadRequestException(
+          "The lock date can't be after today (time before it is locked)"
+        )
+    }
     const row = await this.repo.update(name, profile as never)
     await this.audit.record("workspace.profile_updated", {
       resourceType: "workspace",

@@ -161,7 +161,15 @@ export class ClockifyImportService {
       dates[0] ?? "1970-01-01",
       dates[dates.length - 1] ?? "1970-01-01"
     )
+    const lockedBefore = await this.approvals.lockedBefore()
     const toImport = fresh.filter((p) => {
+      if (lockedBefore && p.row.startDate < lockedBefore) {
+        invalid.push({
+          line: p.row.line,
+          message: `Time before ${lockedBefore} is locked`,
+        })
+        return false
+      }
       if (!locked.has(`${p.memberId}|${weekOf(p.row.startDate)}`)) return true
       invalid.push({
         line: p.row.line,

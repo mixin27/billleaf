@@ -7,6 +7,10 @@ import {
   optionalUrl,
 } from "../common/locale.js"
 import { currencyCodeSchema } from "../common/money.js"
+import {
+  TIME_ROUNDING_MODES,
+  TIME_ROUNDING_STEPS,
+} from "../time/time.schema.js"
 
 /**
  * Workspace business profile — the "from" block on quotes, invoices and
@@ -37,6 +41,11 @@ export const workspaceProfileSchema = z.object({
   invoiceReminderOffsets: z.array(z.number().int()),
   /** Members submit weeks for approval; only approved time is invoiced (Team). */
   timesheetApprovals: z.boolean(),
+  /** Rounding for invoices and reports ("off" = exact). */
+  timeRoundingMode: z.enum(TIME_ROUNDING_MODES),
+  timeRoundingMinutes: z.number().int(),
+  /** Time dated before this day can't be added, changed or deleted. */
+  timeLockedBefore: z.iso.date().nullable(),
   defaultTaxRateBps: z.number().int(),
   documentFooter: z.string().nullable(),
   brandColor: z.string().nullable(),
@@ -83,6 +92,15 @@ export const updateWorkspaceProfileSchema = z
       .max(REMINDER_OFFSETS.length)
       .transform((v) => [...new Set(v)].sort((a, b) => a - b)),
     timesheetApprovals: z.boolean(),
+    timeRoundingMode: z.enum(TIME_ROUNDING_MODES),
+    timeRoundingMinutes: z
+      .number()
+      .int()
+      .refine(
+        (m) => (TIME_ROUNDING_STEPS as readonly number[]).includes(m),
+        "Pick from the list"
+      ),
+    timeLockedBefore: z.iso.date().nullable(),
     defaultTaxRateBps: z.number().int().min(0).max(10_000),
     documentFooter: optionalText(1000),
     brandColor: z

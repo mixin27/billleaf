@@ -28,6 +28,8 @@ import {
   sql,
 } from "drizzle-orm"
 
+import type { TimeRounding } from "@workspace/contracts"
+
 import { RequestContext } from "../../common/context/request-context.js"
 import { offsetOf, orderBy, type PageArgs } from "../../common/pagination.js"
 import { InjectDb, type Database } from "../../core/database/database.module.js"
@@ -54,6 +56,24 @@ export interface ReportFilter {
   billable?: boolean
   q?: string
 }
+
+/**
+ * SQL for one entry's seconds after the workspace's rounding rule (see
+ * `roundSeconds` in contracts — the same math, for sums in the database).
+ */
+export function roundedSecondsSql(
+  col: SQL | typeof timeEntries.durationSeconds,
+  rule: TimeRounding
+): SQL {
+  if (rule.mode === "off" || rule.minutes <= 0) return sql`${col}`
+  const step = rule.minutes * 60
+  if (rule.mode === "nearest")
+    return sql`(floor(${col}::numeric / ${step} + 0.5) * ${step})::int`
+  const fn = rule.mode === "up" ? sql.raw("ceil") : sql.raw("floor")
+  return sql`(${fn}(${col}::numeric / ${step}) * ${step})::int`
+}
+
+const OFF: TimeRounding = { mode: "off", minutes: 0 }
 
 const escapeLike = (v: string) => v.replace(/[\\%_]/g, (c) => `\\${c}`)
 const chunks = <T>(xs: T[], n: number) =>
@@ -311,7 +331,8 @@ export class TimeRepository {
    * Finished time of projects, summed per (project, task, member, billable,
    * invoiced, billed rate): enough to price it with any rate book.
    */
-  async usageRows(projectIds: string[]) {
+  /** Per-entry sums; `billedSeconds` applies the rounding rule (amounts). */
+  async usageRows(projectIds: string[], rule: TimeRounding = OFF) {
     if (projectIds.length === 0) return []
     const rows = await this.db
       .select({
@@ -322,6 +343,7 @@ export class TimeRepository {
         invoiced: sql<boolean>`${timeEntries.invoiceId} is not null`,
         billedRate: timeEntries.billedRate,
         seconds: sql<string>`sum(${timeEntries.durationSeconds})`,
+        billedSeconds: sql<string>`sum(${roundedSecondsSql(timeEntries.durationSeconds, rule)})`,
       })
       .from(timeEntries)
       .leftJoin(tasks, eq(tasks.id, timeEntries.taskId))
@@ -344,6 +366,7 @@ export class TimeRepository {
       ...r,
       projectId: r.projectId!,
       seconds: Number(r.seconds ?? 0),
+      billedSeconds: Number(r.billedSeconds ?? 0),
     }))
   }
 
@@ -602,7 +625,12 @@ export class TimeRepository {
   }
 
   /** One page of the detailed report, plus totals for the whole filter. */
-  async detailed(f: ReportFilter, page: PageArgs | null) {
+  async detailed(
+    f: ReportFilter,
+    page: PageArgs | null,
+    rule: TimeRounding = OFF
+  ) {
+    const dur = roundedSecondsSql(timeEntries.durationSeconds, rule)
     const where = this.reportWhere(f)
     const memberSort = sql`lower(coalesce(${user.name}, ${timeEntries.memberName}))`
     let q = this.select()
@@ -630,8 +658,8 @@ export class TimeRepository {
       this.db
         .select({
           total: sql<number>`count(*)::int`,
-          seconds: sql<string>`coalesce(sum(${timeEntries.durationSeconds}), 0)`,
-          billable: sql<string>`coalesce(sum(${timeEntries.durationSeconds}) filter (where ${timeEntries.billable}), 0)`,
+          seconds: sql<string>`coalesce(sum(${dur}), 0)`,
+          billable: sql<string>`coalesce(sum(${dur}) filter (where ${timeEntries.billable}), 0)`,
         })
         .from(timeEntries)
         .leftJoin(projects, eq(projects.id, timeEntries.projectId))

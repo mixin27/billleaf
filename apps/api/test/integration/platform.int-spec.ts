@@ -5471,3 +5471,148 @@ describe("time favourites", () => {
     expect((await owner.get("/v1/time-favorites")).body.items).toHaveLength(11)
   })
 })
+
+describe("time rules", () => {
+  it("rounds entries for invoices, amounts and reports, and locks time before a date", async () => {
+    const owner = new Client(t)
+    await owner.signUp("Rules Owner")
+    await owner.createWorkspace("Rules Studio")
+    await owner.patch("/v1/workspace", {
+      timezone: "UTC",
+      defaultTaxRateBps: 0,
+      defaultCurrency: "USD",
+    })
+    const client = (await owner.post("/v1/clients", { name: "Rules Co" })).body
+    const project = (
+      await owner.post("/v1/projects", {
+        name: "Rounded work",
+        clientId: client.id,
+        currency: "USD",
+        hourlyRate: 10_000,
+      })
+    ).body
+    const log = (date: string, from: string, to: string) =>
+      owner.post("/v1/time-entries", {
+        projectId: project.id,
+        startedAt: `${date}T${from}:00.000Z`,
+        endedAt: `${date}T${to}:00.000Z`,
+      })
+    const a = (await log("2026-11-02", "09:00", "09:07")).body // 7 min
+    await log("2026-11-03", "10:00", "10:22") // 22 min
+
+    // Steps must come from the list.
+    expect(
+      (
+        await owner.patch("/v1/workspace", {
+          timeRoundingMode: "up",
+          timeRoundingMinutes: 7,
+        })
+      ).status
+    ).toBe(422)
+    const set = await owner.patch("/v1/workspace", {
+      timeRoundingMode: "up",
+      timeRoundingMinutes: 15,
+    })
+    expect(set.body).toMatchObject({
+      timeRoundingMode: "up",
+      timeRoundingMinutes: 15,
+      timeLockedBefore: null,
+    })
+
+    // Reports: rounded per entry by default; exact on request.
+    const range = "from=2026-11-02&to=2026-11-03"
+    const summary = (await owner.get(`/v1/time/reports/summary?${range}`)).body
+    expect(summary).toMatchObject({
+      totalSeconds: 45 * 60, // 15 + 30
+      rounding: { mode: "up", minutes: 15 },
+      amounts: [{ currency: "USD", amount: 7_500 }],
+    })
+    const exact = (
+      await owner.get(`/v1/time/reports/summary?${range}&rounded=false`)
+    ).body
+    expect(exact).toMatchObject({ totalSeconds: 29 * 60, rounding: null })
+    const detailed = (await owner.get(`/v1/time/reports/detailed?${range}`))
+      .body
+    expect(detailed.totalSeconds).toBe(45 * 60)
+    expect(
+      detailed.items.map((e: { durationSeconds: number }) => e.durationSeconds)
+    ).toEqual([30 * 60, 15 * 60])
+    const csv = await owner.get(`/v1/time/reports/detailed.csv?${range}`)
+    expect(csv.body).toContain("0.50")
+
+    // Project amounts and the invoice use the rounded time.
+    const usage = (await owner.get(`/v1/projects/${project.id}/time-summary`))
+      .body
+    expect(usage).toMatchObject({
+      unbilledSeconds: 29 * 60, // hours stay exact
+      unbilledAmount: 7_500,
+    })
+    const invoice = await owner.post("/v1/invoices/from-time", {
+      projectId: project.id,
+    })
+    expect(invoice.status).toBe(201)
+    expect(invoice.body.total).toBe(7_500)
+    expect(invoice.body.lines[0].quantity).toBe(0.75)
+
+    // Rounding down can leave nothing to bill.
+    await owner.patch("/v1/workspace", {
+      timeRoundingMode: "down",
+      timeRoundingMinutes: 30,
+    })
+    await log("2026-11-03", "11:00", "11:10")
+    const zero = await owner.post("/v1/invoices/from-time", {
+      projectId: project.id,
+    })
+    expect(zero.body.code).toBe("rounds_to_zero")
+
+    // Locked period: no future dates; earlier time can't change.
+    expect(
+      (
+        await owner.patch("/v1/workspace", {
+          timeLockedBefore: "2999-01-01",
+        })
+      ).status
+    ).toBe(400)
+    expect(
+      (await owner.patch("/v1/workspace", { timeLockedBefore: "2026-11-03" }))
+        .body.timeLockedBefore
+    ).toBe("2026-11-03")
+    const early = await log("2026-11-02", "13:00", "14:00")
+    expect(early.status).toBe(409)
+    expect(early.body.code).toBe("time_period_locked")
+    expect(
+      (await owner.patch(`/v1/time-entries/${a.id}`, { description: "late" }))
+        .body.code
+    ).toBe("time_period_locked")
+    expect((await log("2026-11-03", "13:00", "14:00")).status).toBe(201)
+    const listed = (await owner.get(`/v1/time-entries?${range}&memberId=me`))
+      .body.items
+    const byDate = (d: string) =>
+      listed.filter((e: { entryDate: string }) => e.entryDate === d)
+    expect(
+      byDate("2026-11-02").every(
+        (e: { periodLocked: boolean }) => e.periodLocked
+      )
+    ).toBe(true)
+    expect(
+      byDate("2026-11-03").some(
+        (e: { periodLocked: boolean }) => e.periodLocked
+      )
+    ).toBe(false)
+    expect(
+      (
+        await owner.patch("/v1/time-entries/bulk", {
+          ids: listed.map((e: { id: string }) => e.id),
+          billable: false,
+        })
+      ).body.skipped
+    ).toBeGreaterThanOrEqual(1)
+    expect(
+      (await owner.get("/v1/time/timesheet?week=2026-11-02")).body.lockedBefore
+    ).toBe("2026-11-03")
+
+    // Clearing the lock reopens it.
+    await owner.patch("/v1/workspace", { timeLockedBefore: null })
+    expect((await log("2026-11-02", "13:00", "14:00")).status).toBe(201)
+  })
+})

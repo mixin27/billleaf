@@ -8,6 +8,7 @@ import {
   NotFoundException,
 } from "@nestjs/common"
 import type {
+  TimeRounding,
   ApprovalStatus,
   ListTimesheetApprovalsQuery,
   TimesheetApproval,
@@ -102,10 +103,31 @@ export class TimesheetApprovalsService {
       .select({
         on: workspaceProfiles.timesheetApprovals,
         timezone: workspaceProfiles.timezone,
+        roundingMode: workspaceProfiles.timeRoundingMode,
+        roundingMinutes: workspaceProfiles.timeRoundingMinutes,
+        lockedBefore: workspaceProfiles.timeLockedBefore,
       })
       .from(workspaceProfiles)
       .where(eq(workspaceProfiles.workspaceId, this.ctx.workspaceId))
-    return { on: row?.on ?? false, timezone: row?.timezone ?? "UTC" }
+    return {
+      on: row?.on ?? false,
+      timezone: row?.timezone ?? "UTC",
+      rounding: {
+        mode: row?.roundingMode ?? "off",
+        minutes: row?.roundingMinutes ?? 15,
+      } satisfies TimeRounding,
+      lockedBefore: row?.lockedBefore ?? null,
+    }
+  }
+
+  /** The workspace's rounding rule for invoices and reports. */
+  async rounding(): Promise<TimeRounding> {
+    return (await this.settings()).rounding
+  }
+
+  /** Time dated before this day is locked (null = no locked period). */
+  async lockedBefore(): Promise<string | null> {
+    return (await this.settings()).lockedBefore
   }
 
   /** Approvals apply: the setting is on and the plan includes them. */
@@ -143,12 +165,19 @@ export class TimesheetApprovalsService {
   }
 
   /**
-   * Refuse changes to a member's entries dated in a submitted or approved
-   * week. Former members (null) and workspaces without approvals pass.
+   * Refuse changes to entries dated in the workspace's locked period (any
+   * member), or in a member's submitted or approved week.
    */
   async assertOpen(memberId: string | null, dates: (string | undefined)[]) {
     const ds = dates.filter((d): d is string => Boolean(d))
-    if (!memberId || ds.length === 0) return
+    if (ds.length === 0) return
+    const lockedBefore = await this.lockedBefore()
+    if (lockedBefore && ds.some((d) => d < lockedBefore))
+      throw new ConflictException({
+        message: `Time before ${lockedBefore} is locked. Ask an admin to move the lock date in Settings → General.`,
+        code: "time_period_locked",
+      })
+    if (!memberId) return
     const weeks = [...new Set(ds.map(weekOf))].sort()
     const locked = await this.lockedWeeks(
       [memberId],

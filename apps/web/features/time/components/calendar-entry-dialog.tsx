@@ -147,6 +147,10 @@ export function CalendarEntryDialog({
               On invoice {entry.invoiceNumber ?? "(draft)"}, so it can&apos;t
               change. Delete that draft invoice to free it.
             </DialogDescription>
+          ) : readOnly && entry?.periodLocked ? (
+            <DialogDescription>
+              Time before the workspace&apos;s lock date can&apos;t change.
+            </DialogDescription>
           ) : readOnly && entry?.approvalLocked ? (
             <DialogDescription>
               This week&apos;s timesheet is submitted or approved, so its time

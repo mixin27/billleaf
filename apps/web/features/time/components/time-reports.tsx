@@ -5,10 +5,13 @@ import {
   type ReportGroup,
   type SummaryReport,
   type TimeEntry,
+  roundingLabel,
 } from "@workspace/contracts"
 import { Button } from "@workspace/ui/components/button"
 import { Card, CardContent } from "@workspace/ui/components/card"
+import { Checkbox } from "@workspace/ui/components/checkbox"
 import { Input } from "@workspace/ui/components/input"
+import { Label } from "@workspace/ui/components/label"
 import {
   Select,
   SelectContent,
@@ -126,7 +129,14 @@ function profits(report: Pick<SummaryReport, "amounts" | "costs">) {
  */
 export function TimeReports({ today }: { today: string }) {
   const { can } = usePermissions()
-  const locale = useWorkspaceProfile().data?.locale
+  const profile = useWorkspaceProfile().data
+  const locale = profile?.locale
+  const rule = profile
+    ? {
+        mode: profile.timeRoundingMode,
+        minutes: profile.timeRoundingMinutes,
+      }
+    : null
   const [s, set] = useQueryStates({
     view: parseAsStringLiteral(VIEWS).withDefault("summary"),
     range: parseAsStringLiteral(PRESETS).withDefault("this-week"),
@@ -141,6 +151,8 @@ export function TimeReports({ today }: { today: string }) {
       "date",
     ] as const).withDefault("project"),
     billable: parseAsStringLiteral(["true", "false"] as const),
+    /** "false" = exact time when the workspace rounds. */
+    rounded: parseAsStringLiteral(["false"] as const),
     project: parseAsString,
     tag: parseAsString,
   })
@@ -159,6 +171,7 @@ export function TimeReports({ today }: { today: string }) {
         : {}),
     ...(s.tag ? { tagId: [s.tag] } : {}),
     ...(table.q ? { q: table.q } : {}),
+    ...(s.rounded ? { rounded: s.rounded } : {}),
   }
   const groupBy =
     s.view === "weekly" && s.groupBy === "date" ? "project" : s.groupBy
@@ -336,6 +349,20 @@ export function TimeReports({ today }: { today: string }) {
             <SelectItem value="false">Non-billable</SelectItem>
           </SelectContent>
         </Select>
+        {rule && rule.mode !== "off" ? (
+          <Label
+            className="flex h-8 items-center gap-2 rounded-md border px-2.5 text-sm font-normal"
+            title="Each entry rounded like on invoices (Settings → General)"
+          >
+            <Checkbox
+              checked={!s.rounded}
+              onCheckedChange={(v) =>
+                void set({ rounded: v === true ? null : "false" })
+              }
+            />
+            Rounded ({roundingLabel(rule).toLowerCase()})
+          </Label>
+        ) : null}
         {s.view !== "detailed" ? (
           <Select
             items={Object.fromEntries(

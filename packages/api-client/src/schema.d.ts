@@ -3605,6 +3605,11 @@ export interface components {
       paymentTermsDays: number
       invoiceReminderOffsets: number[]
       timesheetApprovals: boolean
+      /** @enum {string} */
+      timeRoundingMode: "off" | "up" | "nearest" | "down"
+      timeRoundingMinutes: number
+      /** Format: date */
+      timeLockedBefore: string | null
       defaultTaxRateBps: number
       documentFooter: string | null
       brandColor: string | null
@@ -3625,6 +3630,11 @@ export interface components {
       paymentTermsDays?: number
       invoiceReminderOffsets?: number[]
       timesheetApprovals?: boolean
+      /** @enum {string} */
+      timeRoundingMode?: "off" | "up" | "nearest" | "down"
+      timeRoundingMinutes?: number
+      /** Format: date */
+      timeLockedBefore?: string | null
       defaultTaxRateBps?: number
       documentFooter?: string | null
       brandColor?: (string | null) | ""
@@ -5360,6 +5370,7 @@ export interface components {
         isRunning: boolean
         isMine: boolean
         approvalLocked: boolean
+        periodLocked: boolean
       }[]
       totalSeconds: number
       billableSeconds: number
@@ -5405,6 +5416,7 @@ export interface components {
         isRunning: boolean
         isMine: boolean
         approvalLocked: boolean
+        periodLocked: boolean
       } | null
     }
     StartDto: {
@@ -5456,6 +5468,7 @@ export interface components {
       isRunning: boolean
       isMine: boolean
       approvalLocked: boolean
+      periodLocked: boolean
     }
     UpdateRunningDto: {
       /** Format: uuid */
@@ -5671,6 +5684,8 @@ export interface components {
         note: string | null
       } | null
       locked: boolean
+      /** Format: date */
+      lockedBefore: string | null
     }
     SetTimesheetCellDto: {
       /** Format: date */
@@ -5719,6 +5734,11 @@ export interface components {
         }[]
         byDay: number[]
       }[]
+      rounding: {
+        /** @enum {string} */
+        mode: "off" | "up" | "nearest" | "down"
+        minutes: number
+      } | null
     }
     DetailedReportDto_Output: {
       items: {
@@ -5761,12 +5781,18 @@ export interface components {
         isRunning: boolean
         isMine: boolean
         approvalLocked: boolean
+        periodLocked: boolean
       }[]
       total: number
       page: number
       pageSize: number
       totalSeconds: number
       billableSeconds: number
+      rounding: {
+        /** @enum {string} */
+        mode: "off" | "up" | "nearest" | "down"
+        minutes: number
+      } | null
     }
     ClockifyImportResultDto_Output: {
       dryRun: boolean
@@ -10675,6 +10701,7 @@ export interface operations {
         withoutProject?: "true"
         billable?: "true" | "false"
         q?: string
+        rounded?: "true" | "false"
         groupBy?: "project" | "client" | "member" | "tag" | "task" | "date"
       }
       header?: never
@@ -10705,6 +10732,7 @@ export interface operations {
         withoutProject?: "true"
         billable?: "true" | "false"
         q?: string
+        rounded?: "true" | "false"
         page?: number
         pageSize?: number
         sort?: string
@@ -10737,6 +10765,7 @@ export interface operations {
         withoutProject?: "true"
         billable?: "true" | "false"
         q?: string
+        rounded?: "true" | "false"
       }
       header?: never
       path?: never

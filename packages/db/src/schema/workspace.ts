@@ -2,7 +2,14 @@
  * Workspace business profile (1:1 with `organization`). Name/slug/logo stay on
  * Better Auth's `organization`; everything that appears on documents lives here.
  */
-import { boolean, integer, pgTable, text, uuid } from "drizzle-orm/pg-core"
+import {
+  boolean,
+  date,
+  integer,
+  pgTable,
+  text,
+  uuid,
+} from "drizzle-orm/pg-core"
 
 import { timestamps } from "./_shared.js"
 import { organization } from "./auth.js"
@@ -42,6 +49,16 @@ export const workspaceProfiles = pgTable("workspace_profiles", {
    * only approved time can be invoiced.
    */
   timesheetApprovals: boolean().notNull().default(false),
+  /**
+   * Rounding for invoices and reports: off | up | nearest | down, to a step
+   * in minutes. Each entry rounds on its own; tracked time stays exact.
+   */
+  timeRoundingMode: text({ enum: ["off", "up", "nearest", "down"] })
+    .notNull()
+    .default("off"),
+  timeRoundingMinutes: integer().notNull().default(15),
+  /** Time dated before this day can't be added, changed or deleted. */
+  timeLockedBefore: date({ mode: "string" }),
   /** Basis points: 700 = 7.00% */
   defaultTaxRateBps: integer().notNull().default(0),
   documentFooter: text(),

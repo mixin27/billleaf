@@ -4884,6 +4884,15 @@
             }
           },
           {
+            "name": "rounded",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["true", "false"]
+            }
+          },
+          {
             "name": "groupBy",
             "required": false,
             "in": "query",
@@ -5056,6 +5065,15 @@
             "schema": {
               "maxLength": 200,
               "type": "string"
+            }
+          },
+          {
+            "name": "rounded",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["true", "false"]
             }
           },
           {
@@ -5252,6 +5270,15 @@
             "schema": {
               "maxLength": 200,
               "type": "string"
+            }
+          },
+          {
+            "name": "rounded",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["true", "false"]
             }
           }
         ],
@@ -11714,6 +11741,9 @@
                 },
                 "approvalLocked": {
                   "type": "boolean"
+                },
+                "periodLocked": {
+                  "type": "boolean"
                 }
               },
               "required": [
@@ -11737,7 +11767,8 @@
                 "invoiceNumber",
                 "isRunning",
                 "isMine",
-                "approvalLocked"
+                "approvalLocked",
+                "periodLocked"
               ],
               "additionalProperties": false
             }
@@ -11872,6 +11903,9 @@
               },
               "approvalLocked": {
                 "type": "boolean"
+              },
+              "periodLocked": {
+                "type": "boolean"
               }
             },
             "required": [
@@ -11895,7 +11929,8 @@
               "invoiceNumber",
               "isRunning",
               "isMine",
-              "approvalLocked"
+              "approvalLocked",
+              "periodLocked"
             ],
             "additionalProperties": false,
             "nullable": true
@@ -12051,6 +12086,9 @@
           },
           "approvalLocked": {
             "type": "boolean"
+          },
+          "periodLocked": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -12074,7 +12112,8 @@
           "invoiceNumber",
           "isRunning",
           "isMine",
-          "approvalLocked"
+          "approvalLocked",
+          "periodLocked"
         ],
         "additionalProperties": false
       },
@@ -12812,6 +12851,12 @@
           },
           "locked": {
             "type": "boolean"
+          },
+          "lockedBefore": {
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+            "nullable": true
           }
         },
         "required": [
@@ -12820,7 +12865,8 @@
           "rows",
           "approvalsEnabled",
           "approval",
-          "locked"
+          "locked",
+          "lockedBefore"
         ],
         "additionalProperties": false
       },
@@ -13027,6 +13073,23 @@
               ],
               "additionalProperties": false
             }
+          },
+          "rounding": {
+            "type": "object",
+            "properties": {
+              "mode": {
+                "type": "string",
+                "enum": ["off", "up", "nearest", "down"]
+              },
+              "minutes": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": ["mode", "minutes"],
+            "additionalProperties": false,
+            "nullable": true
           }
         },
         "required": [
@@ -13038,7 +13101,8 @@
           "amounts",
           "costs",
           "byDay",
-          "groups"
+          "groups",
+          "rounding"
         ],
         "additionalProperties": false
       },
@@ -13160,6 +13224,9 @@
                 },
                 "approvalLocked": {
                   "type": "boolean"
+                },
+                "periodLocked": {
+                  "type": "boolean"
                 }
               },
               "required": [
@@ -13183,7 +13250,8 @@
                 "invoiceNumber",
                 "isRunning",
                 "isMine",
-                "approvalLocked"
+                "approvalLocked",
+                "periodLocked"
               ],
               "additionalProperties": false
             }
@@ -13212,6 +13280,23 @@
             "type": "integer",
             "minimum": -9007199254740991,
             "maximum": 9007199254740991
+          },
+          "rounding": {
+            "type": "object",
+            "properties": {
+              "mode": {
+                "type": "string",
+                "enum": ["off", "up", "nearest", "down"]
+              },
+              "minutes": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": ["mode", "minutes"],
+            "additionalProperties": false,
+            "nullable": true
           }
         },
         "required": [
@@ -13220,7 +13305,8 @@
           "page",
           "pageSize",
           "totalSeconds",
-          "billableSeconds"
+          "billableSeconds",
+          "rounding"
         ],
         "additionalProperties": false
       },
