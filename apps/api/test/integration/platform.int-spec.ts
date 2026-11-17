@@ -5761,3 +5761,103 @@ describe("Toggl Track and Harvest imports", () => {
     ).toBe("invalid_csv")
   })
 })
+
+describe("import history and undo", () => {
+  it("lists imports and undoes them, keeping invoiced and locked entries", async () => {
+    const boundary = "----billleaf-import"
+    const importToggl = async (c: Client, csv: string) => {
+      const res = await t.app.inject({
+        method: "POST",
+        url: "/v1/time/import/toggl",
+        headers: {
+          ...c.headers(),
+          "content-type": `multipart/form-data; boundary=${boundary}`,
+        },
+        payload: Buffer.concat([
+          Buffer.from(
+            `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="toggl.csv"\r\nContent-Type: text/csv\r\n\r\n`
+          ),
+          Buffer.from(csv),
+          Buffer.from(`\r\n--${boundary}--\r\n`),
+        ]),
+      })
+      return JSON.parse(res.body)
+    }
+    const owner = new Client(t)
+    const { email } = await owner.signUp("Undo Owner")
+    await owner.createWorkspace("Undo Studio")
+    await owner.patch("/v1/workspace", {
+      timezone: "UTC",
+      defaultCurrency: "USD",
+    })
+    const toggl = readFileSync(
+      new URL("../fixtures/toggl-detailed.csv", import.meta.url),
+      "utf8"
+    ).replaceAll("IMPORTER_EMAIL", email)
+    expect((await importToggl(owner, toggl)).imported).toBe(3)
+
+    const history = (await owner.get("/v1/time/imports")).body.items
+    expect(history).toHaveLength(1)
+    expect(history[0]).toMatchObject({
+      source: "toggl",
+      filename: "toggl.csv",
+      importedCount: 3,
+      invalidCount: 1,
+      createdByName: "Undo Owner",
+      remainingCount: 3,
+      removedCount: 0,
+      undoneAt: null,
+    })
+    const batchId = history[0].id
+
+    // Invoice one entry and lock the day before another.
+    const entries = (
+      await owner.get("/v1/time-entries?from=2026-11-04&to=2026-11-05")
+    ).body.items
+    const byDesc = (d: string) =>
+      entries.find((e: { description: string }) => e.description === d)
+    const logo = byDesc("Logo concepts")
+    await owner.put("/v1/rates/default", { hourlyRate: 5_000 })
+    expect(
+      (
+        await owner.post("/v1/invoices/from-time", {
+          projectId: logo.projectId,
+          entryIds: [logo.id],
+        })
+      ).status
+    ).toBe(201)
+    await owner.patch("/v1/workspace", { timeLockedBefore: "2026-11-05" })
+
+    const first = await owner.post(`/v1/time/imports/${batchId}/undo`)
+    expect(first.status).toBe(200)
+    expect(first.body).toMatchObject({
+      removed: 1, // Research (Nov 5)
+      keptInvoiced: 1, // Logo concepts
+      keptLocked: 1, // Standup (Nov 4)
+      batch: { remainingCount: 2, removedCount: 1 },
+    })
+    expect(first.body.batch.undoneAt).toEqual(expect.any(String))
+
+    // Once unlocked, undo again removes the rest except invoiced time.
+    await owner.patch("/v1/workspace", { timeLockedBefore: null })
+    const second = (await owner.post(`/v1/time/imports/${batchId}/undo`)).body
+    expect(second).toMatchObject({
+      removed: 1,
+      keptInvoiced: 1,
+      keptLocked: 0,
+      batch: { remainingCount: 1, removedCount: 2 },
+    })
+    // Undone rows can be imported again; the kept one is a duplicate.
+    const again = await importToggl(owner, toggl)
+    expect(again).toMatchObject({ imported: 2, duplicates: 1 })
+    expect((await owner.get("/v1/time/imports")).body.items).toHaveLength(2)
+
+    // Audit, not found, and time.manage only.
+    expect(
+      (await owner.get("/v1/audit?action=time.import_undone")).body.items
+    ).toHaveLength(2)
+    expect(
+      (await owner.post(`/v1/time/imports/${crypto.randomUUID()}/undo`)).status
+    ).toBe(404)
+  })
+})

@@ -209,3 +209,39 @@ export const clockifyImportResultSchema = z.object({
   ),
 })
 export type ClockifyImportResult = z.infer<typeof clockifyImportResultSchema>
+
+// ── Import history ────────────────────────────────────────
+
+/** One past import (newest first in the list). */
+export const timeImportBatchSchema = z.object({
+  id: z.string(),
+  source: timeImportSourceSchema,
+  filename: z.string(),
+  importedCount: z.number().int(),
+  duplicateCount: z.number().int(),
+  invalidCount: z.number().int(),
+  /** Who ran it; null if they've left the workspace. */
+  createdByName: z.string().nullable(),
+  createdAt: z.iso.datetime(),
+  /** Entries from this import still in Billleaf. */
+  remainingCount: z.number().int(),
+  /** Entries removed by undo so far. */
+  removedCount: z.number().int(),
+  undoneAt: z.iso.datetime().nullable(),
+})
+export type TimeImportBatch = z.infer<typeof timeImportBatchSchema>
+export const timeImportBatchListSchema = z.object({
+  items: z.array(timeImportBatchSchema),
+})
+
+/**
+ * Undo an import: its entries are deleted, except ones that are invoiced
+ * or dated in a locked period / submitted or approved week (kept).
+ */
+export const undoTimeImportResultSchema = z.object({
+  removed: z.number().int(),
+  keptInvoiced: z.number().int(),
+  keptLocked: z.number().int(),
+  batch: timeImportBatchSchema,
+})
+export type UndoTimeImportResult = z.infer<typeof undoTimeImportResultSchema>

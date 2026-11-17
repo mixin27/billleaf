@@ -8,6 +8,7 @@ import { usePermissions } from "@/components/permissions/can"
 import { useWorkspaceProfile } from "@/features/workspace"
 
 import { ClockifyImport } from "./clockify-import"
+import { ImportHistory } from "./import-history"
 import { useShortcut } from "@/lib/shortcuts"
 
 import { useTimesheetApprovals } from "../api/approvals"
@@ -115,7 +116,10 @@ export function Tracker() {
       ) : current === "reports" ? (
         <TimeReports today={today} />
       ) : (
-        <ClockifyImport />
+        <>
+          <ClockifyImport />
+          <ImportHistory />
+        </>
       )}
       <CalendarEntryDialog
         open={logSlot !== null}

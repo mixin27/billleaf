@@ -82,3 +82,12 @@ You'll see a preview first: how many entries, new clients, projects, tasks and t
 - **People** are matched to members by email (Clockify, Toggl), or by name when the file has no email (Harvest; the name must be unique in the workspace). Anyone not matched is assigned to you.
 - **Times** from Clockify and Toggl are read in the workspace's time zone. Harvest exports hours per day without clock times, so those entries show under **No set time** in the calendar until you drag them onto it.
 - Rows in a [locked period](#time-rules) or an approved week are skipped and listed.
+
+### Undoing an import
+
+Below the importer, **Past imports** lists every import: the app, the file, who ran it, and how many entries came in. **Undo** deletes that import's time entries so you can fix the file and import it again. It keeps:
+
+- entries already on an invoice (delete or void the invoice first to free them), and
+- entries in a [locked period](#time-rules) or a submitted or approved week.
+
+Run **Undo** again later to remove what was kept once it's free. Clients, projects, tasks and tags the import created stay; delete them yourself if you don't need them.

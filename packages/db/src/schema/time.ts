@@ -32,6 +32,9 @@ export const timeImportBatches = pgTable("time_import_batches", {
   createdByMemberId: uuid().references(() => member.id, {
     onDelete: "set null",
   }),
+  /** Last undo: when, and how many entries it removed in total. */
+  undoneAt: timestamp({ withTimezone: true }),
+  removedCount: integer().notNull().default(0),
   ...timestamps,
 })
 
@@ -82,6 +85,7 @@ export const timeEntries = pgTable(
     index().on(t.projectId),
     index().on(t.memberId, t.entryDate),
     index().on(t.invoiceId),
+    index().on(t.importBatchId),
     // One running timer per member.
     uniqueIndex("time_entries_one_running_per_member")
       .on(t.memberId)

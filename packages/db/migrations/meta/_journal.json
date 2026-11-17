@@ -218,6 +218,13 @@
       "when": 1794914165236,
       "tag": "0030_perpetual_wallflower",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1794924137531,
+      "tag": "0031_daily_ultimatum",
+      "breakpoints": true
     }
   ]
 }

@@ -4,6 +4,8 @@ import {
   Controller,
   Get,
   Header,
+  HttpCode,
+  ParseUUIDPipe,
   NotFoundException,
   Param,
   Post,
@@ -16,7 +18,9 @@ import { ApiTags } from "@nestjs/swagger"
 import {
   clockifyImportOptionsSchema,
   clockifyImportResultSchema,
+  timeImportBatchListSchema,
   timeImportSourceSchema,
+  undoTimeImportResultSchema,
   detailedReportQuerySchema,
   detailedReportSchema,
   reportFiltersSchema,
@@ -44,6 +48,10 @@ class DetailedReportDto extends createZodDto(detailedReportSchema) {}
 class ReportCsvQueryDto extends createZodDto(reportFiltersSchema) {}
 class ClockifyImportOptionsDto extends createZodDto(
   clockifyImportOptionsSchema
+) {}
+class TimeImportBatchListDto extends createZodDto(timeImportBatchListSchema) {}
+class UndoTimeImportResultDto extends createZodDto(
+  undoTimeImportResultSchema
 ) {}
 class ClockifyImportResultDto extends createZodDto(
   clockifyImportResultSchema
@@ -96,6 +104,21 @@ export class TimeReportsController {
       .header("content-type", "text/csv; charset=utf-8")
       .header("content-disposition", `attachment; filename="${name}"`)
       .send(csv)
+  }
+
+  /** Past imports, newest first (time.manage). */
+  @Get("imports")
+  @ZodResponse({ status: 200, type: TimeImportBatchListDto })
+  async imports() {
+    return { items: await this.clockify.history() }
+  }
+
+  /** Remove an import's entries (invoiced or locked ones are kept). */
+  @Post("imports/:id/undo")
+  @HttpCode(200)
+  @ZodResponse({ status: 200, type: UndoTimeImportResultDto })
+  undoImport(@Param("id", ParseUUIDPipe) id: string) {
+    return this.clockify.undo(id)
   }
 
   /**
