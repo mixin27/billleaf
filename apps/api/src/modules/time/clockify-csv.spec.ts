@@ -9,6 +9,7 @@ import {
   parseClockifyCsv,
   parseCsv,
   parseDate,
+  parseImportCsv,
   parseTime,
 } from "./clockify-csv.js"
 
@@ -117,6 +118,74 @@ describe("time zones", () => {
     ).toBe("2026-11-03T02:30:00.000Z")
     expect(localParts(new Date("2026-11-03T02:30:00Z"), "Asia/Yangon")).toEqual(
       { date: "2026-11-03", time: "09:00:00" }
+    )
+  })
+})
+
+describe("Toggl Track detailed report", () => {
+  const toggl = readFileSync(
+    new URL("../../../test/fixtures/toggl-detailed.csv", import.meta.url),
+    "utf8"
+  )
+  it("parses through the same column mapping, YYYY-MM-DD dates and 24h times", () => {
+    const p = parseImportCsv("toggl", toggl)
+    expect(p.dateFormat).toBe("YMD")
+    expect(p.rows).toHaveLength(3)
+    expect(p.rows[0]).toMatchObject({
+      user: "Importer",
+      client: "Northwind",
+      project: "Brand refresh",
+      task: "Sketching",
+      description: "Logo concepts",
+      billable: true,
+      tags: ["Design", "Deep work"],
+      startDate: "2026-11-04",
+      startTime: "09:00:00",
+      endTime: "10:15:00",
+    })
+    expect(p.rows[0]!.seconds).toBeUndefined()
+    // Past midnight keeps its end date.
+    expect(p.rows[1]).toMatchObject({ endDate: "2026-11-05", billable: false })
+    expect(p.invalid).toEqual([{ line: 5, message: "End is not after start" }])
+  })
+  it("names the source in format errors", () => {
+    expect(() => parseImportCsv("toggl", "Foo,Bar\n1,2")).toThrow(
+      /Toggl Track detailed report/
+    )
+  })
+})
+
+describe("Harvest detailed time report", () => {
+  const harvest = readFileSync(
+    new URL("../../../test/fixtures/harvest-detailed.csv", import.meta.url),
+    "utf8"
+  )
+  it("turns dates and decimal hours into duration-only rows", () => {
+    const p = parseImportCsv("harvest", harvest)
+    expect(p.rows).toHaveLength(3)
+    expect(p.rows[0]).toMatchObject({
+      user: "Harvest Person",
+      email: null,
+      client: "Northwind",
+      project: "Brand refresh",
+      task: "Design",
+      description: "Moodboard",
+      billable: true,
+      startDate: "2026-11-06",
+      seconds: 5_400,
+      tags: [],
+    })
+    expect(p.rows[1]).toMatchObject({
+      description: "Kickoff, with notes",
+      seconds: 900,
+      billable: false,
+    })
+    expect(p.rows[2]!.description).toBeNull()
+    expect(p.invalid).toEqual([{ line: 5, message: "No hours" }])
+  })
+  it("rejects files without Date and Hours", () => {
+    expect(() => parseImportCsv("harvest", "Day,Time\n1,2")).toThrow(
+      ClockifyFormatError
     )
   })
 })

@@ -1,6 +1,12 @@
 "use client"
 
-import { type ClockifyImportResult, formatDuration } from "@workspace/contracts"
+import {
+  type ClockifyImportResult,
+  formatDuration,
+  TIME_IMPORT_SOURCES,
+  type TimeImportSource,
+} from "@workspace/contracts"
+import { Tabs, TabsList, TabsTrigger } from "@workspace/ui/components/tabs"
 import { Badge } from "@workspace/ui/components/badge"
 import { Button } from "@workspace/ui/components/button"
 import { Card, CardContent } from "@workspace/ui/components/card"
@@ -33,13 +39,49 @@ const DATE_FORMATS: Record<DateFormat, string> = {
 }
 const MAX_BYTES = 10 * 1024 * 1024
 
+const SOURCES: Record<
+  TimeImportSource,
+  { name: string; how: React.ReactNode }
+> = {
+  clockify: {
+    name: "Clockify",
+    how: (
+      <>
+        In Clockify, open <b>Reports → Detailed</b>, pick the date range, then{" "}
+        <b>Export → Save as CSV</b>.
+      </>
+    ),
+  },
+  toggl: {
+    name: "Toggl Track",
+    how: (
+      <>
+        In Toggl Track, open <b>Reports → Detailed</b>, pick the date range,
+        then <b>Export → Download CSV</b>.
+      </>
+    ),
+  },
+  harvest: {
+    name: "Harvest",
+    how: (
+      <>
+        In Harvest, open <b>Reports → Time</b>, pick the date range, choose{" "}
+        <b>Detailed report</b>, then <b>Export → CSV</b>. Harvest has no clock
+        times, so entries come in as hours per day (shown under &ldquo;No set
+        time&rdquo; in the calendar). People are matched by name.
+      </>
+    ),
+  },
+}
+
 /**
- * Three steps: choose a Clockify "Detailed report" CSV → preview what will
- * be created and imported → import. Importing the same file twice adds
- * nothing (every row has a fingerprint).
+ * Three steps: choose a detailed CSV export (Clockify, Toggl Track or
+ * Harvest) → preview what will be created and imported → import.
+ * Importing the same file twice adds nothing (every row has a fingerprint).
  */
 export function ClockifyImport() {
   const run = useClockifyImport()
+  const [source, setSource] = React.useState<TimeImportSource>("clockify")
   const [file, setFile] = React.useState<File | null>(null)
   const [dateFormat, setDateFormat] = React.useState<DateFormat>("auto")
   const [preview, setPreview] = React.useState<ClockifyImportResult | null>(
@@ -56,7 +98,7 @@ export function ClockifyImport() {
   }
   const doPreview = (f: File, fmt: DateFormat) =>
     run.mutate(
-      { file: f, dryRun: true, dateFormat: fmt },
+      { file: f, dryRun: true, dateFormat: fmt, source },
       {
         onSuccess: setPreview,
         onError: (e) => {
@@ -100,12 +142,30 @@ export function ClockifyImport() {
     <div className="flex flex-col gap-4">
       <Card>
         <CardContent className="flex flex-col gap-4">
+          <Tabs
+            value={source}
+            onValueChange={(v) => {
+              setSource(v as TimeImportSource)
+              reset()
+            }}
+          >
+            <TabsList>
+              {TIME_IMPORT_SOURCES.map((s) => (
+                <TabsTrigger key={s} value={s}>
+                  {SOURCES[s].name}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
           <div>
-            <p className="text-base font-semibold">Import from Clockify</p>
+            <p className="text-base font-semibold">
+              Import from {SOURCES[source].name}
+            </p>
             <p className="text-sm text-muted-foreground">
-              In Clockify, open <b>Reports → Detailed</b>, pick the date range,
-              then <b>Export → Save as CSV</b>. Up to 50,000 entries (10 MB) per
-              file. Times are read in your workspace’s time zone.
+              {SOURCES[source].how} Up to 50,000 entries (10 MB) per file.
+              {source === "harvest"
+                ? ""
+                : " Times are read in your workspace’s time zone."}
             </p>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -270,7 +330,7 @@ export function ClockifyImport() {
                 onClick={() =>
                   file &&
                   run.mutate(
-                    { file, dryRun: false, dateFormat },
+                    { file, dryRun: false, dateFormat, source },
                     {
                       onSuccess: setDone,
                       onError: (e) => toast.error(errorMessage(e)),

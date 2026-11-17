@@ -4,6 +4,8 @@ import {
   Controller,
   Get,
   Header,
+  NotFoundException,
+  Param,
   Post,
   Put,
   Query,
@@ -14,6 +16,7 @@ import { ApiTags } from "@nestjs/swagger"
 import {
   clockifyImportOptionsSchema,
   clockifyImportResultSchema,
+  timeImportSourceSchema,
   detailedReportQuerySchema,
   detailedReportSchema,
   reportFiltersSchema,
@@ -96,15 +99,20 @@ export class TimeReportsController {
   }
 
   /**
-   * multipart/form-data with a `file` field: a Clockify "Detailed report"
-   * CSV (≤ 10 MB). `?dryRun=true` previews without writing anything.
+   * multipart/form-data with a `file` field: a detailed CSV export (≤ 10 MB)
+   * from Clockify, Toggl Track or Harvest. `?dryRun=true` previews without
+   * writing anything.
    */
-  @Post("import/clockify")
+  @Post("import/:source")
   @ZodResponse({ status: 201, type: ClockifyImportResultDto })
-  async importClockify(
+  async importTime(
+    @Param("source") sourceParam: string,
     @Req() req: FastifyRequest,
     @Query() q: ClockifyImportOptionsDto
   ) {
+    const source = timeImportSourceSchema.safeParse(sourceParam)
+    if (!source.success)
+      throw new NotFoundException("Import from clockify, toggl or harvest")
     if (!req.isMultipart())
       throw new BadRequestException("Send the CSV as multipart/form-data")
     const file = await req.file({ limits: { fileSize: MAX_IMPORT_BYTES } })
@@ -119,10 +127,14 @@ export class TimeReportsController {
       })
     }
     return this.clockify.import(
-      { filename: file.filename || "clockify.csv", text: buf.toString("utf8") },
+      {
+        filename: file.filename || `${source.data}.csv`,
+        text: buf.toString("utf8"),
+      },
       {
         dryRun: (q as { dryRun?: string }).dryRun === "true",
         dateFormat: (q as { dateFormat: "auto" }).dateFormat ?? "auto",
+        source: source.data,
       }
     )
   }

@@ -1,0 +1,5 @@
+Date,Client,Project,Project Code,Task,Notes,Hours,Hours Rounded,Billable?,Invoiced?,Approved?,First Name,Last Name,Roles,Employee?,Billable Rate,Billable Amount,Cost Rate,Cost Amount,Currency,External Reference URL
+2026-11-06,Northwind,Brand refresh,BR,Design,Moodboard,1.5,1.5,Yes,No,No,Harvest,Person,,Yes,80,120,0,0,US Dollar - USD,
+2026-11-06,Northwind,Brand refresh,BR,Meetings,"Kickoff, with notes",0.25,0.25,No,No,No,Harvest,Person,,Yes,0,0,0,0,US Dollar - USD,
+2026-11-07,Acme,Website,WEB,Development,,2,2,Yes,No,No,Unknown,Contractor,,No,80,160,0,0,US Dollar - USD,
+2026-11-07,Acme,Website,WEB,Development,No hours,,0,Yes,No,No,Harvest,Person,,Yes,80,0,0,0,US Dollar - USD,

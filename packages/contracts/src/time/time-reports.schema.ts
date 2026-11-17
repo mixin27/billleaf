@@ -162,9 +162,14 @@ export const detailedReportSchema = paged(timeEntrySchema).extend({
 })
 export type DetailedReport = z.infer<typeof detailedReportSchema>
 
-// ── Clockify import ───────────────────────────────────────
+// ── Time import (Clockify, Toggl Track, Harvest) ──────────
 
 export const CLOCKIFY_DATE_FORMATS = ["auto", "MDY", "DMY", "YMD"] as const
+
+/** Apps whose CSV exports can be imported (`POST /v1/time/import/{source}`). */
+export const TIME_IMPORT_SOURCES = ["clockify", "toggl", "harvest"] as const
+export type TimeImportSource = (typeof TIME_IMPORT_SOURCES)[number]
+export const timeImportSourceSchema = z.enum(TIME_IMPORT_SOURCES)
 
 export const clockifyImportOptionsSchema = z.object({
   /** "true" = preview only; nothing is written. */

@@ -8,6 +8,7 @@ import {
 } from "@tanstack/react-query"
 import type {
   ClockifyImportResult,
+  TimeImportSource,
   DetailedReportQuery,
   ReportFilters,
   SetTimesheetCellInput,
@@ -120,7 +121,7 @@ export async function downloadReportCsv(filters: ReportFilters) {
   URL.revokeObjectURL(url)
 }
 
-/** Upload a Clockify CSV (multipart: openapi-fetch doesn't do it well). */
+/** Upload a Clockify, Toggl or Harvest CSV (multipart: openapi-fetch doesn't do it well). */
 export function useClockifyImport() {
   const qc = useQueryClient()
   const ws = useWorkspaceStore((s) => s.workspace?.id)
@@ -129,11 +130,12 @@ export function useClockifyImport() {
       file: File
       dryRun: boolean
       dateFormat: "auto" | "MDY" | "DMY" | "YMD"
+      source: TimeImportSource
     }): Promise<ClockifyImportResult> => {
       const form = new FormData()
       form.append("file", v.file)
       const res = await fetch(
-        `${env.NEXT_PUBLIC_API_URL}/v1/time/import/clockify?${toSearch({
+        `${env.NEXT_PUBLIC_API_URL}/v1/time/import/${v.source}?${toSearch({
           dryRun: v.dryRun ? "true" : "false",
           dateFormat: v.dateFormat,
         })}`,

@@ -1,5 +1,5 @@
 ---
-title: Import clockify
+title: Import time
 full: true
 _openapi:
   preload:
@@ -19,7 +19,7 @@ export default function Layout(props) {
   return (
     <>
       {props.children}
-      <OpenAPIPage document="./openapi/public.json" operations={[{"path":"/v1/time/import/clockify","method":"post"}]} showDescription />
+      <OpenAPIPage document="./openapi/public.json" operations={[{"path":"/v1/time/import/{source}","method":"post"}]} showDescription />
     </>
   );
 }

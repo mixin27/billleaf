@@ -14,7 +14,8 @@ import { WorkspaceProfileService } from "../workspace/workspace-profile.service.
 import {
   ClockifyFormatError,
   type DateFormat,
-  parseClockifyCsv,
+  type ImportSource,
+  parseImportCsv,
   rowHash,
 } from "./clockify-csv.js"
 import {
@@ -51,14 +52,19 @@ export class ClockifyImportService {
 
   async import(
     file: { filename: string; text: string },
-    opts: { dryRun: boolean; dateFormat: DateFormat | "auto" }
+    opts: {
+      dryRun: boolean
+      dateFormat: DateFormat | "auto"
+      source?: ImportSource
+    }
   ): Promise<ClockifyImportResult> {
     if (!this.can("time.manage"))
       throw new ForbiddenException("Importing time needs time.manage")
 
-    let parsed: ReturnType<typeof parseClockifyCsv>
+    const source = opts.source ?? "clockify"
+    let parsed: ReturnType<typeof parseImportCsv>
     try {
-      parsed = parseClockifyCsv(file.text, opts.dateFormat)
+      parsed = parseImportCsv(source, file.text, opts.dateFormat)
     } catch (e) {
       if (e instanceof ClockifyFormatError)
         throw new BadRequestException({
@@ -77,6 +83,15 @@ export class ClockifyImportService {
     const lookups = await this.repo.importLookups()
     const membersByEmail = new Map(
       lookups.members.map((m) => [m.email.toLowerCase(), m])
+    )
+    // By name when the file has no email (Harvest), if the name is unique.
+    const nameCounts = new Map<string, number>()
+    for (const m of lookups.members)
+      nameCounts.set(lower(m.name), (nameCounts.get(lower(m.name)) ?? 0) + 1)
+    const membersByName = new Map(
+      lookups.members
+        .filter((m) => nameCounts.get(lower(m.name)) === 1)
+        .map((m) => [lower(m.name), m])
     )
     const me = lookups.members.find((m) => m.id === this.ctx.memberId)!
 
@@ -99,8 +114,16 @@ export class ClockifyImportService {
     let duplicates = 0
 
     for (const row of parsed.rows) {
-      const startedAt = zonedToUtc(row.startDate, row.startTime, timezone)
-      const endedAt = zonedToUtc(row.endDate, row.endTime, timezone)
+      // Duration-only rows (Harvest) are anchored at 12:00 UTC of their date,
+      // like time logged as a date + duration in Billleaf.
+      const startedAt =
+        row.seconds !== undefined
+          ? new Date(`${row.startDate}T12:00:00Z`)
+          : zonedToUtc(row.startDate, row.startTime, timezone)
+      const endedAt =
+        row.seconds !== undefined
+          ? new Date(startedAt.getTime() + row.seconds * 1000)
+          : zonedToUtc(row.endDate, row.endTime, timezone)
       const seconds = Math.round(
         (endedAt.getTime() - startedAt.getTime()) / 1000
       )
@@ -115,9 +138,14 @@ export class ClockifyImportService {
         })
         continue
       }
-      const match = row.email ? membersByEmail.get(row.email) : undefined
+      const match = row.email
+        ? membersByEmail.get(row.email)
+        : row.user
+          ? membersByName.get(lower(row.user))
+          : undefined
       const who = row.email ?? lower(row.user)
       const hash = rowHash({
+        ...(source === "clockify" ? {} : { source }),
         who,
         startedAt,
         endedAt,
@@ -311,6 +339,7 @@ export class ClockifyImportService {
         startedAt: p.startedAt,
         endedAt: p.endedAt,
         durationSeconds: p.seconds,
+        hasTimes: p.row.seconds === undefined,
         billable: p.row.billable,
         externalHash: p.hash,
         tagIds: p.row.tags
@@ -322,6 +351,7 @@ export class ClockifyImportService {
     const { batchId, inserted } = await this.repo.database.transaction(
       async (tx) => {
         const batchId = await this.repo.createImportBatch(tx, {
+          source,
           filename: file.filename.slice(0, 255),
           createdByMemberId: this.ctx.memberId,
         })
@@ -340,7 +370,7 @@ export class ClockifyImportService {
     await this.audit.record("time.imported", {
       resourceType: "time_import_batch",
       resourceId: batchId,
-      metadata: { source: "clockify", entries: inserted },
+      metadata: { source, entries: inserted },
     })
     return {
       ...result,

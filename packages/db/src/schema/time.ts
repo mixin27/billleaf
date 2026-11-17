@@ -23,7 +23,7 @@ export const timeImportBatches = pgTable("time_import_batches", {
   workspaceId: uuid()
     .notNull()
     .references(() => organization.id, { onDelete: "cascade" }),
-  source: text({ enum: ["clockify"] }).notNull(),
+  source: text({ enum: ["clockify", "toggl", "harvest"] }).notNull(),
   filename: text().notNull(),
   /** Rows imported / skipped as already imported / skipped as invalid. */
   importedCount: integer().notNull().default(0),

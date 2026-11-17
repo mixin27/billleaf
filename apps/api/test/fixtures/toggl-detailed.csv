@@ -1,0 +1,5 @@
+User,Email,Client,Project,Task,Description,Billable,Start date,Start time,End date,End time,Duration,Tags,Amount (USD)
+Importer,IMPORTER_EMAIL,Northwind,Brand refresh,Sketching,Logo concepts,Yes,2026-11-04,09:00:00,2026-11-04,10:15:00,01:15:00,"Design, Deep work",100.00
+Importer,IMPORTER_EMAIL,Acme,Website,,Standup,No,2026-11-04,23:30:00,2026-11-05,00:15:00,00:45:00,,0.00
+Someone Else,someone@elsewhere.test,,,,Research,No,2026-11-05,13:00:00,2026-11-05,14:00:00,01:00:00,,0.00
+Importer,IMPORTER_EMAIL,Acme,Website,,Broken row,Yes,2026-11-05,15:00:00,2026-11-05,14:00:00,00:00:00,,0.00

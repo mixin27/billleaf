@@ -774,13 +774,16 @@ export class TimeRepository {
 
   async createImportBatch(
     tx: Database | Transaction,
-    values: { filename: string; createdByMemberId: string }
+    values: {
+      source: "clockify" | "toggl" | "harvest"
+      filename: string
+      createdByMemberId: string
+    }
   ) {
     const [row] = await tx
       .insert(timeImportBatches)
       .values({
         ...values,
-        source: "clockify",
         workspaceId: this.ctx.workspaceId,
       })
       .returning({ id: timeImportBatches.id })
