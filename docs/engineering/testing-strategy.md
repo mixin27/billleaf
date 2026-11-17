@@ -1,11 +1,11 @@
 # Testing Strategy
 
-| Layer             | Tool                                                                       | Scope                                                                                                                                      | Runs                                         |
-| ----------------- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------- |
-| Unit              | **Vitest**                                                                 | Pure logic: money, numbering formatters, permission resolution, Zod schemas, services with fakes, React hooks/components (Testing Library) | Every PR                                     |
-| Integration (API) | **Vitest** against real Postgres 17 + Valkey (docker locally, CI services) | Repositories, guards, controllers via Fastify `inject`, migrations apply cleanly                                                           | Every PR                                     |
-| End-to-end        | **Playwright**                                                             | Critical user journeys in the browser against web + api + docker services                                                                  | PRs touching web/api (smoke), nightly (full) |
-| Contract          | `pnpm gen:api-client` diff                                                 | Generated client matches the API's OpenAPI                                                                                                 | Every PR                                     |
+| Layer             | Tool                                                                       | Scope                                                                                                                                      | Runs                    |
+| ----------------- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------- |
+| Unit              | **Vitest**                                                                 | Pure logic: money, numbering formatters, permission resolution, Zod schemas, services with fakes, React hooks/components (Testing Library) | Every PR                |
+| Integration (API) | **Vitest** against real Postgres 17 + Valkey (docker locally, CI services) | Repositories, guards, controllers via Fastify `inject`, migrations apply cleanly                                                           | Every PR                |
+| End-to-end        | **Playwright** (`apps/e2e`)                                                | Critical user journeys in the browser against web + api + worker + docker services                                                         | Every PR (CI job `e2e`) |
+| Contract          | `pnpm gen:api-client` diff                                                 | Generated client matches the API's OpenAPI                                                                                                 | Every PR                |
 
 ## What must be tested
 
@@ -17,10 +17,15 @@
 
 ## Critical E2E journeys
 
-1. Sign up → verify email (Mailpit) → workspace created with Owner role.
-2. Invite member → accept → member sees only permitted UI.
-3. Create custom role → assign → guarded action 403 → grant → 200.
-4. (Phase 1) Create client → quote → convert to invoice → issue → record payment → receipt.
+In `apps/e2e/tests` (see `apps/e2e/README.md`):
+
+1. Sign up → verify email (Mailpit) → workspace created with Owner role. (`auth.spec.ts`)
+2. Invite member → accept → member sees only permitted UI; the API returns 403. (`permissions.spec.ts`)
+3. Client → quote → accepted in the portal → invoice → issue → record payment → receipt. (`invoicing.spec.ts`)
+4. Timer, calendar and timesheet → invoice unbilled time. (`time.spec.ts`)
+5. Phone width: no sideways scroll, drawer menu. (`mobile.spec.ts`)
+
+Not yet covered: custom role → 403 → grant → 200 in the browser (covered by API integration tests).
 
 ## Conventions
 
@@ -36,7 +41,7 @@
 pnpm test                         # all unit tests (turbo)
 pnpm test:integration             # API integration tests (requires pnpm infra:up)
 pnpm --filter api test            # one package
-pnpm --filter web test:e2e        # Playwright (requires infra:up)
+pnpm test:e2e                     # Playwright (requires infra:up; once: pnpm --filter e2e browsers)
 ```
 
 Coverage is informative, not a gate; focus on the "must be tested" list above.

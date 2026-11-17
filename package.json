@@ -10,6 +10,7 @@
     "typecheck": "turbo typecheck",
     "test": "turbo test",
     "test:integration": "turbo test:integration",
+    "test:e2e": "turbo test:e2e",
     "db:generate": "pnpm --filter @workspace/db db:generate",
     "db:migrate": "pnpm --filter @workspace/db db:migrate",
     "db:seed": "pnpm --filter @workspace/db db:seed",
