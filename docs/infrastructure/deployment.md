@@ -83,6 +83,8 @@ Every service in the production compose has:
 
 The app images run as a **non-root** user. Valkey uses `noeviction`, so BullMQ jobs are never dropped under memory pressure. The worker gets 60 seconds to finish in-flight jobs on deploy.
 
+**PDF fonts:** Chinese, Japanese and Korean fonts (4–9 MB each) aren't in the image. The first PDF that needs one downloads it from `raw.githubusercontent.com` (pinned release, SHA-256 checked) into the `pdffonts` volume, shared by api and worker, so the server needs outbound HTTPS to that host. To fetch them all up front: `docker compose exec api node dist/fetch-cjk-fonts.js`. Without access, those characters print as boxes and a warning is logged.
+
 ## Docs site
 
 `apps/docs` is a static site ([ADR-0016](../adr/0016-docs-site.md)); it needs no server, database or secrets.

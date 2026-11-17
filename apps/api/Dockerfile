@@ -33,6 +33,10 @@ ARG APP_VERSION=dev
 ENV NODE_ENV=production PORT=4000 APP_VERSION=${APP_VERSION}
 RUN addgroup -S app && adduser -S app -G app
 COPY --from=builder --chown=app:app /prod/api ./
+# Chinese/Japanese/Korean PDF fonts are fetched on first use and cached
+# here (mount a volume to keep them across deploys).
+ENV PDF_FONT_CACHE_DIR=/app/.font-cache
+RUN mkdir -p /app/.font-cache && chown app:app /app/.font-cache
 USER app
 EXPOSE 4000
 HEALTHCHECK --interval=15s --timeout=3s --retries=5 CMD wget -qO- http://127.0.0.1:4000/health/live || exit 1

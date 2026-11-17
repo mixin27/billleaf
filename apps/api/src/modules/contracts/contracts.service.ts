@@ -342,6 +342,7 @@ export class ContractsService {
         ? await this.repo.signatureEvidence(id)
         : null
     const content = await renderContractPdf({
+      locale: profile.locale,
       certificate: evidence
         ? {
             name: evidence.name ?? c.signedByName ?? "",

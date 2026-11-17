@@ -4,6 +4,8 @@ import { fileURLToPath } from "node:url"
 import { formatMoney, type PartySnapshot } from "@workspace/contracts"
 import PDFDocument from "pdfkit"
 
+import { CJK, cjkFonts, cjkLangFor } from "./cjk-fonts.js"
+
 export interface DocumentPdfData {
   /** "Invoice" | "Quote" | "Receipt" — the document heading. */
   title: string
@@ -55,11 +57,15 @@ export const RULE = "#DDE5E2"
 // ── Fonts ────────────────────────────────────────────────────────────────
 // Noto Sans (Latin, Greek, Cyrillic, Vietnamese) + Thai + Myanmar, OFL-1.1.
 // apps/api/assets/fonts, resolved relative to this file in src/ and dist/.
-type Script = "base" | "thai" | "myanmar"
+// Chinese/Japanese/Korean ("cjk") are fetched on first use: see cjk-fonts.ts.
+type Script = "base" | "thai" | "myanmar" | "cjk"
 const FONT_DIR = fileURLToPath(
   new URL("../../../assets/fonts/", import.meta.url)
 )
-const FONT_FILES: Record<Script, { regular: string; bold: string }> = {
+const FONT_FILES: Record<
+  Exclude<Script, "cjk">,
+  { regular: string; bold: string }
+> = {
   base: { regular: "NotoSans_400Regular.ttf", bold: "NotoSans_700Bold.ttf" },
   thai: {
     regular: "NotoSansThai_400Regular.ttf",
@@ -82,12 +88,28 @@ function fonts(): Record<string, Buffer> {
   return fontCache
 }
 
+/**
+ * The CJK fonts a document's text needs (looked up from all its strings),
+ * or null when it has none or they can't be fetched.
+ */
+export async function cjkFontsFor(data: unknown, locale?: string) {
+  const text = JSON.stringify(data, (_k, v: unknown) =>
+    Buffer.isBuffer(v) ||
+    (v && typeof v === "object" && (v as { type?: string }).type === "Buffer")
+      ? undefined
+      : v
+  )
+  const lang = cjkLangFor(text ?? "", locale)
+  return lang ? cjkFonts(lang) : null
+}
+
 const THAI = /[฀-๿]/
 const MYANMAR = /[က-႟ꧠ-꧿ꩠ-ꩿ]/
 // Characters that belong to whichever script surrounds them.
 const NEUTRAL = /[\s\d.,:;!?'"()[\]{}\-–—/\\&@#%+*=<>|·•]/
 
 function scriptOf(ch: string): Script | null {
+  if (CJK.test(ch)) return "cjk"
   if (THAI.test(ch)) return "thai"
   if (MYANMAR.test(ch)) return "myanmar"
   if (NEUTRAL.test(ch)) return null
@@ -112,7 +134,14 @@ export type WriteStyle = { bold?: boolean; size?: number; color?: string }
  * A4 document with the Unicode fonts registered and a script-aware `write`
  * (switches font per Latin/Thai/Myanmar run so mixed text renders).
  */
-export function createPdf(title: string, opts: { bufferPages?: boolean } = {}) {
+export function createPdf(
+  title: string,
+  opts: {
+    bufferPages?: boolean
+    /** Chinese/Japanese/Korean fonts (see `cjkFontsFor`); null = none. */
+    cjk?: { regular: Buffer; bold: Buffer } | null
+  } = {}
+) {
   const doc = new PDFDocument({
     size: "A4",
     margin: 50,
@@ -121,6 +150,12 @@ export function createPdf(title: string, opts: { bufferPages?: boolean } = {}) {
   })
   for (const [name, data] of Object.entries(fonts()))
     doc.registerFont(name, data)
+  if (opts.cjk) {
+    doc.registerFont("cjk", opts.cjk.regular)
+    doc.registerFont("cjk-bold", opts.cjk.bold)
+  }
+  // Without CJK fonts those runs fall back to the base font (boxes).
+  const has = (s: Script) => s !== "cjk" || Boolean(opts.cjk)
   const chunks: Buffer[] = []
   doc.on("data", (c: Buffer) => chunks.push(c))
   const done = new Promise<Buffer>((resolve) =>
@@ -139,7 +174,10 @@ export function createPdf(title: string, opts: { bufferPages?: boolean } = {}) {
     if (style.size) doc.fontSize(style.size)
     if (style.color) doc.fillColor(style.color)
     const runs = scriptRuns(text)
-    const font = (s: Script) => (style.bold ? `${s}-bold` : s)
+    const font = (s: Script) => {
+      const f = has(s) ? s : "base"
+      return style.bold ? `${f}-bold` : f
+    }
     if (runs.length <= 1) {
       doc.font(font(runs[0]?.script ?? "base"))
       if (x === undefined) doc.text(text, opts)
@@ -155,8 +193,13 @@ export function createPdf(title: string, opts: { bufferPages?: boolean } = {}) {
     })
   }
   const heightOf = (text: string, w: number) => {
+    const scripts = new Set(scriptRuns(text).map((r) => r.script))
     doc.font(
-      scriptRuns(text).some((r) => r.script !== "base") ? "myanmar" : "base"
+      scripts.has("myanmar") || scripts.has("thai")
+        ? "myanmar"
+        : scripts.has("cjk") && has("cjk")
+          ? "cjk"
+          : "base"
     )
     return doc.heightOfString(text, { width: w })
   }
@@ -169,9 +212,11 @@ export function createPdf(title: string, opts: { bufferPages?: boolean } = {}) {
  * Render a quote/invoice/receipt as an A4 PDF with embedded Unicode fonts
  * (so Thai/Burmese/Vietnamese names render) and the workspace logo.
  */
-export function renderDocumentPdf(d: DocumentPdfData): Promise<Buffer> {
+export async function renderDocumentPdf(d: DocumentPdfData): Promise<Buffer> {
+  const cjk = await cjkFontsFor(d, d.locale)
   const { doc, done, write, heightOf, left, width } = createPdf(
-    `${d.title} ${d.number ?? ""}`.trim()
+    `${d.title} ${d.number ?? ""}`.trim(),
+    { cjk }
   )
   type TextOpts = PDFKit.Mixins.TextOptions
 

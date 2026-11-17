@@ -9,6 +9,7 @@
     "dev:worker": "nest start --watch --env-file .env --entryFile worker",
     "start": "node --import ./dist/instrument.js dist/main.js",
     "start:worker": "node --import ./dist/instrument.js dist/worker.js",
+    "fonts:cjk": "tsx --env-file-if-exists=.env src/fetch-cjk-fonts.ts",
     "openapi:emit": "nest build && node --env-file-if-exists=.env dist/openapi-emit.js",
     "auth:generate": "tsx scripts/generate-auth-schema.ts && prettier --write ../../packages/db/src/schema/auth.ts",
     "lint": "eslint",
