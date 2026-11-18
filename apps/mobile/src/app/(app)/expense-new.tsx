@@ -22,6 +22,7 @@ import { SafeAreaView } from "react-native-safe-area-context"
 import {
   Body,
   Button,
+  Chip,
   Field,
   KeyboardAvoid,
   Screen,
@@ -325,37 +326,6 @@ export default function NewExpenseScreen() {
   )
 }
 
-function Chip({
-  label,
-  selected,
-  onPress,
-}: {
-  label: string
-  selected: boolean
-  onPress: () => void
-}) {
-  const t = useTheme()
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityState={{ selected }}
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.chip,
-        {
-          borderColor: selected ? t.primary : t.border,
-          backgroundColor: selected ? t.backgroundSelected : t.background,
-          opacity: pressed ? 0.7 : 1,
-        },
-      ]}
-    >
-      <Text style={[Type.small, { color: selected ? t.primary : t.text }]}>
-        {label}
-      </Text>
-    </Pressable>
-  )
-}
-
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   header: {
@@ -381,12 +351,4 @@ const styles = StyleSheet.create({
   label: { fontWeight: "600" },
   chips: { flexDirection: "row", gap: Spacing.two },
   wrap: { flexDirection: "row", flexWrap: "wrap", gap: Spacing.two },
-  chip: {
-    borderWidth: 1,
-    borderRadius: Radius.full,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-    minHeight: 36,
-    justifyContent: "center",
-  },
 })

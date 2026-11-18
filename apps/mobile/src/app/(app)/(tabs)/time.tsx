@@ -1,4 +1,4 @@
-import { formatDuration, type TimeEntry } from "@workspace/contracts"
+import { addDays, formatDuration, type TimeEntry } from "@workspace/contracts"
 import { router } from "expo-router"
 import * as React from "react"
 import {
@@ -28,6 +28,7 @@ import {
   useTimeFavorites,
   useUpdateRunning,
 } from "@/features/time"
+import { useWorkspaceProfile } from "@/features/workspaces"
 import { useElapsed } from "@/hooks/use-elapsed"
 import { useTheme } from "@/hooks/use-theme"
 import { ApiError, errorMessage } from "@/lib/api"
@@ -60,9 +61,12 @@ export default function TimeScreen() {
   const today = dashboard.data?.today
   const running = useRunningTimer()
   const favorites = useTimeFavorites()
+  /** The day the list shows (null = today); step back to fix older time. */
+  const [picked, setPicked] = React.useState<string | null>(null)
+  const day = picked ?? today
   const entries = useTimeEntries(
-    { from: today ?? "", to: today ?? "", memberId: "me" },
-    Boolean(today)
+    { from: day ?? "", to: day ?? "", memberId: "me" },
+    Boolean(day)
   )
   const [refreshing, setRefreshing] = React.useState(false)
 
@@ -72,7 +76,7 @@ export default function TimeScreen() {
       running.refetch(),
       favorites.refetch(),
       dashboard.refetch(),
-      today ? entries.refetch() : null,
+      day ? entries.refetch() : null,
     ])
     setRefreshing(false)
   }
@@ -101,11 +105,16 @@ export default function TimeScreen() {
             {favorites.data && favorites.data.length > 0 ? (
               <Favorites items={favorites.data} />
             ) : null}
-            <Today
-              entries={entries.data?.items}
-              total={entries.data?.totalSeconds}
-              error={entries.error}
-            />
+            {day && today ? (
+              <DayEntries
+                day={day}
+                today={today}
+                onDay={(d) => setPicked(d === today ? null : d)}
+                entries={entries.data?.items}
+                total={entries.data?.totalSeconds}
+                error={entries.error}
+              />
+            ) : null}
           </ScrollView>
         </KeyboardAvoid>
       </SafeAreaView>
@@ -329,23 +338,70 @@ function Favorites({
   )
 }
 
-function Today({
+/** "Today", "Yesterday" or "Mon, Nov 16" for a YYYY-MM-DD. */
+function dayLabel(day: string, today: string, locale: string) {
+  if (day === today) return "Today"
+  if (day === addDays(today, -1)) return "Yesterday"
+  return new Intl.DateTimeFormat(locale, {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    timeZone: "UTC",
+  }).format(new Date(`${day}T00:00:00Z`))
+}
+
+/** One day's entries (step back with ‹ ›), with Log time for that day. */
+function DayEntries({
+  day,
+  today,
+  onDay,
   entries,
   total,
   error,
 }: {
+  day: string
+  today: string
+  onDay: (day: string) => void
   entries: TimeEntry[] | undefined
   total: number | undefined
   error: unknown
 }) {
   const t = useTheme()
   const resume = useContinueEntry()
+  const locale =
+    useWorkspaceProfile().data?.locale ??
+    Intl.DateTimeFormat().resolvedOptions().locale
+  const label = dayLabel(day, today, locale)
+  const isToday = day === today
+  const arrow = (dir: -1 | 1, disabled: boolean) => (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={dir < 0 ? "Previous day" : "Next day"}
+      accessibilityState={{ disabled }}
+      disabled={disabled}
+      hitSlop={8}
+      onPress={() => onDay(addDays(day, dir))}
+      style={({ pressed }) => [
+        styles.arrow,
+        { borderColor: t.border, opacity: disabled ? 0.3 : pressed ? 0.6 : 1 },
+      ]}
+    >
+      <Text style={[Type.body, { color: t.text }]}>{dir < 0 ? "‹" : "›"}</Text>
+    </Pressable>
+  )
   return (
     <View style={styles.section}>
       <View style={styles.todayHeader}>
-        <Text style={[Type.small, styles.heading, { color: t.textSecondary }]}>
-          TODAY
-        </Text>
+        <View style={styles.dayNav}>
+          {arrow(-1, false)}
+          <Text
+            accessibilityRole="header"
+            style={[Type.small, styles.heading, { color: t.textSecondary }]}
+          >
+            {label.toUpperCase()}
+          </Text>
+          {arrow(1, isToday)}
+        </View>
         {total !== undefined ? (
           <Text style={[Type.small, styles.bold, { color: t.textSecondary }]}>
             {formatDuration(total)}
@@ -357,7 +413,11 @@ function Today({
       ) : !entries ? (
         <Body muted>Loading…</Body>
       ) : entries.length === 0 ? (
-        <Body muted>Nothing tracked yet today.</Body>
+        <Body muted>
+          {isToday
+            ? "Nothing tracked yet today."
+            : "Nothing tracked on this day."}
+        </Body>
       ) : (
         <Card style={styles.list}>
           {entries.map((e, i) => (
@@ -425,6 +485,13 @@ function Today({
           ))}
         </Card>
       )}
+      <Button
+        title={isToday ? "Log time" : `Log time for ${label}`}
+        variant="secondary"
+        onPress={() =>
+          router.push({ pathname: "/entry-edit", params: { date: day } })
+        }
+      />
     </View>
   )
 }
@@ -477,7 +544,20 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   list: { gap: 0, paddingVertical: Spacing.one },
-  todayHeader: { flexDirection: "row", justifyContent: "space-between" },
+  dayNav: { flexDirection: "row", alignItems: "center", gap: Spacing.two },
+  arrow: {
+    width: 32,
+    height: 32,
+    borderRadius: Radius.full,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  todayHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
   entry: {
     flexDirection: "row",
     alignItems: "center",

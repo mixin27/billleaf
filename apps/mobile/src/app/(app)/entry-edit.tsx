@@ -1,4 +1,5 @@
 import {
+  addDays,
   formatDuration,
   hhmm,
   parseDuration,
@@ -23,43 +24,62 @@ import { SafeAreaView } from "react-native-safe-area-context"
 import {
   Body,
   Button,
+  Chip,
   Field,
   KeyboardAvoid,
   Screen,
   Title,
 } from "@/components/ui"
 import { Radius, Spacing, Type } from "@/constants/theme"
+import { useDashboard } from "@/features/dashboard"
 import {
   entryLockReason,
   useCachedEntry,
+  useCreateTimeEntry,
   useDeleteTimeEntry,
   useUpdateTimeEntry,
 } from "@/features/time"
 import { useWorkspaceProfile } from "@/features/workspaces"
 import { useTheme } from "@/hooks/use-theme"
 import { errorMessage } from "@/lib/api"
-import { useEditDraft } from "@/stores/timer-draft"
+import { NO_PROJECT, useEditDraft } from "@/stores/timer-draft"
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
 
 /**
- * Edit or delete a finished entry from Today: description, project,
- * billable, and its clock times (in the workspace's time zone) or, for an
- * entry logged as a duration, the duration. Locked entries open read-only.
+ * One sheet for finished time.
+ *
+ * - `?id=…`: edit or delete an entry from the Time list (description,
+ *   project, billable, and its clock times in the workspace's time zone, or
+ *   its duration when it was logged without times). Locked entries open
+ *   read-only.
+ * - no id (`?date=YYYY-MM-DD` optional): log new time for a day, as a
+ *   duration (quickest on a phone) or a start and end.
  */
-export default function EditEntryScreen() {
+export default function EntryScreen() {
   const t = useTheme()
-  const { id } = useLocalSearchParams<{ id: string }>()
-  const entry = useCachedEntry(id)
+  const params = useLocalSearchParams<{ id?: string; date?: string }>()
+  const isNew = !params.id
+  const entry = useCachedEntry(params.id)
   const tz = useWorkspaceProfile().data?.timezone ?? "UTC"
+  const today = useDashboard().data?.today
+  const create = useCreateTimeEntry()
   const update = useUpdateTimeEntry()
   const remove = useDeleteTimeEntry()
   const picked = useEditDraft((s) => s.project)
   const setPicked = useEditDraft((s) => s.setProject)
 
   // Start from what's saved; forget a project picked for another entry.
-  React.useEffect(() => setPicked(null), [id, setPicked])
+  React.useEffect(() => setPicked(null), [params.id, setPicked])
 
   const [description, setDescription] = React.useState(entry?.description ?? "")
-  const [billable, setBillable] = React.useState(entry?.billable ?? true)
+  /** Null = follow the project's billing (new entries only). */
+  const [billable, setBillable] = React.useState<boolean | null>(
+    entry ? entry.billable : null
+  )
+  /** How new time is entered; an existing entry keeps its kind. */
+  const [mode, setMode] = React.useState<"duration" | "times">("duration")
+  const [date, setDate] = React.useState<string | null>(params.date ?? null)
   const [from, setFrom] = React.useState(() =>
     entry?.hasTimes ? hhmm(zonedParts(entry.startedAt, tz).minutes) : ""
   )
@@ -73,7 +93,7 @@ export default function EditEntryScreen() {
   )
   const [touched, setTouched] = React.useState(false)
 
-  if (!entry) {
+  if (!isNew && !entry) {
     return (
       <Screen>
         <SafeAreaView style={styles.flex}>
@@ -87,11 +107,13 @@ export default function EditEntryScreen() {
     )
   }
 
-  const locked = entryLockReason(entry)
-  const project = picked ?? entry
+  const locked = entry ? entryLockReason(entry) : null
+  const project = picked ?? entry ?? NO_PROJECT
   const projectLabel = project.projectName
     ? [project.projectName, project.taskTitle].filter(Boolean).join(": ")
     : null
+  const day = entry?.entryDate ?? date ?? today ?? ""
+  const hasTimes = entry ? entry.hasTimes : mode === "times"
 
   // Clock times: an end at or before the start means it ends the next day.
   const start = parseHhmm(from)
@@ -103,41 +125,52 @@ export default function EditEntryScreen() {
         : endRaw
       : null
   const timedMinutes = start !== null && end !== null ? end - start : null
-  const durationMinutes = entry.hasTimes ? null : parseDuration(duration)
-  const minutes = entry.hasTimes ? timedMinutes : durationMinutes
+  const minutes = hasTimes ? timedMinutes : parseDuration(duration)
+  const minutesValid = minutes !== null && minutes > 0 && minutes <= 1440
   const timeError =
-    touched && (minutes === null || minutes <= 0 || minutes > 1440)
-      ? entry.hasTimes
+    touched && !minutesValid
+      ? hasTimes
         ? "Use 24-hour times, e.g. 09:30"
-        : "Enter a duration, e.g. 1:30"
+        : "Enter a duration, e.g. 1:30 or 45m"
       : undefined
+  const dateError =
+    touched && !ISO_DATE.test(day) ? "Use YYYY-MM-DD" : undefined
+
+  const onError = (title: string) => (e: unknown) =>
+    Alert.alert(title, errorMessage(e))
 
   const save = () => {
     setTouched(true)
-    if (minutes === null || minutes <= 0 || minutes > 1440) return
-    const times = entry.hasTimes
+    if (!minutesValid || !ISO_DATE.test(day)) return
+    const times = hasTimes
       ? {
-          startedAt: zonedToUtc(entry.entryDate, start!, tz).toISOString(),
-          endedAt: zonedToUtc(entry.entryDate, end!, tz).toISOString(),
+          startedAt: zonedToUtc(day, start!, tz).toISOString(),
+          endedAt: zonedToUtc(day, end!, tz).toISOString(),
         }
-      : { durationMinutes: minutes }
-    update.mutate(
-      {
-        id: entry.id,
-        description,
-        projectId: project.projectId,
-        taskId: project.taskId,
-        billable,
-        ...times,
-      },
-      {
+      : entry
+        ? { durationMinutes: minutes! }
+        : { entryDate: day, durationMinutes: minutes! }
+    const fields = {
+      description,
+      projectId: project.projectId,
+      taskId: project.taskId,
+      ...(billable !== null ? { billable } : {}),
+      ...times,
+    }
+    if (entry)
+      update.mutate(
+        { id: entry.id, ...fields },
+        { onSuccess: () => router.back(), onError: onError("Couldn't save") }
+      )
+    else
+      create.mutate(fields, {
         onSuccess: () => router.back(),
-        onError: (e) => Alert.alert("Couldn't save", errorMessage(e)),
-      }
-    )
+        onError: onError("Couldn't log the time"),
+      })
   }
 
   const confirmDelete = () =>
+    entry &&
     Alert.alert(
       "Delete this entry?",
       `${formatDuration(entry.durationSeconds ?? 0)}${entry.description ? ` of “${entry.description}”` : ""} will be removed. This can't be undone.`,
@@ -149,7 +182,7 @@ export default function EditEntryScreen() {
           onPress: () =>
             remove.mutate(entry.id, {
               onSuccess: () => router.back(),
-              onError: (e) => Alert.alert("Couldn't delete", errorMessage(e)),
+              onError: onError("Couldn't delete"),
             }),
         },
       ]
@@ -164,7 +197,9 @@ export default function EditEntryScreen() {
       >
         <KeyboardAvoid>
           <View style={styles.header}>
-            <Title>{locked ? "Time entry" : "Edit time"}</Title>
+            <Title>
+              {isNew ? "Log time" : locked ? "Time entry" : "Edit time"}
+            </Title>
             <Button
               title={locked ? "Close" : "Cancel"}
               variant="link"
@@ -242,13 +277,59 @@ export default function EditEntryScreen() {
                 </View>
                 {locked ? null : (
                   <Text style={[Type.small, { color: t.textSecondary }]}>
-                    Change
+                    {projectLabel ? "Change" : "Pick"}
                   </Text>
                 )}
               </Pressable>
             </View>
 
-            {entry.hasTimes ? (
+            {isNew ? (
+              <View style={styles.gap}>
+                <Field
+                  label="Date"
+                  value={day}
+                  onChangeText={setDate}
+                  keyboardType="numbers-and-punctuation"
+                  autoCorrect={false}
+                  maxLength={10}
+                  error={dateError}
+                />
+                {today ? (
+                  <View style={styles.chips}>
+                    {(
+                      [
+                        ["Today", today],
+                        ["Yesterday", addDays(today, -1)],
+                      ] as const
+                    ).map(([label, value]) => (
+                      <Chip
+                        key={label}
+                        label={label}
+                        selected={day === value}
+                        onPress={() => setDate(value)}
+                      />
+                    ))}
+                  </View>
+                ) : null}
+              </View>
+            ) : null}
+
+            {isNew ? (
+              <View style={styles.chips}>
+                <Chip
+                  label="Duration"
+                  selected={mode === "duration"}
+                  onPress={() => setMode("duration")}
+                />
+                <Chip
+                  label="Start and end"
+                  selected={mode === "times"}
+                  onPress={() => setMode("times")}
+                />
+              </View>
+            ) : null}
+
+            {hasTimes ? (
               <View style={styles.gap}>
                 <View style={styles.row}>
                   <View style={styles.flex}>
@@ -302,17 +383,24 @@ export default function EditEntryScreen() {
             <Pressable
               accessibilityRole="switch"
               accessibilityState={{
-                checked: billable,
+                checked: billable ?? true,
                 disabled: Boolean(locked),
               }}
               accessibilityLabel="Billable"
               disabled={Boolean(locked)}
-              onPress={() => setBillable((b) => !b)}
+              onPress={() => setBillable((b) => !(b ?? true))}
               style={[styles.switchRow, { borderColor: t.border }]}
             >
-              <Text style={[Type.body, { color: t.text }]}>Billable</Text>
+              <View>
+                <Text style={[Type.body, { color: t.text }]}>Billable</Text>
+                {billable === null ? (
+                  <Text style={[Type.small, { color: t.textSecondary }]}>
+                    Follows the project
+                  </Text>
+                ) : null}
+              </View>
               <Switch
-                value={billable}
+                value={billable ?? true}
                 onValueChange={setBillable}
                 disabled={Boolean(locked)}
                 trackColor={{ true: t.primary }}
@@ -322,20 +410,21 @@ export default function EditEntryScreen() {
             </Pressable>
 
             {locked ? null : (
-              <>
-                <Button
-                  title="Save"
-                  loading={update.isPending}
-                  onPress={save}
-                />
-                <Button
-                  title="Delete entry"
-                  variant="secondary"
-                  disabled={remove.isPending}
-                  onPress={confirmDelete}
-                />
-              </>
+              <Button
+                title={isNew ? "Log time" : "Save"}
+                loading={create.isPending || update.isPending}
+                disabled={isNew && !today}
+                onPress={save}
+              />
             )}
+            {entry && !locked ? (
+              <Button
+                title="Delete entry"
+                variant="secondary"
+                disabled={remove.isPending}
+                onPress={confirmDelete}
+              />
+            ) : null}
           </ScrollView>
         </KeyboardAvoid>
       </SafeAreaView>
@@ -362,6 +451,7 @@ const styles = StyleSheet.create({
   gap: { gap: Spacing.two },
   label: { fontWeight: "600" },
   row: { flexDirection: "row", gap: Spacing.three },
+  chips: { flexDirection: "row", gap: Spacing.two },
   project: {
     flexDirection: "row",
     alignItems: "center",
