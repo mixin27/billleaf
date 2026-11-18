@@ -1,76 +1,266 @@
-import { useQuery } from "@tanstack/react-query"
-import { PLANS } from "@workspace/contracts"
+import { formatDuration, formatMoney } from "@workspace/contracts"
+import { router } from "expo-router"
 import * as React from "react"
-import { StyleSheet, View } from "react-native"
+import {
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 
 import { Body, Button, Screen, Title } from "@/components/ui"
-import { Spacing } from "@/constants/theme"
-import { api, errorMessage, setApiWorkspace, unwrap } from "@/lib/api"
+import { Radius, Spacing, Type } from "@/constants/theme"
+import { useDashboard, useWeekTime } from "@/features/dashboard"
+import { useMe } from "@/features/me"
+import { useWorkspaceProfile } from "@/features/workspaces"
+import { useTheme } from "@/hooks/use-theme"
+import { errorMessage } from "@/lib/api"
 import { authClient } from "@/lib/auth-client"
-import { queryClient } from "@/lib/query-client"
+import { signOut } from "@/lib/session"
+import { useWorkspaceStore } from "@/stores/workspace-store"
 
-/**
- * Placeholder home: proves the session works against the API (`/v1/me` in
- * your first workspace). The workspace picker and dashboard come next.
- */
-export default function HomeScreen() {
+/** Home: this week's time and what you're owed, for the active workspace. */
+export default function DashboardScreen() {
+  const t = useTheme()
   const session = authClient.useSession()
-  const workspaces = useQuery({
-    queryKey: ["workspaces"],
-    queryFn: async () => {
-      const { data, error } = await authClient.organization.list()
-      if (error) throw new Error(error.message ?? "Couldn't load workspaces")
-      return data ?? []
-    },
-  })
-  const first = workspaces.data?.[0]
-  const me = useQuery({
-    queryKey: ["me", first?.id],
-    enabled: Boolean(first),
-    queryFn: () => {
-      setApiWorkspace(first!.id)
-      return unwrap(api.GET("/v1/me"))
-    },
-  })
+  const workspace = useWorkspaceStore((s) => s.workspace)
+  const me = useMe()
+  // Money reads the way it does on your invoices (the workspace locale).
+  const locale =
+    useWorkspaceProfile().data?.locale ??
+    Intl.DateTimeFormat().resolvedOptions().locale
+  const dashboard = useDashboard()
+  const tracksTime = me.data?.plan.features.timeTracking ?? false
+  const week = useWeekTime(tracksTime ? dashboard.data?.today : undefined)
+  const [refreshing, setRefreshing] = React.useState(false)
   const [signingOut, setSigningOut] = React.useState(false)
+
+  const refresh = async () => {
+    setRefreshing(true)
+    // refetch() ignores `enabled`, so only refresh the week when it's shown.
+    await Promise.all([
+      me.refetch(),
+      dashboard.refetch(),
+      tracksTime && dashboard.data ? week.refetch() : null,
+    ])
+    setRefreshing(false)
+  }
+
+  const d = dashboard.data
+  const error = me.error ?? dashboard.error ?? week.error
+  const firstName = session.data?.user.name?.split(" ")[0]
 
   return (
     <Screen>
-      <SafeAreaView style={styles.content}>
-        <Title>Hi, {session.data?.user.name?.split(" ")[0] ?? "there"}</Title>
-        <Body muted>{session.data?.user.email}</Body>
-        <View style={styles.card}>
-          {workspaces.isPending || me.isPending ? (
-            <Body muted>Loading your workspace…</Body>
-          ) : workspaces.error || me.error ? (
-            <Body>{errorMessage(workspaces.error ?? me.error)}</Body>
-          ) : first ? (
-            <Body>
-              {me.data?.workspace?.name ?? first.name} ·{" "}
-              {me.data ? PLANS[me.data.plan.key].name : ""} plan
+      <SafeAreaView style={styles.flex} edges={["top"]}>
+        <ScrollView
+          contentContainerStyle={styles.content}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={refresh} />
+          }
+        >
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Workspace ${workspace?.name}. Switch workspace`}
+            onPress={() => router.push("/workspaces")}
+            style={({ pressed }) => [
+              styles.switcher,
+              { borderColor: t.border, opacity: pressed ? 0.7 : 1 },
+            ]}
+          >
+            <Text
+              style={[Type.small, styles.bold, { color: t.text }]}
+              numberOfLines={1}
+            >
+              {workspace?.name}
+            </Text>
+            <Text style={[Type.small, { color: t.textSecondary }]}>
+              Switch ▾
+            </Text>
+          </Pressable>
+          <Title>{firstName ? `Hi, ${firstName}` : "Hi there"}</Title>
+
+          {error ? (
+            <Card>
+              <Body>{errorMessage(error)}</Body>
+            </Card>
+          ) : null}
+
+          {tracksTime ? (
+            <Card title="This week">
+              {week.data ? (
+                <View style={styles.stats}>
+                  <Stat
+                    label="Tracked"
+                    value={formatDuration(week.data.totalSeconds)}
+                  />
+                  <Stat
+                    label="Billable"
+                    value={formatDuration(week.data.billableSeconds)}
+                  />
+                </View>
+              ) : (
+                <Body muted>Loading…</Body>
+              )}
+            </Card>
+          ) : null}
+
+          {d?.receivables ? (
+            <Card title="Outstanding">
+              {d.receivables.totals.length === 0 ? (
+                <Body muted>Nothing owed right now.</Body>
+              ) : (
+                d.receivables.totals.map((r) => (
+                  <View key={r.currency} style={styles.stats}>
+                    <Stat
+                      label={`${r.openCount} open`}
+                      value={formatMoney(
+                        { amount: r.outstanding, currency: r.currency },
+                        locale
+                      )}
+                    />
+                    <Stat
+                      label={`${r.overdueCount} overdue`}
+                      value={formatMoney(
+                        { amount: r.overdue, currency: r.currency },
+                        locale
+                      )}
+                      tone={r.overdue > 0 ? "danger" : undefined}
+                    />
+                  </View>
+                ))
+              )}
+            </Card>
+          ) : null}
+
+          {d?.received ? (
+            <Card title="Received this month">
+              {d.received.thisMonth.length === 0 ? (
+                <Body muted>No payments yet this month.</Body>
+              ) : (
+                d.received.thisMonth.map((r) => (
+                  <Stat
+                    key={r.currency}
+                    label={`${r.count} payment${r.count === 1 ? "" : "s"}`}
+                    value={formatMoney(
+                      { amount: r.amount, currency: r.currency },
+                      locale
+                    )}
+                  />
+                ))
+              )}
+            </Card>
+          ) : null}
+
+          {d && !tracksTime && !d.receivables && !d.received ? (
+            <Body muted>
+              Nothing to show for your role here yet. Open Billleaf on the web
+              for everything else.
             </Body>
-          ) : (
-            <Body muted>No workspace yet: create one on the web.</Body>
-          )}
-        </View>
-        <Button
-          title="Sign out"
-          variant="secondary"
-          loading={signingOut}
-          onPress={async () => {
-            setSigningOut(true)
-            await authClient.signOut()
-            setApiWorkspace(null)
-            queryClient.clear()
-          }}
-        />
+          ) : null}
+
+          <View style={styles.footer}>
+            <Body muted style={Type.small}>
+              {session.data?.user.email}
+            </Body>
+            <Button
+              title="Sign out"
+              variant="secondary"
+              loading={signingOut}
+              onPress={async () => {
+                setSigningOut(true)
+                await signOut()
+              }}
+            />
+          </View>
+        </ScrollView>
       </SafeAreaView>
     </Screen>
   )
 }
 
+function Card({
+  title,
+  children,
+}: {
+  title?: string
+  children: React.ReactNode
+}) {
+  const t = useTheme()
+  return (
+    <View
+      style={[
+        styles.card,
+        { backgroundColor: t.backgroundElement, borderColor: t.border },
+      ]}
+    >
+      {title ? (
+        <Text
+          accessibilityRole="header"
+          style={[Type.small, styles.bold, { color: t.textSecondary }]}
+        >
+          {title.toUpperCase()}
+        </Text>
+      ) : null}
+      {children}
+    </View>
+  )
+}
+
+function Stat({
+  label,
+  value,
+  tone,
+}: {
+  label: string
+  value: string
+  tone?: "danger"
+}) {
+  const t = useTheme()
+  return (
+    <View
+      style={styles.stat}
+      accessible
+      accessibilityLabel={`${label}: ${value}`}
+    >
+      <Text
+        style={[styles.value, { color: tone === "danger" ? t.danger : t.text }]}
+        adjustsFontSizeToFit
+        numberOfLines={1}
+      >
+        {value}
+      </Text>
+      <Text style={[Type.small, { color: t.textSecondary }]}>{label}</Text>
+    </View>
+  )
+}
+
 const styles = StyleSheet.create({
-  content: { flex: 1, padding: Spacing.four, gap: Spacing.three },
-  card: { paddingVertical: Spacing.three },
+  flex: { flex: 1 },
+  content: { padding: Spacing.four, gap: Spacing.three },
+  bold: { fontWeight: "600" },
+  switcher: {
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    gap: Spacing.two,
+    alignItems: "center",
+    borderWidth: 1,
+    borderRadius: Radius.full,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.one + 2,
+    maxWidth: "100%",
+  },
+  card: {
+    borderWidth: 1,
+    borderRadius: Radius.lg,
+    padding: Spacing.three,
+    gap: Spacing.three,
+  },
+  stats: { flexDirection: "row", gap: Spacing.three },
+  stat: { flex: 1, gap: Spacing.half },
+  value: { fontSize: 24, fontWeight: "700", fontVariant: ["tabular-nums"] },
+  footer: { marginTop: Spacing.four, gap: Spacing.two },
 })
