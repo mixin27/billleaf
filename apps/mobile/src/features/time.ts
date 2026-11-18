@@ -3,7 +3,9 @@ import type {
   ListTimeEntriesQuery,
   StartTimerInput,
   TimeEntry,
+  TimeEntryList,
   UpdateRunningInput,
+  UpdateTimeEntryInput,
 } from "@workspace/contracts"
 
 import { api, unwrap } from "@/lib/api"
@@ -185,4 +187,56 @@ export function canTrackTime(
     (me.permissions.includes("time.track") ||
       me.permissions.includes("time.manage"))
   )
+}
+
+/**
+ * An entry from whichever time list is cached (there's no single-entry
+ * GET; the edit sheet only opens from a list that's on screen).
+ */
+export function useCachedEntry(id: string | undefined): TimeEntry | null {
+  const qc = useQueryClient()
+  const ws = useWs()
+  if (!id) return null
+  for (const [, data] of qc.getQueriesData<TimeEntryList>({
+    queryKey: [...timeKeys.all(ws), "list"],
+  })) {
+    const hit = data?.items.find((e) => e.id === id)
+    if (hit) return hit
+  }
+  return null
+}
+
+export function useUpdateTimeEntry() {
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: ({ id, ...body }: UpdateTimeEntryInput & { id: string }) =>
+      unwrap(
+        api.PATCH("/v1/time-entries/{id}", {
+          params: { path: { id } },
+          body: body as never,
+        })
+      ),
+    onSuccess: invalidate,
+  })
+}
+
+export function useDeleteTimeEntry() {
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: (id: string) =>
+      unwrap(api.DELETE("/v1/time-entries/{id}", { params: { path: { id } } })),
+    onSuccess: invalidate,
+  })
+}
+
+/** Why an entry can't be changed, or null when it can. */
+export function entryLockReason(e: TimeEntry): string | null {
+  if (e.isRunning) return "This is the running timer: change it from the timer."
+  if (e.invoiceId)
+    return `It's on invoice ${e.invoiceNumber ?? "(draft)"}, so it can't change. Delete that draft invoice on the web to free it.`
+  if (e.periodLocked)
+    return "Time before the workspace's lock date can't change."
+  if (e.approvalLocked)
+    return "This week's timesheet is submitted or approved, so its time can't change."
+  return null
 }
