@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import type {
+  CreateTimeEntryInput,
   ListTimeEntriesQuery,
   StartTimerInput,
   TimeEntry,
@@ -204,6 +205,16 @@ export function useCachedEntry(id: string | undefined): TimeEntry | null {
     if (hit) return hit
   }
   return null
+}
+
+/** Log a finished entry: start and end, or a date and duration. */
+export function useCreateTimeEntry() {
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: (body: CreateTimeEntryInput) =>
+      unwrap(api.POST("/v1/time-entries", { body: body as never })),
+    onSuccess: invalidate,
+  })
 }
 
 export function useUpdateTimeEntry() {

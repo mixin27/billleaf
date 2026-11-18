@@ -26,7 +26,7 @@ The first `ios` run generates `ios/` (gitignored), installs CocoaPods and builds
 - `src/app/(app)/(tabs)`: native tabs (Home, Time). `project-picker.tsx` is a modal that sets the running timer's project, or the next one's via `stores/timer-draft.ts`.
 - Expenses: `src/lib/receipt-photo.ts` takes or picks a photo (`expo-image-picker`) and re-saves it as a JPEG of at most 2000px (`expo-image-manipulator`; iPhones shoot HEIC, which the API rejects). `features/expenses.ts` creates the expense, then PUTs the photo as multipart with `fetch` and `apiHeaders()`. Expo's fetch only takes Blob-like parts, so the photo goes in as an `expo-file-system` `File` (React Native's `{ uri, name, type }` parts fail with "Unsupported FormDataPart implementation"). `lib/amount.ts` reads a decimal-pad comma as the decimal point.
 - Date and time-zone helpers (`weekStart`, `addDays`, `parseDuration`, `zonedParts`, `zonedToUtc`, `hhmm`, `parseHhmm`) come from `@workspace/contracts` (`common/dates.ts`), shared with the web.
-- `app/(app)/entry-edit.tsx`: edit or delete a Today entry. There's no single-entry GET, so it reads the entry from the cached time list (`useCachedEntry`).
+- `app/(app)/entry-edit.tsx`: log new time (no `id`; `?date=` pre-fills the day) or edit or delete an entry. There's no single-entry GET, so it reads the entry from the cached time list (`useCachedEntry`).
 - Tests: `pnpm --filter mobile test` (Vitest) covers the pure modules in `src/lib` only (`clock`, `amount`, `api-error`); no React Native runtime.
 - `src/lib/session.ts`: `signOut()` clears the session, the workspace and the query cache.
 - `src/lib/query-client.ts`: TanStack Query; refetches when the app returns to the foreground.

@@ -147,6 +147,38 @@ export function Button({
   )
 }
 
+/** A pill you pick from a set (category, payment method, date shortcut). */
+export function Chip({
+  label,
+  selected,
+  onPress,
+}: {
+  label: string
+  selected: boolean
+  onPress: () => void
+}) {
+  const t = useTheme()
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ selected }}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.chip,
+        {
+          borderColor: selected ? t.primary : t.border,
+          backgroundColor: selected ? t.backgroundSelected : t.background,
+          opacity: pressed ? 0.7 : 1,
+        },
+      ]}
+    >
+      <Text style={[Type.small, { color: selected ? t.primary : t.text }]}>
+        {label}
+      </Text>
+    </Pressable>
+  )
+}
+
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   input: {
@@ -165,4 +197,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
   },
   link: { minHeight: 40 },
+  chip: {
+    borderWidth: 1,
+    borderRadius: Radius.full,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+    minHeight: 36,
+    justifyContent: "center",
+  },
 })
