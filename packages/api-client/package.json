@@ -29,7 +29,7 @@
     "@workspace/typescript-config": "workspace:*",
     "eslint": "^10",
     "openapi-typescript": "^7.13.0",
-    "prettier": "^3.10.0",
+    "prettier": "^3.10.1",
     "typescript": "^5"
   }
 }
