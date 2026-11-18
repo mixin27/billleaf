@@ -1,7 +1,7 @@
+import { addDays, weekStart } from "@workspace/contracts"
 import { useQuery } from "@tanstack/react-query"
 
 import { api, unwrap } from "@/lib/api"
-import { addDays, weekStart } from "@/lib/dates"
 import { useWorkspaceStore } from "@/stores/workspace-store"
 
 /** GET /v1/dashboard (sections are null without permission), same key as web. */
