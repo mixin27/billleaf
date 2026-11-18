@@ -34,3 +34,15 @@ export const useTimerDraft = create<{
   setProject: (project) => set({ project }),
   reset: () => set({ description: "", project: NO_PROJECT }),
 }))
+
+/**
+ * The project picked for the entry being edited, until Save. Null means
+ * "unchanged". The edit sheet clears it when it opens.
+ */
+export const useEditDraft = create<{
+  project: DraftProject | null
+  setProject: (p: DraftProject | null) => void
+}>((set) => ({
+  project: null,
+  setProject: (project) => set({ project }),
+}))

@@ -361,11 +361,19 @@ function Today({
       ) : (
         <Card style={styles.list}>
           {entries.map((e, i) => (
-            <View
+            <Pressable
               key={e.id}
-              style={[
+              // Tap to edit or delete (the running one changes in the timer).
+              accessibilityRole={e.isRunning ? undefined : "button"}
+              accessibilityHint={e.isRunning ? undefined : "Edit or delete"}
+              disabled={e.isRunning}
+              onPress={() =>
+                router.push({ pathname: "/entry-edit", params: { id: e.id } })
+              }
+              style={({ pressed }) => [
                 styles.entry,
                 i > 0 && { borderTopWidth: 1, borderTopColor: t.border },
+                { opacity: pressed ? 0.6 : 1 },
               ]}
             >
               <View style={styles.flex}>
@@ -413,7 +421,7 @@ function Today({
                   </Pressable>
                 </>
               )}
-            </View>
+            </Pressable>
           ))}
         </Card>
       )}

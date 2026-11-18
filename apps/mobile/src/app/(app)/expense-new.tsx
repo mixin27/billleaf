@@ -1,4 +1,5 @@
 import {
+  addDays,
   EXPENSE_PAYMENT_METHOD_LABELS,
   type ExpensePaymentMethod,
   formatMoney,
@@ -34,7 +35,6 @@ import { useWorkspaceProfile } from "@/features/workspaces"
 import { useTheme } from "@/hooks/use-theme"
 import { normalizeAmount } from "@/lib/amount"
 import { errorMessage } from "@/lib/api"
-import { addDays } from "@/lib/dates"
 import { pickReceiptPhoto, type ReceiptPhoto } from "@/lib/receipt-photo"
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/

@@ -1,4 +1,4 @@
-import { router } from "expo-router"
+import { router, useLocalSearchParams } from "expo-router"
 import * as React from "react"
 import {
   ActivityIndicator,
@@ -26,6 +26,7 @@ import { errorMessage } from "@/lib/api"
 import {
   type DraftProject,
   NO_PROJECT,
+  useEditDraft,
   useTimerDraft,
 } from "@/stores/timer-draft"
 
@@ -40,8 +41,9 @@ type Row =
   | { kind: "project"; key: string; project: DraftProject }
 
 /**
- * Pick the project for the timer: recent entries (description + project)
- * first, then active projects. Changes the running timer, or the next one.
+ * Pick a project: recent entries (description + project) first, then
+ * active projects. Changes the running timer or the next one; with
+ * `?for=edit`, the entry being edited (applied when it's saved).
  */
 export default function ProjectPickerScreen() {
   const t = useTheme()
@@ -51,16 +53,25 @@ export default function ProjectPickerScreen() {
     const id = setTimeout(() => setQ(query.trim()), 250)
     return () => clearTimeout(id)
   }, [query])
+  const editing = useLocalSearchParams<{ for?: string; current?: string }>()
+  const forEdit = editing.for === "edit"
+  const edit = useEditDraft()
   const running = useRunningTimer()
   const update = useUpdateRunning()
   const draft = useTimerDraft()
   const suggestions = useTimeSuggestions(q)
   const projects = useActiveProjects(q)
-  const entry = running.data ?? null
-  const current = entry?.projectId ?? draft.project.projectId
+  const entry = forEdit ? null : (running.data ?? null)
+  const current = forEdit
+    ? (edit.project?.projectId ?? editing.current ?? null)
+    : (entry?.projectId ?? draft.project.projectId)
 
   const choose = (project: DraftProject, description?: string) => {
-    if (entry) {
+    if (forEdit) {
+      // Only the project: the description stays what's in the sheet.
+      edit.setProject(project)
+      router.back()
+    } else if (entry) {
       update.mutate(
         {
           projectId: project.projectId,
@@ -103,7 +114,9 @@ export default function ProjectPickerScreen() {
     },
   }))
   const sections = [
-    ...(recent.length ? [{ title: "Recent", data: recent }] : []),
+    // Recent rows carry a description too; editing an entry takes only
+    // the project, so they'd mislead there.
+    ...(recent.length && !forEdit ? [{ title: "Recent", data: recent }] : []),
     {
       title: "Projects",
       data: [...(q ? [] : [{ kind: "none" } as Row]), ...list],
