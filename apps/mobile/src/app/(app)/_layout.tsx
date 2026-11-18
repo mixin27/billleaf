@@ -43,7 +43,11 @@ export default function AppLayout() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Protected guard={Boolean(workspace)}>
-        <Stack.Screen name="index" />
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen
+          name="project-picker"
+          options={{ presentation: "modal" }}
+        />
       </Stack.Protected>
       <Stack.Screen
         name="workspaces"

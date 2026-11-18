@@ -90,7 +90,7 @@ export function Button({
   ...rest
 }: PressableProps & {
   title: string
-  variant?: "primary" | "secondary" | "link"
+  variant?: "primary" | "secondary" | "danger" | "link"
   loading?: boolean
 }) {
   const t = useTheme()
@@ -98,9 +98,11 @@ export function Button({
   const colors =
     variant === "primary"
       ? { bg: t.primary, fg: t.onPrimary, border: t.primary }
-      : variant === "secondary"
-        ? { bg: "transparent", fg: t.text, border: t.border }
-        : { bg: "transparent", fg: t.primary, border: "transparent" }
+      : variant === "danger"
+        ? { bg: t.danger, fg: "#FFFFFF", border: t.danger }
+        : variant === "secondary"
+          ? { bg: "transparent", fg: t.text, border: t.border }
+          : { bg: "transparent", fg: t.primary, border: "transparent" }
   return (
     <Pressable
       accessibilityRole="button"

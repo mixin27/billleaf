@@ -22,7 +22,9 @@ The first `ios` run generates `ios/` (gitignored), installs CocoaPods and builds
 - `src/lib/auth-client.ts`: Better Auth with `@better-auth/expo/client`. The session cookie is stored in the keychain (expo-secure-store) and sent with `expo-origin: billleaf://`.
 - `src/lib/api.ts`: the shared typed client (`@workspace/api-client`) with `credentials: "omit"`, the stored `Cookie`, and `X-Workspace-Id`. `ApiError` / `unwrap` / `errorMessage` match the web app.
 - `src/stores/workspace-store.ts`: the active workspace (zustand, persisted in SecureStore). `app/(app)/_layout.tsx` checks it against your memberships on launch and sends you to the picker without one.
-- `src/features/*`: TanStack Query hooks per screen (workspaces, `/v1/me`, dashboard). Query keys include the workspace id.
+- `src/features/*`: TanStack Query hooks per screen (workspaces, `/v1/me`, dashboard, time). Query keys include the workspace id; `features/time.ts` uses the web's `timeKeys` shape.
+- `src/app/(app)/(tabs)`: native tabs (Home, Time). `project-picker.tsx` is a modal that sets the running timer's project, or the next one's via `stores/timer-draft.ts`.
+- Tests: `pnpm --filter mobile test` (Vitest) covers the pure modules in `src/lib` only (`clock`, `dates`, `api-error`); no React Native runtime.
 - `src/lib/session.ts`: `signOut()` clears the session, the workspace and the query cache.
 - `src/lib/query-client.ts`: TanStack Query; refetches when the app returns to the foreground.
 
