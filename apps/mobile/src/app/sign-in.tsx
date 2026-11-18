@@ -3,7 +3,14 @@ import * as React from "react"
 import { ScrollView, StyleSheet, View } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 
-import { Body, Button, Field, Screen, Title } from "@/components/ui"
+import {
+  Body,
+  Button,
+  Field,
+  KeyboardAvoid,
+  Screen,
+  Title,
+} from "@/components/ui"
 import { Spacing } from "@/constants/theme"
 import { useTheme } from "@/hooks/use-theme"
 import { authClient } from "@/lib/auth-client"
@@ -60,103 +67,109 @@ export default function SignInScreen() {
   return (
     <Screen>
       <SafeAreaView style={{ flex: 1 }}>
-        {/* Insets, not KeyboardAvoidingView: its layout animation made the
+        <KeyboardAvoid>
+          {/* Insets, not KeyboardAvoidingView: its layout animation made the
             fields jump under your finger as the keyboard opened. */}
-        <ScrollView
-          contentContainerStyle={styles.content}
-          keyboardShouldPersistTaps="handled"
-          automaticallyAdjustKeyboardInsets
-        >
-          <View style={{ gap: Spacing.one }}>
-            <Body style={[styles.wordmark, { color: t.primary }]}>
-              billleaf
-            </Body>
-            <Title>
-              {step === "password" ? "Sign in" : "Two-factor authentication"}
-            </Title>
-            {step === "code" ? (
-              <Body muted>
-                Enter the 6-digit code from your authenticator app.
+          <ScrollView
+            contentContainerStyle={styles.content}
+            keyboardShouldPersistTaps="handled"
+            automaticallyAdjustKeyboardInsets
+          >
+            <View style={{ gap: Spacing.one }}>
+              <Body style={[styles.wordmark, { color: t.primary }]}>
+                billleaf
               </Body>
-            ) : null}
-          </View>
+              <Title>
+                {step === "password" ? "Sign in" : "Two-factor authentication"}
+              </Title>
+              {step === "code" ? (
+                <Body muted>
+                  Enter the 6-digit code from your authenticator app.
+                </Body>
+              ) : null}
+            </View>
 
-          {step === "password" ? (
-            <View style={{ gap: Spacing.three }}>
-              <Field
-                label="Email"
-                value={email}
-                onChangeText={setEmail}
-                autoCapitalize="none"
-                autoCorrect={false}
-                autoComplete="email"
-                keyboardType="email-address"
-                textContentType="emailAddress"
-              />
-              <Field
-                label="Password"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                autoCapitalize="none"
-                autoCorrect={false}
-                autoComplete="current-password"
-                textContentType="password"
-                onSubmitEditing={signIn}
-              />
-              {error ? <Body style={{ color: t.danger }}>{error}</Body> : null}
-              <Button
-                title="Sign in"
-                loading={pending}
-                disabled={!email.trim() || !password}
-                onPress={signIn}
-              />
-              <Button
-                title="Forgot password?"
-                variant="link"
-                onPress={() =>
-                  openWeb(
-                    `/forgot-password${email.trim() ? `?email=${encodeURIComponent(email.trim())}` : ""}`
-                  )
-                }
-              />
-              <Button
-                title="Create an account"
-                variant="secondary"
-                onPress={() => openWeb("/sign-up")}
-              />
-            </View>
-          ) : (
-            <View style={{ gap: Spacing.three }}>
-              <Field
-                label="Code"
-                value={code}
-                onChangeText={setCode}
-                keyboardType="number-pad"
-                autoComplete="one-time-code"
-                textContentType="oneTimeCode"
-                autoFocus
-                onSubmitEditing={verify}
-              />
-              {error ? <Body style={{ color: t.danger }}>{error}</Body> : null}
-              <Button
-                title="Verify"
-                loading={pending}
-                disabled={code.replace(/\s/g, "").length < 6}
-                onPress={verify}
-              />
-              <Button
-                title="Back"
-                variant="link"
-                onPress={() => {
-                  setStep("password")
-                  setCode("")
-                  setError(null)
-                }}
-              />
-            </View>
-          )}
-        </ScrollView>
+            {step === "password" ? (
+              <View style={{ gap: Spacing.three }}>
+                <Field
+                  label="Email"
+                  value={email}
+                  onChangeText={setEmail}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  autoComplete="email"
+                  keyboardType="email-address"
+                  textContentType="emailAddress"
+                />
+                <Field
+                  label="Password"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  autoComplete="current-password"
+                  textContentType="password"
+                  onSubmitEditing={signIn}
+                />
+                {error ? (
+                  <Body style={{ color: t.danger }}>{error}</Body>
+                ) : null}
+                <Button
+                  title="Sign in"
+                  loading={pending}
+                  disabled={!email.trim() || !password}
+                  onPress={signIn}
+                />
+                <Button
+                  title="Forgot password?"
+                  variant="link"
+                  onPress={() =>
+                    openWeb(
+                      `/forgot-password${email.trim() ? `?email=${encodeURIComponent(email.trim())}` : ""}`
+                    )
+                  }
+                />
+                <Button
+                  title="Create an account"
+                  variant="secondary"
+                  onPress={() => openWeb("/sign-up")}
+                />
+              </View>
+            ) : (
+              <View style={{ gap: Spacing.three }}>
+                <Field
+                  label="Code"
+                  value={code}
+                  onChangeText={setCode}
+                  keyboardType="number-pad"
+                  autoComplete="one-time-code"
+                  textContentType="oneTimeCode"
+                  autoFocus
+                  onSubmitEditing={verify}
+                />
+                {error ? (
+                  <Body style={{ color: t.danger }}>{error}</Body>
+                ) : null}
+                <Button
+                  title="Verify"
+                  loading={pending}
+                  disabled={code.replace(/\s/g, "").length < 6}
+                  onPress={verify}
+                />
+                <Button
+                  title="Back"
+                  variant="link"
+                  onPress={() => {
+                    setStep("password")
+                    setCode("")
+                    setError(null)
+                  }}
+                />
+              </View>
+            )}
+          </ScrollView>
+        </KeyboardAvoid>
       </SafeAreaView>
     </Screen>
   )
