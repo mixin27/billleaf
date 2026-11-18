@@ -20,11 +20,23 @@ export const api = createApiClient({
   getWorkspaceId: () => workspaceId,
 })
 
+/**
+ * Headers every API call needs: the session cookie from the keychain,
+ * `expo-origin` (as the auth client sends) and the active workspace.
+ * Exported for the few calls the typed client can't make (file uploads).
+ */
+export async function apiHeaders(): Promise<Record<string, string>> {
+  const h: Record<string, string> = { "expo-origin": "billleaf://" }
+  const cookie = await authClient.getCookie()
+  if (cookie) h.cookie = cookie
+  if (workspaceId) h["x-workspace-id"] = workspaceId
+  return h
+}
+
 api.use({
   async onRequest({ request }) {
-    const cookie = await authClient.getCookie()
-    if (cookie) request.headers.set("cookie", cookie)
-    request.headers.set("expo-origin", "billleaf://")
+    for (const [k, v] of Object.entries(await apiHeaders()))
+      if (k !== "x-workspace-id") request.headers.set(k, v)
     return request
   },
 })

@@ -48,6 +48,7 @@ export default function AppLayout() {
           name="project-picker"
           options={{ presentation: "modal" }}
         />
+        <Stack.Screen name="expense-new" options={{ presentation: "modal" }} />
       </Stack.Protected>
       <Stack.Screen
         name="workspaces"
