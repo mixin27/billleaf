@@ -1,6 +1,8 @@
 import * as React from "react"
 import {
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   type PressableProps,
   StyleSheet,
@@ -22,6 +24,21 @@ export function Screen({ children }: { children: React.ReactNode }) {
     <View style={[styles.screen, { backgroundColor: t.background }]}>
       {children}
     </View>
+  )
+}
+
+/**
+ * Keeps focused fields above the keyboard on Android, where the app draws
+ * edge to edge and the window no longer resizes for it. iOS scroll views
+ * use `automaticallyAdjustKeyboardInsets` instead (KeyboardAvoidingView's
+ * layout animation there made fields jump under your finger).
+ */
+export function KeyboardAvoid({ children }: { children: React.ReactNode }) {
+  if (Platform.OS !== "android") return <>{children}</>
+  return (
+    <KeyboardAvoidingView behavior="padding" style={styles.screen}>
+      {children}
+    </KeyboardAvoidingView>
   )
 }
 

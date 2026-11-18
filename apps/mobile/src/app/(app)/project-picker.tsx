@@ -3,6 +3,7 @@ import * as React from "react"
 import {
   ActivityIndicator,
   Alert,
+  Platform,
   Pressable,
   SectionList,
   StyleSheet,
@@ -12,7 +13,7 @@ import {
 } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 
-import { Button, Screen, Title } from "@/components/ui"
+import { Button, KeyboardAvoid, Screen, Title } from "@/components/ui"
 import { Radius, Spacing, Type } from "@/constants/theme"
 import {
   useActiveProjects,
@@ -111,127 +112,134 @@ export default function ProjectPickerScreen() {
 
   return (
     <Screen>
-      <SafeAreaView style={styles.flex} edges={["bottom"]}>
-        <View style={styles.header}>
-          <Title>Project</Title>
-          <Button title="Done" variant="link" onPress={() => router.back()} />
-        </View>
-        <TextInput
-          value={query}
-          onChangeText={setQuery}
-          placeholder="Search projects or recent work"
-          placeholderTextColor={t.textSecondary}
-          accessibilityLabel="Search projects"
-          autoCorrect={false}
-          clearButtonMode="while-editing"
-          style={[
-            styles.search,
-            {
-              color: t.text,
-              backgroundColor: t.backgroundElement,
-              borderColor: t.border,
-            },
-          ]}
-        />
-        {update.isPending ? <ActivityIndicator style={styles.busy} /> : null}
-        <SectionList
-          sections={sections}
-          keyExtractor={(r, i) => (r.kind === "none" ? `none-${i}` : r.key)}
-          keyboardShouldPersistTaps="handled"
-          contentContainerStyle={styles.list}
-          stickySectionHeadersEnabled={false}
-          renderSectionHeader={({ section }) => (
-            <Text
-              style={[Type.small, styles.section, { color: t.textSecondary }]}
-            >
-              {section.title.toUpperCase()}
-            </Text>
-          )}
-          renderItem={({ item }) => {
-            const selected =
-              item.kind === "none"
-                ? !current
-                : item.kind === "project" && item.project.projectId === current
-            const title =
-              item.kind === "none"
-                ? "No project"
-                : item.kind === "recent"
-                  ? item.description || item.project.projectName || "Untitled"
-                  : item.project.projectName
-            const sub =
-              item.kind === "none"
-                ? null
-                : item.kind === "recent"
-                  ? [item.project.projectName, item.project.taskTitle]
-                      .filter(Boolean)
-                      .join(": ") || null
-                  : item.project.clientName
-            return (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityState={{ selected }}
-                disabled={update.isPending}
-                onPress={() =>
-                  item.kind === "none"
-                    ? choose(NO_PROJECT)
-                    : item.kind === "recent"
-                      ? choose(item.project, item.description)
-                      : choose(item.project)
-                }
-                style={({ pressed }) => [
-                  styles.row,
-                  {
-                    backgroundColor: selected
-                      ? t.backgroundSelected
-                      : "transparent",
-                    opacity: pressed ? 0.7 : 1,
-                  },
-                ]}
+      {/* An iOS sheet leaves room at the top; Android shows it full screen. */}
+      <SafeAreaView
+        style={styles.flex}
+        edges={Platform.OS === "android" ? ["top", "bottom"] : ["bottom"]}
+      >
+        <KeyboardAvoid>
+          <View style={styles.header}>
+            <Title>Project</Title>
+            <Button title="Done" variant="link" onPress={() => router.back()} />
+          </View>
+          <TextInput
+            value={query}
+            onChangeText={setQuery}
+            placeholder="Search projects or recent work"
+            placeholderTextColor={t.textSecondary}
+            accessibilityLabel="Search projects"
+            autoCorrect={false}
+            clearButtonMode="while-editing"
+            style={[
+              styles.search,
+              {
+                color: t.text,
+                backgroundColor: t.backgroundElement,
+                borderColor: t.border,
+              },
+            ]}
+          />
+          {update.isPending ? <ActivityIndicator style={styles.busy} /> : null}
+          <SectionList
+            sections={sections}
+            keyExtractor={(r, i) => (r.kind === "none" ? `none-${i}` : r.key)}
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={styles.list}
+            stickySectionHeadersEnabled={false}
+            renderSectionHeader={({ section }) => (
+              <Text
+                style={[Type.small, styles.section, { color: t.textSecondary }]}
               >
-                <View style={styles.flex}>
-                  <Text
-                    style={[Type.body, { color: t.text }]}
-                    numberOfLines={1}
-                  >
-                    {title}
-                  </Text>
-                  {sub ? (
+                {section.title.toUpperCase()}
+              </Text>
+            )}
+            renderItem={({ item }) => {
+              const selected =
+                item.kind === "none"
+                  ? !current
+                  : item.kind === "project" &&
+                    item.project.projectId === current
+              const title =
+                item.kind === "none"
+                  ? "No project"
+                  : item.kind === "recent"
+                    ? item.description || item.project.projectName || "Untitled"
+                    : item.project.projectName
+              const sub =
+                item.kind === "none"
+                  ? null
+                  : item.kind === "recent"
+                    ? [item.project.projectName, item.project.taskTitle]
+                        .filter(Boolean)
+                        .join(": ") || null
+                    : item.project.clientName
+              return (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityState={{ selected }}
+                  disabled={update.isPending}
+                  onPress={() =>
+                    item.kind === "none"
+                      ? choose(NO_PROJECT)
+                      : item.kind === "recent"
+                        ? choose(item.project, item.description)
+                        : choose(item.project)
+                  }
+                  style={({ pressed }) => [
+                    styles.row,
+                    {
+                      backgroundColor: selected
+                        ? t.backgroundSelected
+                        : "transparent",
+                      opacity: pressed ? 0.7 : 1,
+                    },
+                  ]}
+                >
+                  <View style={styles.flex}>
                     <Text
-                      style={[
-                        Type.small,
-                        {
-                          color:
-                            item.kind === "recent"
-                              ? t.primary
-                              : t.textSecondary,
-                        },
-                      ]}
+                      style={[Type.body, { color: t.text }]}
                       numberOfLines={1}
                     >
-                      {sub}
+                      {title}
                     </Text>
+                    {sub ? (
+                      <Text
+                        style={[
+                          Type.small,
+                          {
+                            color:
+                              item.kind === "recent"
+                                ? t.primary
+                                : t.textSecondary,
+                          },
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {sub}
+                      </Text>
+                    ) : null}
+                  </View>
+                  {selected ? (
+                    <Text style={[Type.body, { color: t.primary }]}>✓</Text>
                   ) : null}
-                </View>
-                {selected ? (
-                  <Text style={[Type.body, { color: t.primary }]}>✓</Text>
-                ) : null}
-              </Pressable>
-            )
-          }}
-          renderSectionFooter={({ section }) =>
-            section.title !== "Projects" ? null : projects.error ? (
-              <Text style={[Type.body, styles.empty, { color: t.danger }]}>
-                {errorMessage(projects.error)}
-              </Text>
-            ) : !projects.isPending && !list.length ? (
-              <Text
-                style={[Type.body, styles.empty, { color: t.textSecondary }]}
-              >
-                {q ? "No matching projects." : "No active projects yet."}
-              </Text>
-            ) : null
-          }
-        />
+                </Pressable>
+              )
+            }}
+            renderSectionFooter={({ section }) =>
+              section.title !== "Projects" ? null : projects.error ? (
+                <Text style={[Type.body, styles.empty, { color: t.danger }]}>
+                  {errorMessage(projects.error)}
+                </Text>
+              ) : !projects.isPending && !list.length ? (
+                <Text
+                  style={[Type.body, styles.empty, { color: t.textSecondary }]}
+                >
+                  {q ? "No matching projects." : "No active projects yet."}
+                </Text>
+              ) : null
+            }
+          />
+        </KeyboardAvoid>
       </SafeAreaView>
     </Screen>
   )

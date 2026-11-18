@@ -15,7 +15,7 @@ import {
 } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 
-import { Body, Button, Screen, Title } from "@/components/ui"
+import { Body, Button, KeyboardAvoid, Screen, Title } from "@/components/ui"
 import { Radius, Spacing, Type } from "@/constants/theme"
 import { useDashboard } from "@/features/dashboard"
 import {
@@ -80,32 +80,34 @@ export default function TimeScreen() {
   return (
     <Screen>
       <SafeAreaView style={styles.flex} edges={["top"]}>
-        <ScrollView
-          contentContainerStyle={styles.content}
-          keyboardShouldPersistTaps="handled"
-          automaticallyAdjustKeyboardInsets
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={refresh} />
-          }
-        >
-          <Title>Time</Title>
-          {running.isPending ? (
-            <TimerCardShell />
-          ) : (
-            <TimerCard
-              key={running.data?.id ?? "idle"}
-              entry={running.data ?? null}
+        <KeyboardAvoid>
+          <ScrollView
+            contentContainerStyle={styles.content}
+            keyboardShouldPersistTaps="handled"
+            automaticallyAdjustKeyboardInsets
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={refresh} />
+            }
+          >
+            <Title>Time</Title>
+            {running.isPending ? (
+              <TimerCardShell />
+            ) : (
+              <TimerCard
+                key={running.data?.id ?? "idle"}
+                entry={running.data ?? null}
+              />
+            )}
+            {favorites.data && favorites.data.length > 0 ? (
+              <Favorites items={favorites.data} />
+            ) : null}
+            <Today
+              entries={entries.data?.items}
+              total={entries.data?.totalSeconds}
+              error={entries.error}
             />
-          )}
-          {favorites.data && favorites.data.length > 0 ? (
-            <Favorites items={favorites.data} />
-          ) : null}
-          <Today
-            entries={entries.data?.items}
-            total={entries.data?.totalSeconds}
-            error={entries.error}
-          />
-        </ScrollView>
+          </ScrollView>
+        </KeyboardAvoid>
       </SafeAreaView>
     </Screen>
   )
