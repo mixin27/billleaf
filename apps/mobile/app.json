@@ -17,7 +17,8 @@
         "backgroundColor": "#FFFFFF",
         "foregroundImage": "../../packages/brand/assets/adaptive-foreground-1024.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": ["android.permission.SCHEDULE_EXACT_ALARM"]
     },
     "plugins": [
       "expo-router",
