@@ -38,6 +38,15 @@ test("track time with the timer, calendar and timesheet, then invoice it", async
   await page.goto(`/${slug}/time?tab=calendar&view=day&day=${today}`)
   const column = page.locator(`[data-day="${today}"]`)
   await expect(column).toBeVisible()
+  // The calendar opens at 8 AM or today's earliest entry, so the timer
+  // entry above puts 09:00 off screen when this runs just after midnight
+  // UTC. Scroll to 08:30 so the drag lands on visible slots.
+  await column.evaluate((el, px) => {
+    let sc = el.parentElement
+    while (sc && getComputedStyle(sc).overflowY !== "auto")
+      sc = sc.parentElement
+    if (sc) sc.scrollTop = 8.5 * px
+  }, HOUR_PX)
   const box = (await column.boundingBox())!
   const x = box.x + box.width / 2
   await page.mouse.move(x, box.y + 9 * HOUR_PX + 2)
