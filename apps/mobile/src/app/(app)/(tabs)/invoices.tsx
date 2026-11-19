@@ -1,8 +1,6 @@
-import { formatMoney, type InvoiceSummary } from "@workspace/contracts"
-import { router } from "expo-router"
+import { formatMoney } from "@workspace/contracts"
 import * as React from "react"
 import {
-  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -11,19 +9,18 @@ import {
 } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 
+import { InvoiceRow, totalsByCurrency } from "@/components/invoice-row"
 import { Body, Chip, Screen, Title } from "@/components/ui"
 import { Radius, Spacing, Type } from "@/constants/theme"
 import { useDashboard } from "@/features/dashboard"
 import {
   INVOICE_FILTERS,
-  INVOICE_STATUS_LABELS,
   useInvoiceFilter,
   useInvoices,
 } from "@/features/invoices"
 import { useWorkspaceProfile } from "@/features/workspaces"
 import { useTheme } from "@/hooks/use-theme"
 import { errorMessage } from "@/lib/api"
-import { shortDate } from "@/lib/format"
 
 const EMPTY: Record<string, string> = {
   unpaid: "Nothing owed right now. Every issued invoice is paid.",
@@ -134,87 +131,6 @@ export default function InvoicesScreen() {
   )
 }
 
-function totalsByCurrency(items: InvoiceSummary[]) {
-  const m = new Map<string, number>()
-  for (const i of items)
-    m.set(i.currency, (m.get(i.currency) ?? 0) + i.amountDue)
-  return [...m].map(([currency, amount]) => ({ currency, amount }))
-}
-
-function InvoiceRow({
-  invoice: inv,
-  locale,
-  today,
-  first,
-}: {
-  invoice: InvoiceSummary
-  locale: string
-  today: string | undefined
-  first: boolean
-}) {
-  const t = useTheme()
-  const owing = inv.displayStatus !== "paid" && inv.displayStatus !== "void"
-  const amount = formatMoney(
-    {
-      amount: owing && inv.status === "issued" ? inv.amountDue : inv.total,
-      currency: inv.currency,
-    },
-    locale
-  )
-  const when =
-    inv.status === "issued" && owing && inv.dueDate
-      ? `Due ${shortDate(inv.dueDate, locale, today)}`
-      : shortDate(inv.issueDate, locale, today)
-  const sub = [inv.number ?? "Draft", when].join(" · ")
-  const status = INVOICE_STATUS_LABELS[inv.displayStatus]
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={`${inv.clientName}, ${amount}, ${status}, ${sub}`}
-      onPress={() =>
-        router.push({ pathname: "/invoice/[id]", params: { id: inv.id } })
-      }
-      style={({ pressed }) => [
-        styles.row,
-        !first && { borderTopWidth: 1, borderTopColor: t.border },
-        { opacity: pressed ? 0.6 : 1 },
-      ]}
-    >
-      <View style={styles.flex}>
-        <Text style={[Type.body, { color: t.text }]} numberOfLines={1}>
-          {inv.clientName}
-        </Text>
-        <Text
-          style={[Type.small, { color: t.textSecondary }]}
-          numberOfLines={1}
-        >
-          {sub}
-        </Text>
-      </View>
-      <View style={styles.right}>
-        <Text style={[Type.body, styles.amount, { color: t.text }]}>
-          {amount}
-        </Text>
-        <Text
-          style={[
-            Type.small,
-            {
-              color:
-                inv.displayStatus === "overdue"
-                  ? t.danger
-                  : inv.displayStatus === "paid"
-                    ? t.primary
-                    : t.textSecondary,
-            },
-          ]}
-        >
-          {status}
-        </Text>
-      </View>
-    </Pressable>
-  )
-}
-
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   content: { padding: Spacing.four, gap: Spacing.three },
@@ -226,12 +142,4 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.one,
   },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.three,
-    paddingVertical: Spacing.two + 2,
-  },
-  right: { alignItems: "flex-end", gap: Spacing.half },
-  amount: { fontWeight: "600", fontVariant: ["tabular-nums"] },
 })

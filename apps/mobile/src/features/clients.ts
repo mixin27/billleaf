@@ -13,6 +13,22 @@ export const clientKeys = {
     ["clients", ws, "detail", id] as const,
 }
 
+/**
+ * Active clients by name, filtered by `q` (name or email). The first 100;
+ * a search finds the rest.
+ */
+export function useClients(q: string, enabled = true) {
+  const ws = useWs()
+  const query = { q: q || undefined, sort: "name:asc", pageSize: 100 }
+  return useQuery({
+    queryKey: [...clientKeys.all(ws), "list", query],
+    queryFn: () =>
+      unwrap(api.GET("/v1/clients", { params: { query: query as never } })),
+    enabled: Boolean(ws) && enabled,
+    placeholderData: (prev) => prev,
+  })
+}
+
 /** A client with its contacts (needs client.read). */
 export function useClient(id: string | undefined, enabled = true) {
   const ws = useWs()

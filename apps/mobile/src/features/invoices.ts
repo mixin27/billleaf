@@ -30,7 +30,7 @@ export const invoiceKeys = {
   all: (ws: string | undefined) => ["invoices", ws] as const,
   list: (
     ws: string | undefined,
-    filters: { status?: InvoiceDisplayStatus },
+    filters: { status?: InvoiceDisplayStatus; clientId?: string },
     pageSize: number
   ) => ["invoices", ws, "list", filters, pageSize] as const,
   detail: (ws: string | undefined, id: string) =>
@@ -100,6 +100,50 @@ export function useInvoices(filter: InvoiceFilter, enabled = true) {
     error,
     /** Some invoices didn't fit (the web has them all). */
     more,
+    refetch: () => Promise.all(results.map((r) => r.refetch())),
+  }
+}
+
+/**
+ * One client's invoices: everything still owed (overdue first), and the
+ * latest few of the rest.
+ */
+export function useClientInvoices(clientId: string, enabled = true) {
+  const ws = useWs()
+  const lists = [
+    ...UNPAID.map((status) => ({ status, sort: "dueDate:asc", size: 100 })),
+    { status: undefined, sort: "createdAt:desc", size: 10 },
+  ]
+  const results = useQueries({
+    queries: lists.map(({ status, sort, size }) => ({
+      queryKey: invoiceKeys.list(ws, { status, clientId }, size),
+      enabled: Boolean(ws && clientId) && enabled,
+      queryFn: () =>
+        unwrap(
+          api.GET("/v1/invoices", {
+            params: {
+              query: { status, clientId, sort, pageSize: size } as never,
+            },
+          })
+        ),
+    })),
+  })
+  const error = results.find((r) => r.error)?.error ?? null
+  const done = results.every((r) => r.data)
+  const unpaid = done
+    ? results.slice(0, UNPAID.length).flatMap((r) => r.data!.items)
+    : undefined
+  const owed = new Set(unpaid?.map((i) => i.id))
+  const recent = done
+    ? results
+        .at(-1)!
+        .data!.items.filter((i) => !owed.has(i.id))
+        .slice(0, 5)
+    : undefined
+  return {
+    unpaid,
+    recent,
+    error,
     refetch: () => Promise.all(results.map((r) => r.refetch())),
   }
 }

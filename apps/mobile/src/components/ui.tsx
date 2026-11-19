@@ -179,8 +179,43 @@ export function Chip({
   )
 }
 
+/** A titled card: "ITEMS", "CONTACTS", … with rows inside. */
+export function Section({
+  title,
+  children,
+}: {
+  title: string
+  children: React.ReactNode
+}) {
+  const t = useTheme()
+  return (
+    <View style={{ gap: Spacing.two }}>
+      <Text
+        accessibilityRole="header"
+        style={[Type.small, { color: t.textSecondary, fontWeight: "600" }]}
+      >
+        {title.toUpperCase()}
+      </Text>
+      <View
+        style={[
+          styles.card,
+          { backgroundColor: t.backgroundElement, borderColor: t.border },
+        ]}
+      >
+        {children}
+      </View>
+    </View>
+  )
+}
+
 const styles = StyleSheet.create({
   screen: { flex: 1 },
+  card: {
+    borderWidth: 1,
+    borderRadius: Radius.lg,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.one,
+  },
   input: {
     borderWidth: 1,
     borderRadius: Radius.md,
