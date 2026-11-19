@@ -28,8 +28,9 @@ The first `ios` run generates `ios/` (gitignored), installs CocoaPods and builds
 - Invoices: `features/invoices.ts` mirrors the web's `["invoices", ws, …]` keys. The **Unpaid** filter is three list queries (overdue, partly paid, open) because the API filters one status at a time; `useInvoiceFilter` (zustand) lets Home open the list on a filter. `invoice/[id].tsx` is a pushed screen; `payment-new.tsx` records a payment. The PDF needs the session, so `shareInvoicePdf` downloads it with `File.downloadFileAsync` and `apiHeaders()` into the cache and opens the share sheet (`expo-sharing`).
 - Date and time-zone helpers (`weekStart`, `addDays`, `parseDuration`, `zonedParts`, `zonedToUtc`, `hhmm`, `parseHhmm`) come from `@workspace/contracts` (`common/dates.ts`), shared with the web.
 - `app/(app)/entry-edit.tsx`: log new time (no `id`; `?date=` pre-fills the day) or edit or delete an entry. There's no single-entry GET, so it reads the entry from the cached time list (`useCachedEntry`).
-- Tests: `pnpm --filter mobile test` (Vitest) covers the pure modules in `src/lib` only (`clock`, `amount`, `api-error`, `format`); no React Native runtime.
-- `src/lib/session.ts`: `signOut()` clears the session, the workspace and the query cache.
+- Tests: `pnpm --filter mobile test` (Vitest) covers the pure modules in `src/lib` only (`clock`, `amount`, `api-error`, `format`, `reminder-schedule`); no React Native runtime.
+- Timer reminder: `features/timer-reminder.ts` (mounted in `app/(app)/_layout.tsx`) watches the running timer and keeps one local notification (`expo-notifications`, id `running-timer`) scheduled 8 hours after its start (`lib/reminder-schedule.ts`); it's replaced when the timer changes and removed when it stops. There's no push server: a timer started on the web is picked up when the app next fetches it. The notification's **Stop timer** action opens the app, checks the running timer is still the same entry, then stops it. Remote notifications are off in the plugin config (no `aps-environment` entitlement); the Android status bar icon is `packages/brand/assets/notification-icon-96.png`.
+- `src/lib/session.ts`: `signOut()` clears the session, the workspace, the query cache and the timer reminder.
 - `src/lib/query-client.ts`: TanStack Query; refetches when the app returns to the foreground.
 
 ## Layout

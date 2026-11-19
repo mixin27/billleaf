@@ -126,6 +126,20 @@ const tile = (size: number, scale: number, radius: number) =>
     `<rect width="${size}" height="${size}" rx="${radius}" fill="${TILE_BG}"/>${place(mark, (size * (1 - scale)) / 2, (size * (1 - scale)) / 2, size * scale)}`
   )
 
+/** Every drawn pixel white, keeping only the shape (its alpha). */
+async function silhouette(svg: string, size: number) {
+  const alpha = await sharp(await png(svg, size))
+    .ensureAlpha()
+    .extractChannel("alpha")
+    .toBuffer()
+  return sharp({
+    create: { width: size, height: size, channels: 3, background: "#FFFFFF" },
+  })
+    .joinChannel(alpha)
+    .png({ compressionLevel: 9 })
+    .toBuffer()
+}
+
 async function write(name: string, data: Buffer | Promise<Buffer>) {
   writeFileSync(resolve(out, name), await data)
 }
@@ -207,6 +221,9 @@ async function main() {
     png(svgDoc(1024, 1024, place(mark, 272, 272, 480)), 1024)
   )
   await write("splash-icon.png", png(bare(512), 512))
+  // Android status bar icon: a white silhouette on transparent (the
+  // system tints it).
+  await write("notification-icon-96.png", silhouette(bare(96, true), 96))
 
   sync()
   console.log(`✔ brand assets written to ${out} and copied to the apps`)
