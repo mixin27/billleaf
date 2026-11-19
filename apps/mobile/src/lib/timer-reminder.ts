@@ -85,32 +85,60 @@ async function askForExactAlarms() {
   if (open) await Notifications.requestExactAlarmPermissionsAsync()
 }
 
+const cancelNow = () =>
+  Notifications.cancelScheduledNotificationAsync(ID).catch(() => {})
+
+let queue: Promise<void> = Promise.resolve()
+let latest = 0
+
+/** Remove the reminder (sign out, no time tracking); wins over any sync. */
 export function cancelTimerReminder() {
-  return Notifications.cancelScheduledNotificationAsync(ID).catch(() => {})
+  ++latest
+  queue = queue.then(cancelNow, cancelNow)
+  return queue
 }
 
 /**
- * One reminder at most, for the running timer in the active workspace:
- * replaced when the timer changes, removed when it stops. A timer that's
- * already past the mark gets none (you're looking at it).
+ * One reminder at most, for the running timer in the active workspace,
+ * `hours` after it started (`null`: none): replaced when the timer or the
+ * setting changes, removed when it stops. A timer that's already past the
+ * mark gets none (you're looking at it).
+ *
+ * Calls run one at a time, and a newer call wins: a sync still waiting on
+ * a permission prompt doesn't schedule once the timer has stopped.
  */
-export async function syncTimerReminder(
+export function syncTimerReminder(
   entry: TimeEntry | null,
-  workspace: ReminderData["workspace"]
+  workspace: ReminderData["workspace"],
+  hours: number | null
 ) {
-  await cancelTimerReminder()
-  const at = entry && reminderAt(entry)
+  const mine = ++latest
+  const run = () => sync(mine, entry, workspace, hours)
+  queue = queue.then(run, run)
+  return queue
+}
+
+async function sync(
+  mine: number,
+  entry: TimeEntry | null,
+  workspace: ReminderData["workspace"],
+  hours: number | null
+) {
+  if (mine !== latest) return
+  await cancelNow()
+  const at = entry && hours && reminderAt(entry, hours)
   if (!at || at <= Date.now() + 5_000) return
   // The channel first: Android 13+ only shows the permission prompt once
   // the app has a notification channel.
   await setUp()
   if (!(await allowed())) return
   await askForExactAlarms().catch(() => {})
+  if (mine !== latest) return
   await Notifications.scheduleNotificationAsync({
     identifier: ID,
     content: {
       title: "Is your timer still running?",
-      body: reminderBody(entry),
+      body: reminderBody(entry, hours!),
       data: { entryId: entry.id, workspace } satisfies ReminderData,
       categoryIdentifier: ID,
     },
