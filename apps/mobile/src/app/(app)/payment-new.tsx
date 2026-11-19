@@ -91,7 +91,29 @@ export default function RecordPaymentScreen() {
         reference: reference || null,
       },
       {
-        onSuccess: () => router.back(),
+        onSuccess: (payment) => {
+          router.back()
+          if (!payment.receiptNumber) return
+          Alert.alert(
+            "Payment recorded",
+            `Receipt ${payment.receiptNumber} is ready. Email it to ${inv?.clientName ?? "the client"}?`,
+            [
+              { text: "Not now", style: "cancel" },
+              {
+                text: "Send receipt",
+                onPress: () =>
+                  router.push({
+                    pathname: "/send",
+                    params: {
+                      kind: "receipt",
+                      invoiceId,
+                      paymentId: payment.id,
+                    },
+                  }),
+              },
+            ]
+          )
+        },
         onError: (e) =>
           Alert.alert("Couldn't record the payment", errorMessage(e)),
       }
@@ -201,8 +223,8 @@ export default function RecordPaymentScreen() {
                   onPress={submit}
                 />
                 <Body muted style={Type.small}>
-                  A receipt is created for the payment. Send it to the client
-                  from the web.
+                  A receipt is created for the payment. You can email it to the
+                  client next.
                 </Body>
               </>
             )}

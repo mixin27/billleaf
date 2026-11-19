@@ -9,6 +9,7 @@ import type {
   InvoiceDisplayStatus,
   InvoiceSummary,
   RecordPaymentInput,
+  SendDocumentInput,
 } from "@workspace/contracts"
 import { File, Paths } from "expo-file-system"
 import * as Sharing from "expo-sharing"
@@ -156,15 +157,33 @@ export function useRecordPayment(invoiceId: string) {
   })
 }
 
-/** Email the invoice (PDF attached) to the client's billing contact. */
+/**
+ * Email the invoice (PDF attached). Without `to`, the API picks the
+ * client's primary contact, else the client email.
+ */
 export function useSendInvoice(id: string) {
   const invalidate = useInvalidate()
   return useMutation({
-    mutationFn: () =>
+    mutationFn: (body: SendDocumentInput) =>
       unwrap(
         api.POST("/v1/invoices/{id}/send", {
           params: { path: { id } },
-          body: {},
+          body: body as never,
+        })
+      ),
+    onSettled: invalidate,
+  })
+}
+
+/** Email a payment's receipt (PDF attached); same recipient rules. */
+export function useSendReceipt(paymentId: string) {
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: (body: SendDocumentInput) =>
+      unwrap(
+        api.POST("/v1/payments/{id}/receipt/send", {
+          params: { path: { id: paymentId } },
+          body: body as never,
         })
       ),
     onSettled: invalidate,
