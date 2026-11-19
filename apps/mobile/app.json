@@ -42,7 +42,8 @@
           "cameraPermission": "Billleaf uses the camera to photograph receipts.",
           "microphonePermission": false
         }
-      ]
+      ],
+      "expo-sharing"
     ],
     "experiments": {
       "typedRoutes": false,

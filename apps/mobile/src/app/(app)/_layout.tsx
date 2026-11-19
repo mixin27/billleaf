@@ -2,6 +2,7 @@ import { Stack } from "expo-router"
 import * as React from "react"
 
 import { useWorkspaces } from "@/features/workspaces"
+import { useTheme } from "@/hooks/use-theme"
 import { useWorkspaceStore } from "@/stores/workspace-store"
 
 function useHydrated() {
@@ -21,6 +22,7 @@ function useHydrated() {
  * memberships (you may have left it), and a single workspace is picked for you.
  */
 export default function AppLayout() {
+  const t = useTheme()
   const hydrated = useHydrated()
   const workspaces = useWorkspaces()
   const workspace = useWorkspaceStore((s) => s.workspace)
@@ -50,6 +52,19 @@ export default function AppLayout() {
         />
         <Stack.Screen name="expense-new" options={{ presentation: "modal" }} />
         <Stack.Screen name="entry-edit" options={{ presentation: "modal" }} />
+        <Stack.Screen name="payment-new" options={{ presentation: "modal" }} />
+        <Stack.Screen
+          name="invoice/[id]"
+          options={{
+            headerShown: true,
+            title: "Invoice",
+            headerBackTitle: "Invoices",
+            headerTintColor: t.primary,
+            headerStyle: { backgroundColor: t.background },
+            headerTitleStyle: { color: t.text },
+            headerShadowVisible: false,
+          }}
+        />
       </Stack.Protected>
       <Stack.Screen
         name="workspaces"
