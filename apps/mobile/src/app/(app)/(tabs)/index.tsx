@@ -14,6 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context"
 import { Body, Button, Screen, Title } from "@/components/ui"
 import { Radius, Spacing, Type } from "@/constants/theme"
 import { useDashboard, useWeekTime } from "@/features/dashboard"
+import { useInvoiceFilter } from "@/features/invoices"
 import { useMe } from "@/features/me"
 import { useWorkspaceProfile } from "@/features/workspaces"
 import { useTheme } from "@/hooks/use-theme"
@@ -109,7 +110,18 @@ export default function DashboardScreen() {
           ) : null}
 
           {d?.receivables ? (
-            <Card title="Outstanding">
+            <Card
+              title="Outstanding"
+              // Opens the unpaid invoices (when you can see them).
+              onPress={
+                me.data?.permissions.includes("invoice.read")
+                  ? () => {
+                      useInvoiceFilter.getState().setFilter("unpaid")
+                      router.navigate("/invoices")
+                    }
+                  : undefined
+              }
+            >
               {d.receivables.totals.length === 0 ? (
                 <Body muted>Nothing owed right now.</Body>
               ) : (
@@ -184,29 +196,47 @@ export default function DashboardScreen() {
 
 function Card({
   title,
+  onPress,
   children,
 }: {
   title?: string
+  /** Makes the whole card a button (with a › after the title). */
+  onPress?: () => void
   children: React.ReactNode
 }) {
   const t = useTheme()
   return (
-    <View
-      style={[
+    <Pressable
+      disabled={!onPress}
+      onPress={onPress}
+      accessibilityRole={onPress ? "button" : undefined}
+      accessibilityHint={onPress ? `Opens ${title}` : undefined}
+      style={({ pressed }) => [
         styles.card,
-        { backgroundColor: t.backgroundElement, borderColor: t.border },
+        {
+          backgroundColor: t.backgroundElement,
+          borderColor: t.border,
+          opacity: pressed ? 0.7 : 1,
+        },
       ]}
     >
       {title ? (
-        <Text
-          accessibilityRole="header"
-          style={[Type.small, styles.bold, { color: t.textSecondary }]}
-        >
-          {title.toUpperCase()}
-        </Text>
+        <View style={styles.cardHead}>
+          <Text
+            accessibilityRole="header"
+            style={[Type.small, styles.bold, { color: t.textSecondary }]}
+          >
+            {title.toUpperCase()}
+          </Text>
+          {onPress ? (
+            <Text style={[Type.small, styles.bold, { color: t.primary }]}>
+              View ›
+            </Text>
+          ) : null}
+        </View>
       ) : null}
       {children}
-    </View>
+    </Pressable>
   )
 }
 
@@ -242,6 +272,7 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   content: { padding: Spacing.four, gap: Spacing.three },
   bold: { fontWeight: "600" },
+  cardHead: { flexDirection: "row", justifyContent: "space-between" },
   switcher: {
     alignSelf: "flex-start",
     flexDirection: "row",
