@@ -23,17 +23,16 @@ import {
   shareInvoicePdf,
   useInvoice,
   useInvoicePayments,
-  useSendInvoice,
 } from "@/features/invoices"
 import { useMe } from "@/features/me"
 import { useWorkspaceProfile } from "@/features/workspaces"
 import { useTheme } from "@/hooks/use-theme"
-import { ApiError, errorMessage } from "@/lib/api"
+import { errorMessage } from "@/lib/api"
 import { shortDate } from "@/lib/format"
 
 /**
  * One invoice: what's due, its lines and payments. From here you record a
- * payment, share the PDF or email it to the client. Drafts are edited and
+ * payment, share the PDF, or email the invoice or a receipt to the client. Drafts are edited and
  * issued on the web.
  */
 export default function InvoiceScreen() {
@@ -43,7 +42,6 @@ export default function InvoiceScreen() {
   const can = (p: Permission) => me.data?.permissions.includes(p) ?? false
   const invoice = useInvoice(id)
   const payments = useInvoicePayments(id, can("payment.read"))
-  const send = useSendInvoice(id)
   const today = useDashboard().data?.today
   const locale =
     useWorkspaceProfile().data?.locale ??
@@ -68,33 +66,13 @@ export default function InvoiceScreen() {
     }
   }
 
-  const email = () => {
-    if (!inv) return
-    Alert.alert(
-      `Email ${inv.number}?`,
-      `${inv.clientName} gets the invoice as a PDF with a link to view and pay it${
-        inv.lastSentTo ? `. Last sent to ${inv.lastSentTo}` : ""
-      }.`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Send",
-          onPress: () =>
-            send.mutate(undefined, {
-              onSuccess: (sent) =>
-                Alert.alert("Sent", `Emailed to ${sent.lastSentTo}.`),
-              onError: (e) =>
-                Alert.alert(
-                  "Couldn't send it",
-                  e instanceof ApiError && e.code === "no_recipient"
-                    ? `${inv.clientName} has no email address. Add one to the client on the web, then send again.`
-                    : errorMessage(e)
-                ),
-            }),
-        },
-      ]
-    )
-  }
+  const email = (paymentId?: string) =>
+    router.push({
+      pathname: "/send",
+      params: paymentId
+        ? { kind: "receipt", invoiceId: id, paymentId }
+        : { kind: "invoice", invoiceId: id },
+    })
 
   return (
     <Screen>
@@ -152,8 +130,7 @@ export default function InvoiceScreen() {
                     <Button
                       title="Email client"
                       variant="secondary"
-                      loading={send.isPending}
-                      onPress={email}
+                      onPress={() => email()}
                     />
                   </View>
                 ) : null}
@@ -215,44 +192,74 @@ export default function InvoiceScreen() {
 
             {can("payment.read") && payments.data?.items.length ? (
               <Section title="Payments">
-                {payments.data.items.map((p, i) => (
-                  <View
-                    key={p.id}
-                    style={[
-                      styles.line,
-                      i > 0 && { borderTopWidth: 1, borderTopColor: t.border },
-                    ]}
-                    accessible
-                  >
-                    <View style={styles.flex}>
-                      <Text style={[Type.body, { color: t.text }]}>
-                        {`${date(p.paidOn)} · ${PAYMENT_METHOD_LABELS[p.method]}`}
-                      </Text>
-                      <Text style={[Type.small, { color: t.textSecondary }]}>
-                        {[
-                          p.receiptNumber && `Receipt ${p.receiptNumber}`,
-                          p.reference,
-                          p.status === "refunded" && "Refunded",
-                        ]
-                          .filter(Boolean)
-                          .join(" · ")}
-                      </Text>
-                    </View>
-                    <Text
+                {payments.data.items.map((p, i) => {
+                  const sendable =
+                    p.receiptId &&
+                    p.status !== "refunded" &&
+                    can("payment.record")
+                  return (
+                    <View
+                      key={p.id}
                       style={[
-                        Type.body,
-                        styles.num,
-                        {
-                          color: t.text,
-                          textDecorationLine:
-                            p.status === "refunded" ? "line-through" : "none",
+                        styles.payment,
+                        i > 0 && {
+                          borderTopWidth: 1,
+                          borderTopColor: t.border,
                         },
                       ]}
                     >
-                      {money(p.amount)}
-                    </Text>
-                  </View>
-                ))}
+                      <View style={styles.line} accessible>
+                        <View style={styles.flex}>
+                          <Text style={[Type.body, { color: t.text }]}>
+                            {`${date(p.paidOn)} · ${PAYMENT_METHOD_LABELS[p.method]}`}
+                          </Text>
+                          <Text
+                            style={[Type.small, { color: t.textSecondary }]}
+                          >
+                            {[
+                              p.receiptNumber && `Receipt ${p.receiptNumber}`,
+                              p.reference,
+                              p.status === "refunded" && "Refunded",
+                              p.receiptLastSentAt &&
+                                p.status !== "refunded" &&
+                                `Sent ${date(p.receiptLastSentAt.slice(0, 10))}`,
+                            ]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </Text>
+                        </View>
+                        <Text
+                          style={[
+                            Type.body,
+                            styles.num,
+                            {
+                              color: t.text,
+                              textDecorationLine:
+                                p.status === "refunded"
+                                  ? "line-through"
+                                  : "none",
+                            },
+                          ]}
+                        >
+                          {money(p.amount)}
+                        </Text>
+                      </View>
+                      {sendable ? (
+                        <View style={styles.paymentAction}>
+                          <Button
+                            title={
+                              p.receiptLastSentAt
+                                ? "Send receipt again"
+                                : "Send receipt"
+                            }
+                            variant="link"
+                            onPress={() => email(p.id)}
+                          />
+                        </View>
+                      ) : null}
+                    </View>
+                  )
+                })}
               </Section>
             ) : null}
 
@@ -402,6 +409,13 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.two + 2,
   },
   num: { fontVariant: ["tabular-nums"] },
+  payment: { paddingBottom: Spacing.one },
+  // Line the link text up with the row (the button pads its sides).
+  paymentAction: {
+    alignItems: "flex-start",
+    marginTop: -Spacing.one,
+    marginLeft: -Spacing.three,
+  },
   totals: {
     borderTopWidth: 1,
     paddingVertical: Spacing.two,
