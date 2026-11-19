@@ -1,9 +1,16 @@
 import { Stack } from "expo-router"
 import * as React from "react"
 
+import { useTimerReminder } from "@/features/timer-reminder"
 import { useWorkspaces } from "@/features/workspaces"
 import { useTheme } from "@/hooks/use-theme"
 import { useWorkspaceStore } from "@/stores/workspace-store"
+
+/** Mounted only with an active workspace (the reminder belongs to one). */
+function TimerReminder() {
+  useTimerReminder()
+  return null
+}
 
 function useHydrated() {
   const [done, setDone] = React.useState(() =>
@@ -43,33 +50,42 @@ export default function AppLayout() {
   if (!hydrated || (!workspace && workspaces.isPending)) return null
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Protected guard={Boolean(workspace)}>
-        <Stack.Screen name="(tabs)" />
+    <>
+      {workspace ? <TimerReminder /> : null}
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Protected guard={Boolean(workspace)}>
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen
+            name="project-picker"
+            options={{ presentation: "modal" }}
+          />
+          <Stack.Screen
+            name="expense-new"
+            options={{ presentation: "modal" }}
+          />
+          <Stack.Screen name="entry-edit" options={{ presentation: "modal" }} />
+          <Stack.Screen
+            name="payment-new"
+            options={{ presentation: "modal" }}
+          />
+          <Stack.Screen
+            name="invoice/[id]"
+            options={{
+              headerShown: true,
+              title: "Invoice",
+              headerBackTitle: "Invoices",
+              headerTintColor: t.primary,
+              headerStyle: { backgroundColor: t.background },
+              headerTitleStyle: { color: t.text },
+              headerShadowVisible: false,
+            }}
+          />
+        </Stack.Protected>
         <Stack.Screen
-          name="project-picker"
-          options={{ presentation: "modal" }}
+          name="workspaces"
+          options={{ presentation: workspace ? "modal" : "card" }}
         />
-        <Stack.Screen name="expense-new" options={{ presentation: "modal" }} />
-        <Stack.Screen name="entry-edit" options={{ presentation: "modal" }} />
-        <Stack.Screen name="payment-new" options={{ presentation: "modal" }} />
-        <Stack.Screen
-          name="invoice/[id]"
-          options={{
-            headerShown: true,
-            title: "Invoice",
-            headerBackTitle: "Invoices",
-            headerTintColor: t.primary,
-            headerStyle: { backgroundColor: t.background },
-            headerTitleStyle: { color: t.text },
-            headerShadowVisible: false,
-          }}
-        />
-      </Stack.Protected>
-      <Stack.Screen
-        name="workspaces"
-        options={{ presentation: workspace ? "modal" : "card" }}
-      />
-    </Stack>
+      </Stack>
+    </>
   )
 }
