@@ -10,6 +10,7 @@ import {
   View,
 } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
+import { create } from "zustand"
 
 import { ProjectRow } from "@/components/project-row"
 import { Body, Chip, Field, Screen, Title } from "@/components/ui"
@@ -34,6 +35,12 @@ function useDebounced<T>(value: T, ms = 300) {
 
 type Pane = "clients" | "projects"
 
+/** Kept outside the screen, so the tab reopens on the last half. */
+const usePane = create<{ pane: Pane; setPane: (p: Pane) => void }>((set) => ({
+  pane: "clients",
+  setPane: (pane) => set({ pane }),
+}))
+
 const PROJECT_FILTERS: { value: ProjectStatus; label: string }[] = [
   { value: "active", label: "Active" },
   { value: "on_hold", label: "On hold" },
@@ -50,7 +57,7 @@ export default function ClientsScreen() {
   const me = useMe()
   const canClients = me.data?.permissions.includes("client.read") ?? false
   const canProjects = me.data?.permissions.includes("project.read") ?? false
-  const [picked, setPicked] = React.useState<Pane>("clients")
+  const { pane: picked, setPane: setPicked } = usePane()
   const view: Pane = !canClients
     ? "projects"
     : !canProjects
