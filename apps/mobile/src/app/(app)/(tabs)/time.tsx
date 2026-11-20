@@ -15,7 +15,14 @@ import {
 } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 
-import { Body, Button, KeyboardAvoid, Screen, Title } from "@/components/ui"
+import {
+  Body,
+  Button,
+  Chip,
+  KeyboardAvoid,
+  Screen,
+  Title,
+} from "@/components/ui"
 import { Radius, Spacing, Type } from "@/constants/theme"
 import { useDashboard } from "@/features/dashboard"
 import {
@@ -34,6 +41,8 @@ import { useTheme } from "@/hooks/use-theme"
 import { ApiError, errorMessage } from "@/lib/api"
 import { formatClock } from "@/lib/clock"
 import { queryClient } from "@/lib/query-client"
+import { REMINDER_HOURS } from "@/lib/reminder-schedule"
+import { useReminderSettings } from "@/stores/reminder-settings"
 import { useTimerDraft } from "@/stores/timer-draft"
 
 /** Show the error; a "timer_running" race just means another device won. */
@@ -115,10 +124,46 @@ export default function TimeScreen() {
                 error={entries.error}
               />
             ) : null}
+            <ReminderSetting />
           </ScrollView>
         </KeyboardAvoid>
       </SafeAreaView>
     </Screen>
+  )
+}
+
+/** After how long a running timer gets a "still running?" notification. */
+function ReminderSetting() {
+  const t = useTheme()
+  const { hours, setHours } = useReminderSettings()
+  const options = [
+    { label: "Off", value: null },
+    ...REMINDER_HOURS.map((h) => ({ label: `${h} h`, value: h })),
+  ]
+  return (
+    <View style={styles.section}>
+      <Text
+        accessibilityRole="header"
+        style={[Type.small, styles.heading, { color: t.textSecondary }]}
+      >
+        REMIND ME AFTER
+      </Text>
+      <View style={styles.reminderChips}>
+        {options.map((o) => (
+          <Chip
+            key={o.label}
+            label={o.label}
+            selected={hours === o.value}
+            onPress={() => setHours(o.value)}
+          />
+        ))}
+      </View>
+      <Body muted style={Type.small}>
+        {hours
+          ? `A notification asks whether your timer is still running once it has run for ${hours} hours. On this phone only.`
+          : "No reminder for a timer left running. On this phone only."}
+      </Body>
+    </View>
   )
 }
 
@@ -534,6 +579,7 @@ const styles = StyleSheet.create({
   section: { gap: Spacing.two },
   heading: { fontWeight: "600" },
   chips: { gap: Spacing.two },
+  reminderChips: { flexDirection: "row", flexWrap: "wrap", gap: Spacing.two },
   chip: {
     borderWidth: 1,
     borderRadius: Radius.md,

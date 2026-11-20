@@ -14,6 +14,10 @@ import {
   STOP_ACTION,
   syncTimerReminder,
 } from "@/lib/timer-reminder"
+import {
+  useReminderSettings,
+  useReminderSettingsHydrated,
+} from "@/stores/reminder-settings"
 import { useWorkspaceStore } from "@/stores/workspace-store"
 
 /**
@@ -26,16 +30,18 @@ export function useTimerReminder() {
   const me = useMe()
   const canTrack = canTrackTime(me.data)
   const running = useRunningTimer(canTrack)
+  const hours = useReminderSettings((s) => s.hours)
+  const hydrated = useReminderSettingsHydrated()
 
   React.useEffect(() => {
-    if (!workspace || !me.data) return
+    if (!workspace || !me.data || !hydrated) return
     if (!canTrack) {
       void cancelTimerReminder()
       return
     }
     if (running.data === undefined) return
-    syncTimerReminder(running.data, workspace).catch(() => {})
-  }, [workspace, me.data, canTrack, running.data])
+    syncTimerReminder(running.data, workspace, hours).catch(() => {})
+  }, [workspace, me.data, canTrack, running.data, hours, hydrated])
 
   useReminderResponse()
 }
