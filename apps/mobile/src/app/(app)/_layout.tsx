@@ -46,6 +46,15 @@ export default function AppLayout() {
     else if (workspace) setWorkspace(null)
   }, [hydrated, list, workspace, setWorkspace])
 
+  // Pushed screens (an invoice, a client) get a native header.
+  const pushed = {
+    headerShown: true,
+    headerTintColor: t.primary,
+    headerStyle: { backgroundColor: t.background },
+    headerTitleStyle: { color: t.text },
+    headerShadowVisible: false,
+  }
+
   // Wait for the stored choice (and, without one, the list) before routing.
   if (!hydrated || (!workspace && workspaces.isPending)) return null
 
@@ -71,15 +80,11 @@ export default function AppLayout() {
           <Stack.Screen name="send" options={{ presentation: "modal" }} />
           <Stack.Screen
             name="invoice/[id]"
-            options={{
-              headerShown: true,
-              title: "Invoice",
-              headerBackTitle: "Invoices",
-              headerTintColor: t.primary,
-              headerStyle: { backgroundColor: t.background },
-              headerTitleStyle: { color: t.text },
-              headerShadowVisible: false,
-            }}
+            options={{ ...pushed, title: "Invoice", headerBackTitle: "Back" }}
+          />
+          <Stack.Screen
+            name="client/[id]"
+            options={{ ...pushed, title: "Client", headerBackTitle: "Back" }}
           />
         </Stack.Protected>
         <Stack.Screen

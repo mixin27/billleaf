@@ -8,6 +8,7 @@ import { router, Stack, useLocalSearchParams } from "expo-router"
 import * as React from "react"
 import {
   Alert,
+  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -15,8 +16,8 @@ import {
   View,
 } from "react-native"
 
-import { Body, Button, Screen } from "@/components/ui"
-import { Radius, Spacing, Type } from "@/constants/theme"
+import { Body, Button, Screen, Section } from "@/components/ui"
+import { Spacing, Type } from "@/constants/theme"
 import { useDashboard } from "@/features/dashboard"
 import {
   INVOICE_STATUS_LABELS,
@@ -100,7 +101,12 @@ export default function InvoiceScreen() {
           <Body muted>Loading…</Body>
         ) : (
           <>
-            <Summary invoice={inv} money={money} date={date} />
+            <Summary
+              invoice={inv}
+              money={money}
+              date={date}
+              canOpenClient={can("client.read")}
+            />
 
             <View style={styles.actions}>
               {inv.status === "issued" &&
@@ -279,10 +285,12 @@ function Summary({
   invoice: inv,
   money,
   date,
+  canOpenClient,
 }: {
   invoice: Invoice
   money: (n: number) => string
   date: (iso: string) => string
+  canOpenClient: boolean
 }) {
   const t = useTheme()
   const owing = inv.status === "issued" && inv.amountDue > 0
@@ -295,7 +303,25 @@ function Summary({
     .join(" · ")
   return (
     <View style={styles.summary}>
-      <Text style={[Type.heading, { color: t.text }]}>{inv.clientName}</Text>
+      {canOpenClient ? (
+        <Pressable
+          accessibilityRole="link"
+          accessibilityHint="Opens the client"
+          onPress={() =>
+            router.push({
+              pathname: "/client/[id]",
+              params: { id: inv.clientId },
+            })
+          }
+          style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+        >
+          <Text style={[Type.heading, { color: t.primary }]}>
+            {inv.clientName}
+          </Text>
+        </Pressable>
+      ) : (
+        <Text style={[Type.heading, { color: t.text }]}>{inv.clientName}</Text>
+      )}
       {inv.title ? (
         <Text style={[Type.body, { color: t.textSecondary }]}>{inv.title}</Text>
       ) : null}
@@ -335,34 +361,6 @@ function Summary({
   )
 }
 
-function Section({
-  title,
-  children,
-}: {
-  title: string
-  children: React.ReactNode
-}) {
-  const t = useTheme()
-  return (
-    <View style={styles.gap}>
-      <Text
-        accessibilityRole="header"
-        style={[Type.small, styles.heading, { color: t.textSecondary }]}
-      >
-        {title.toUpperCase()}
-      </Text>
-      <View
-        style={[
-          styles.card,
-          { backgroundColor: t.backgroundElement, borderColor: t.border },
-        ]}
-      >
-        {children}
-      </View>
-    </View>
-  )
-}
-
 function Total({
   label,
   value,
@@ -393,15 +391,7 @@ const styles = StyleSheet.create({
   big: { fontSize: 34, fontWeight: "700", fontVariant: ["tabular-nums"] },
   actions: { gap: Spacing.two },
   row: { flexDirection: "row", gap: Spacing.two },
-  gap: { gap: Spacing.two },
-  heading: { fontWeight: "600" },
   bold: { fontWeight: "700" },
-  card: {
-    borderWidth: 1,
-    borderRadius: Radius.lg,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.one,
-  },
   line: {
     flexDirection: "row",
     alignItems: "flex-start",
