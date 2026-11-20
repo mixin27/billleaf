@@ -11,6 +11,7 @@ import {
   type TextInputProps,
   type TextProps,
   View,
+  type ViewStyle,
 } from "react-native"
 
 import { Radius, Spacing, Type } from "@/constants/theme"
@@ -78,7 +79,7 @@ export function Field({
       <Text style={[Type.small, { color: t.text, fontWeight: "600" }]}>
         {label}
       </Text>
-      <TextInput
+      <ClearableInput
         accessibilityLabel={label}
         placeholderTextColor={t.textSecondary}
         {...input}
@@ -94,6 +95,47 @@ export function Field({
       />
       {error ? (
         <Text style={[Type.small, { color: t.danger }]}>{error}</Text>
+      ) : null}
+    </View>
+  )
+}
+
+/**
+ * A TextInput whose `clearButtonMode` also works on Android, where React
+ * Native ignores it: a ✕ at the end clears the text (iOS keeps its own).
+ */
+export function ClearableInput({
+  containerStyle,
+  ...props
+}: TextInputProps & { containerStyle?: ViewStyle }) {
+  const t = useTheme()
+  const mode = props.clearButtonMode
+  if (Platform.OS !== "android" || !mode || mode === "never") {
+    return (
+      <View style={containerStyle}>
+        <TextInput {...props} />
+      </View>
+    )
+  }
+  // The wrapper stays put whether or not the ✕ shows, so typing the first
+  // letter doesn't remount the input and drop the keyboard.
+  const show = Boolean(props.value) && props.editable !== false
+  return (
+    <View style={[styles.clearable, containerStyle]}>
+      <TextInput {...props} style={[props.style, styles.clearablePad]} />
+      {show ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Clear text"
+          hitSlop={8}
+          onPress={() => props.onChangeText?.("")}
+          style={({ pressed }) => [
+            styles.clear,
+            { opacity: pressed ? 0.5 : 1 },
+          ]}
+        >
+          <Text style={[styles.clearIcon, { color: t.textSecondary }]}>✕</Text>
+        </Pressable>
       ) : null}
     </View>
   )
@@ -216,6 +258,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.one,
   },
+  clearable: { justifyContent: "center" },
+  clearablePad: { paddingRight: 44 },
+  clear: {
+    position: "absolute",
+    right: 4,
+    width: 36,
+    height: 36,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  clearIcon: { fontSize: 16, fontWeight: "600" },
   input: {
     borderWidth: 1,
     borderRadius: Radius.md,

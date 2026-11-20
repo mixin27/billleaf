@@ -8,12 +8,17 @@ import {
   SectionList,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 
-import { Button, KeyboardAvoid, Screen, Title } from "@/components/ui"
+import {
+  Button,
+  ClearableInput,
+  KeyboardAvoid,
+  Screen,
+  Title,
+} from "@/components/ui"
 import { Radius, Spacing, Type } from "@/constants/theme"
 import {
   useActiveProjects,
@@ -135,7 +140,8 @@ export default function ProjectPickerScreen() {
             <Title>Project</Title>
             <Button title="Done" variant="link" onPress={() => router.back()} />
           </View>
-          <TextInput
+          <ClearableInput
+            containerStyle={styles.searchBox}
             value={query}
             onChangeText={setQuery}
             placeholder="Search projects or recent work"
@@ -267,9 +273,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.four,
     paddingTop: Spacing.four,
   },
+  searchBox: { marginHorizontal: Spacing.four, marginTop: Spacing.three },
   search: {
-    marginHorizontal: Spacing.four,
-    marginTop: Spacing.three,
     borderWidth: 1,
     borderRadius: Radius.md,
     paddingHorizontal: Spacing.three,
