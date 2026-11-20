@@ -41,7 +41,6 @@ import { useTheme } from "@/hooks/use-theme"
 import { ApiError, errorMessage } from "@/lib/api"
 import { formatClock } from "@/lib/clock"
 import { queryClient } from "@/lib/query-client"
-import { REMINDER_HOURS } from "@/lib/reminder-schedule"
 import { useReminderSettings } from "@/stores/reminder-settings"
 import { useTimerDraft } from "@/stores/timer-draft"
 
@@ -124,7 +123,7 @@ export default function TimeScreen() {
                 error={entries.error}
               />
             ) : null}
-            <ReminderSetting />
+            <ReminderLink />
           </ScrollView>
         </KeyboardAvoid>
       </SafeAreaView>
@@ -132,38 +131,24 @@ export default function TimeScreen() {
   )
 }
 
-/** After how long a running timer gets a "still running?" notification. */
-function ReminderSetting() {
+/** Where the reminder is set now (Account), with what it's set to. */
+function ReminderLink() {
   const t = useTheme()
-  const { hours, setHours } = useReminderSettings()
-  const options = [
-    { label: "Off", value: null },
-    ...REMINDER_HOURS.map((h) => ({ label: `${h} h`, value: h })),
-  ]
+  const hours = useReminderSettings((s) => s.hours)
   return (
-    <View style={styles.section}>
-      <Text
-        accessibilityRole="header"
-        style={[Type.small, styles.heading, { color: t.textSecondary }]}
-      >
-        REMIND ME AFTER
-      </Text>
-      <View style={styles.reminderChips}>
-        {options.map((o) => (
-          <Chip
-            key={o.label}
-            label={o.label}
-            selected={hours === o.value}
-            onPress={() => setHours(o.value)}
-          />
-        ))}
-      </View>
-      <Body muted style={Type.small}>
+    <Pressable
+      accessibilityRole="link"
+      accessibilityHint="Opens Account, where the timer reminder is set"
+      onPress={() => router.push("/account")}
+      style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+    >
+      <Text style={[Type.small, { color: t.textSecondary }]}>
         {hours
-          ? `A notification asks whether your timer is still running once it has run for ${hours} hours. On this phone only.`
-          : "No reminder for a timer left running. On this phone only."}
-      </Body>
-    </View>
+          ? `Reminder after ${hours} hours of running. `
+          : "Timer reminder off. "}
+        <Text style={{ color: t.primary }}>Change</Text>
+      </Text>
+    </Pressable>
   )
 }
 
@@ -579,7 +564,6 @@ const styles = StyleSheet.create({
   section: { gap: Spacing.two },
   heading: { fontWeight: "600" },
   chips: { gap: Spacing.two },
-  reminderChips: { flexDirection: "row", flexWrap: "wrap", gap: Spacing.two },
   chip: {
     borderWidth: 1,
     borderRadius: Radius.md,
