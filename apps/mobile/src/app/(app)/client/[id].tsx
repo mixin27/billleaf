@@ -20,12 +20,14 @@ import {
 } from "react-native"
 
 import { InvoiceRow, totalsByCurrency } from "@/components/invoice-row"
+import { ProjectRow } from "@/components/project-row"
 import { Body, Button, Screen, Section } from "@/components/ui"
 import { Spacing, Type } from "@/constants/theme"
 import { useClient } from "@/features/clients"
 import { useDashboard } from "@/features/dashboard"
 import { useClientInvoices } from "@/features/invoices"
 import { useMe } from "@/features/me"
+import { useProjects } from "@/features/projects"
 import { useWorkspaceProfile } from "@/features/workspaces"
 import { useTheme } from "@/hooks/use-theme"
 import { errorMessage } from "@/lib/api"
@@ -48,7 +50,8 @@ const web = (url: string) =>
   /^https?:\/\//i.test(url) ? url : `https://${url}`
 
 /**
- * One client: how to reach them, what they owe, and their invoices.
+ * One client: how to reach them, what they owe, their invoices and
+ * projects.
  * Adding and editing clients and contacts stays on the web.
  */
 export default function ClientScreen() {
@@ -57,6 +60,7 @@ export default function ClientScreen() {
   const can = (p: Permission) => me.data?.permissions.includes(p) ?? false
   const client = useClient(id)
   const invoices = useClientInvoices(id, can("invoice.read"))
+  const projects = useProjects({ clientId: id }, can("project.read"))
   const profile = useWorkspaceProfile().data
   const today = useDashboard().data?.today
   const locale =
@@ -89,6 +93,7 @@ export default function ClientScreen() {
               await Promise.all([
                 client.refetch(),
                 can("invoice.read") ? invoices.refetch() : null,
+                can("project.read") ? projects.refetch() : null,
               ])
               setRefreshing(false)
             }}
@@ -121,6 +126,25 @@ export default function ClientScreen() {
                 ) : null}
               </>
             )}
+
+            {can("project.read") &&
+            projects.data &&
+            projects.data.items.some((p) => p.status !== "archived") ? (
+              <Section title="Projects">
+                {projects.data.items
+                  .filter((p) => p.status !== "archived")
+                  .map((p, i) => (
+                    <ProjectRow
+                      key={p.id}
+                      project={p}
+                      first={i === 0}
+                      locale={locale}
+                      today={today}
+                      noClient
+                    />
+                  ))}
+              </Section>
+            ) : null}
 
             {c.contacts.length > 0 ? (
               <Section title="Contacts">
