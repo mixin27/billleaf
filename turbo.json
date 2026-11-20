@@ -43,6 +43,11 @@
       "dependsOn": ["^build", "api#build"],
       "cache": false
     },
+    "docs#build": {
+      "dependsOn": ["^build", "docs#typecheck"],
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "outputs": [".next/**", "!.next/cache/**", "!.next/dev/**", "out/**"]
+    },
     "web#build": {
       "dependsOn": ["^build", "web#typecheck"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
