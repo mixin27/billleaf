@@ -33,6 +33,7 @@ import {
   useSendReceipt,
 } from "@/features/invoices"
 import { useMe } from "@/features/me"
+import { useEmailQuote, useQuote } from "@/features/quotes"
 import { useTheme } from "@/hooks/use-theme"
 import { ApiError, errorMessage } from "@/lib/api"
 
@@ -44,23 +45,28 @@ const isEmail = (s: string) => sendDocumentSchema.shape.to.safeParse(s).success
  * with no address needs one typed here, and can keep it.
  */
 export default function SendScreen() {
-  const { kind, invoiceId, paymentId } = useLocalSearchParams<{
-    kind: "invoice" | "receipt"
-    invoiceId: string
+  const { kind, invoiceId, paymentId, quoteId } = useLocalSearchParams<{
+    kind: "invoice" | "receipt" | "quote"
+    invoiceId?: string
     paymentId?: string
+    quoteId?: string
   }>()
   const receipt = kind === "receipt"
+  const isQuote = kind === "quote"
   const t = useTheme()
   const me = useMe()
   const can = (p: Permission) => me.data?.permissions.includes(p) ?? false
-  const invoice = useInvoice(invoiceId)
-  const inv = invoice.data
-  const payments = useInvoicePayments(invoiceId, receipt)
+  const invoice = useInvoice(isQuote ? "" : (invoiceId ?? ""))
+  const quote = useQuote(isQuote ? (quoteId ?? "") : "")
+  /** The document being sent: its client and number. */
+  const inv = isQuote ? quote.data : invoice.data
+  const payments = useInvoicePayments(invoiceId ?? "", receipt)
   const payment = payments.data?.items.find((p) => p.id === paymentId)
   const client = useClient(inv?.clientId, can("client.read"))
-  const sendInvoice = useSendInvoice(invoiceId)
+  const sendInvoice = useSendInvoice(invoiceId ?? "")
   const sendReceipt = useSendReceipt(paymentId ?? "")
-  const send = receipt ? sendReceipt : sendInvoice
+  const sendQuote = useEmailQuote(quoteId ?? "")
+  const send = isQuote ? sendQuote : receipt ? sendReceipt : sendInvoice
   const setEmail = useSetClientEmail(inv?.clientId ?? "")
 
   const fallback = client.data ? defaultRecipient(client.data) : undefined
@@ -83,6 +89,7 @@ export default function SendScreen() {
       : undefined
   const canSave = needsAddress && can("client.update") && isEmail(text)
   const number = receipt ? payment?.receiptNumber : inv?.number
+  const lastSentTo = invoice.data && !receipt ? invoice.data.lastSentTo : null
   const loading = !inv || (receipt && !payment)
 
   const submit = () => {
@@ -120,7 +127,11 @@ export default function SendScreen() {
         <KeyboardAvoid>
           <View style={styles.header}>
             <Title style={styles.flex} numberOfLines={1}>
-              {receipt ? "Email receipt" : "Email invoice"}
+              {receipt
+                ? "Email receipt"
+                : isQuote
+                  ? "Email quote"
+                  : "Email invoice"}
             </Title>
             <Button
               title="Cancel"
@@ -133,19 +144,23 @@ export default function SendScreen() {
             keyboardShouldPersistTaps="handled"
             automaticallyAdjustKeyboardInsets
           >
-            {invoice.error || payments.error ? (
-              <Body>{errorMessage(invoice.error ?? payments.error)}</Body>
+            {invoice.error || quote.error || payments.error ? (
+              <Body>
+                {errorMessage(invoice.error ?? quote.error ?? payments.error)}
+              </Body>
             ) : loading || !inv ? (
               <Body muted>Loading…</Body>
             ) : (
               <>
                 <Body muted>
-                  {`${number} goes to ${inv.clientName} as a PDF, with a link to view${
-                    receipt ? " it" : " and pay it"
+                  {`${number} goes to ${inv.clientName} as a PDF, with a link to ${
+                    isQuote
+                      ? "accept or decline it"
+                      : receipt
+                        ? "view it"
+                        : "view and pay it"
                   }. Replies go to your workspace email.`}
-                  {!receipt && inv.lastSentTo
-                    ? ` Last sent to ${inv.lastSentTo}.`
-                    : ""}
+                  {lastSentTo ? ` Last sent to ${lastSentTo}.` : ""}
                 </Body>
 
                 <Field

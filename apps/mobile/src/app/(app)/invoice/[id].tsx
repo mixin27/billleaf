@@ -16,6 +16,7 @@ import {
   View,
 } from "react-native"
 
+import { LineItems, Total } from "@/components/line-items"
 import { Body, Button, Screen, Section } from "@/components/ui"
 import { Spacing, Type } from "@/constants/theme"
 import { useDashboard } from "@/features/dashboard"
@@ -149,33 +150,7 @@ export default function InvoiceScreen() {
             </View>
 
             <Section title="Items">
-              {inv.lines.length === 0 ? (
-                <Body muted>No items.</Body>
-              ) : (
-                inv.lines.map((l, i) => (
-                  <View
-                    key={l.id}
-                    style={[
-                      styles.line,
-                      i > 0 && { borderTopWidth: 1, borderTopColor: t.border },
-                    ]}
-                  >
-                    <View style={styles.flex}>
-                      <Text style={[Type.body, { color: t.text }]}>
-                        {l.description}
-                      </Text>
-                      <Text style={[Type.small, { color: t.textSecondary }]}>
-                        {`${l.quantity} × ${money(l.unitPrice)}`}
-                        {l.taxRateBps ? ` · tax ${l.taxRateBps / 100}%` : ""}
-                      </Text>
-                    </View>
-                    <Text style={[Type.body, styles.num, { color: t.text }]}>
-                      {money(l.amount)}
-                    </Text>
-                  </View>
-                ))
-              )}
-              <View style={[styles.totals, { borderTopColor: t.border }]}>
+              <LineItems lines={inv.lines} money={money}>
                 <Total label="Subtotal" value={money(inv.subtotal)} />
                 {inv.taxTotal ? (
                   <Total label="Tax" value={money(inv.taxTotal)} />
@@ -193,7 +168,7 @@ export default function InvoiceScreen() {
                 {inv.status === "issued" ? (
                   <Total label="Due" value={money(inv.amountDue)} bold />
                 ) : null}
-              </View>
+              </LineItems>
             </Section>
 
             {can("payment.read") && payments.data?.items.length ? (
@@ -361,29 +336,6 @@ function Summary({
   )
 }
 
-function Total({
-  label,
-  value,
-  bold,
-}: {
-  label: string
-  value: string
-  bold?: boolean
-}) {
-  const t = useTheme()
-  const weight = bold ? styles.bold : null
-  return (
-    <View style={styles.total} accessible>
-      <Text style={[Type.body, weight, { color: t.textSecondary }]}>
-        {label}
-      </Text>
-      <Text style={[Type.body, styles.num, weight, { color: t.text }]}>
-        {value}
-      </Text>
-    </View>
-  )
-}
-
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   content: { padding: Spacing.four, gap: Spacing.four },
@@ -406,10 +358,4 @@ const styles = StyleSheet.create({
     marginTop: -Spacing.one,
     marginLeft: -Spacing.three,
   },
-  totals: {
-    borderTopWidth: 1,
-    paddingVertical: Spacing.two,
-    gap: Spacing.one,
-  },
-  total: { flexDirection: "row", justifyContent: "space-between" },
 })
