@@ -11,7 +11,7 @@ import {
 } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 
-import { Body, Button, Screen, Title } from "@/components/ui"
+import { Body, Screen, Title } from "@/components/ui"
 import { Radius, Spacing, Type } from "@/constants/theme"
 import { useDashboard, useWeekTime } from "@/features/dashboard"
 import { useInvoiceFilter } from "@/features/invoices"
@@ -20,7 +20,7 @@ import { useWorkspaceProfile } from "@/features/workspaces"
 import { useTheme } from "@/hooks/use-theme"
 import { errorMessage } from "@/lib/api"
 import { authClient } from "@/lib/auth-client"
-import { signOut } from "@/lib/session"
+import { initials } from "@/lib/format"
 import { useWorkspaceStore } from "@/stores/workspace-store"
 
 /** Home: this week's time and what you're owed, for the active workspace. */
@@ -37,7 +37,6 @@ export default function DashboardScreen() {
   const tracksTime = me.data?.plan.features.timeTracking ?? false
   const week = useWeekTime(tracksTime ? dashboard.data?.today : undefined)
   const [refreshing, setRefreshing] = React.useState(false)
-  const [signingOut, setSigningOut] = React.useState(false)
 
   const refresh = async () => {
     setRefreshing(true)
@@ -63,25 +62,42 @@ export default function DashboardScreen() {
             <RefreshControl refreshing={refreshing} onRefresh={refresh} />
           }
         >
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={`Workspace ${workspace?.name}. Switch workspace`}
-            onPress={() => router.push("/workspaces")}
-            style={({ pressed }) => [
-              styles.switcher,
-              { borderColor: t.border, opacity: pressed ? 0.7 : 1 },
-            ]}
-          >
-            <Text
-              style={[Type.small, styles.bold, { color: t.text }]}
-              numberOfLines={1}
+          <View style={styles.top}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Workspace ${workspace?.name}. Switch workspace`}
+              onPress={() => router.push("/workspaces")}
+              style={({ pressed }) => [
+                styles.switcher,
+                { borderColor: t.border, opacity: pressed ? 0.7 : 1 },
+              ]}
             >
-              {workspace?.name}
-            </Text>
-            <Text style={[Type.small, { color: t.textSecondary }]}>
-              Switch ▾
-            </Text>
-          </Pressable>
+              <Text
+                style={[Type.small, styles.bold, { color: t.text }]}
+                numberOfLines={1}
+              >
+                {workspace?.name}
+              </Text>
+              <Text style={[Type.small, { color: t.textSecondary }]}>
+                Switch ▾
+              </Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Account"
+              accessibilityHint="Your account, the timer reminder and signing out"
+              onPress={() => router.push("/account")}
+              hitSlop={6}
+              style={({ pressed }) => [
+                styles.avatar,
+                { backgroundColor: t.primary, opacity: pressed ? 0.7 : 1 },
+              ]}
+            >
+              <Text style={[Type.small, styles.bold, { color: t.onPrimary }]}>
+                {initials(session.data?.user.name, session.data?.user.email)}
+              </Text>
+            </Pressable>
+          </View>
           <Title>{firstName ? `Hi, ${firstName}` : "Hi there"}</Title>
 
           {error ? (
@@ -173,21 +189,6 @@ export default function DashboardScreen() {
               for everything else.
             </Body>
           ) : null}
-
-          <View style={styles.footer}>
-            <Body muted style={Type.small}>
-              {session.data?.user.email}
-            </Body>
-            <Button
-              title="Sign out"
-              variant="secondary"
-              loading={signingOut}
-              onPress={async () => {
-                setSigningOut(true)
-                await signOut()
-              }}
-            />
-          </View>
         </ScrollView>
       </SafeAreaView>
     </Screen>
@@ -282,7 +283,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.full,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.one + 2,
-    maxWidth: "100%",
+    flexShrink: 1,
   },
   card: {
     borderWidth: 1,
@@ -293,5 +294,17 @@ const styles = StyleSheet.create({
   stats: { flexDirection: "row", gap: Spacing.three },
   stat: { flex: 1, gap: Spacing.half },
   value: { fontSize: 24, fontWeight: "700", fontVariant: ["tabular-nums"] },
-  footer: { marginTop: Spacing.four, gap: Spacing.two },
+  top: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: Spacing.three,
+  },
+  avatar: {
+    width: 36,
+    height: 36,
+    borderRadius: Radius.full,
+    alignItems: "center",
+    justifyContent: "center",
+  },
 })

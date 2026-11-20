@@ -12,3 +12,13 @@ export function shortDate(iso: string, locale: string, today?: string) {
     timeZone: "UTC",
   }).format(new Date(`${iso}T00:00:00Z`))
 }
+
+/** "Ada Lovelace" → "AL"; an email's first letter without a name. */
+export function initials(name: string | undefined, email?: string) {
+  const parts = (name ?? "").trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return (email?.[0] ?? "?").toUpperCase()
+  return parts
+    .slice(0, 2)
+    .map((p) => p[0]!.toUpperCase())
+    .join("")
+}

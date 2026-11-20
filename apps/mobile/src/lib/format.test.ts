@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { shortDate } from "./format"
+import { initials, shortDate } from "./format"
 
 describe("shortDate", () => {
   it("leaves out the year in the current year", () => {
@@ -11,5 +11,17 @@ describe("shortDate", () => {
   })
   it("never shifts the day with the device time zone", () => {
     expect(shortDate("2026-01-01", "en-GB")).toBe("1 Jan")
+  })
+})
+
+describe("initials", () => {
+  it("takes the first letters of the first two names", () => {
+    expect(initials("Ada Lovelace")).toBe("AL")
+    expect(initials("  mary  ann  smith ")).toBe("MA")
+    expect(initials("Cher")).toBe("C")
+  })
+  it("falls back to the email, then a question mark", () => {
+    expect(initials("", "ben@example.test")).toBe("B")
+    expect(initials(undefined)).toBe("?")
   })
 })
