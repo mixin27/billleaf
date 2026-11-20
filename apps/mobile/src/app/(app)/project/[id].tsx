@@ -5,6 +5,7 @@ import {
   type Project,
   PROJECT_STATUS_LABELS,
   type ProjectTimeSummary,
+  type Task,
 } from "@workspace/contracts"
 import { router, useLocalSearchParams } from "expo-router"
 import * as React from "react"
@@ -18,6 +19,7 @@ import {
   View,
 } from "react-native"
 
+import { ProjectTasks } from "@/components/project-tasks"
 import { Body, Button, Screen, Section } from "@/components/ui"
 import { Radius, Spacing, Type } from "@/constants/theme"
 import { useDashboard } from "@/features/dashboard"
@@ -37,9 +39,9 @@ import { shortDate } from "@/lib/format"
 const hours = (seconds: number) => `${Math.round((seconds / 3600) * 10) / 10} h`
 
 /**
- * One project: start a timer on it, how much time and money it has used
- * against its estimate, and invoice its unbilled time. Tasks, editing and
- * the calendar stay on the web.
+ * One project: start a timer on it or one of its tasks, tick tasks off,
+ * how much time and money it has used against its estimate, and invoice
+ * its unbilled time. Editing stays on the web.
  */
 export default function ProjectScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
@@ -64,11 +66,12 @@ export default function ProjectScreen() {
     formatMoney({ amount, currency }, locale)
   const date = (iso: string) => shortDate(iso, locale, today)
 
-  const onThis = running.data?.projectId === id
-  const startTimer = () => {
+  const onThis = running.data?.projectId === id && !running.data.taskId
+  /** On the project, or one of its tasks. */
+  const startTimer = (task?: Task) => {
     const go = () =>
       start.mutate(
-        { projectId: id },
+        { projectId: id, taskId: task?.id ?? null },
         {
           onSuccess: () => router.navigate("/time"),
           onError: (e) =>
@@ -77,9 +80,11 @@ export default function ProjectScreen() {
       )
     const other = running.data
     if (!other) return go()
+    const from = [other.projectName, other.taskTitle].filter(Boolean).join(": ")
+    const to = task ? `${p?.name}: ${task.title}` : p?.name
     Alert.alert(
       "Switch the timer?",
-      `This stops the timer${other.projectName ? ` on ${other.projectName}` : ""} and starts one on ${p?.name}.`,
+      `This stops the timer${from ? ` on ${from}` : ""} and starts one on ${to}.`,
       [
         { text: "Cancel", style: "cancel" },
         { text: "Switch", onPress: go },
@@ -157,10 +162,20 @@ export default function ProjectScreen() {
                 <Button
                   title="Start timer"
                   loading={start.isPending}
-                  onPress={startTimer}
+                  onPress={() => startTimer()}
                 />
               )
             ) : null}
+
+            <ProjectTasks
+              projectId={id}
+              locale={locale}
+              today={today}
+              canEdit={can("project.update") && p.status !== "archived"}
+              canTrack={tracks && p.status !== "archived"}
+              runningTaskId={running.data?.taskId ?? null}
+              onStart={startTimer}
+            />
 
             {summary.error ? (
               <Body>{errorMessage(summary.error)}</Body>
@@ -216,7 +231,6 @@ export default function ProjectScreen() {
                     .join(" · ")}
                 />
               ) : null}
-              <Detail label="Tasks" value={tasksLabel(p)} />
               {p.quoteNumber ? (
                 <Detail label="From quote" value={p.quoteNumber} />
               ) : null}
@@ -265,13 +279,6 @@ function billingLabel(p: Project, money: (n: number) => string) {
       ? `${money(p.hourlyRate)} an hour`
       : "Hourly (member or default rate)"
   return "Not billable"
-}
-
-function tasksLabel(p: Project) {
-  const c = p.taskCounts
-  const total = c.todo + c.in_progress + c.done
-  if (total === 0) return "No tasks"
-  return `${c.done} of ${total} done${c.in_progress ? ` · ${c.in_progress} in progress` : ""}`
 }
 
 function Header({
