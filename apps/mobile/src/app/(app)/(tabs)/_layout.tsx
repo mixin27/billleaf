@@ -6,12 +6,15 @@ import { useTheme } from "@/hooks/use-theme"
 
 /**
  * Home, Time, Invoices, Clients and Expenses. Time is hidden without time
- * tracking (plan or role), Invoices without `invoice.read`, Clients
- * without `client.read`, Expenses without `expense.read`.
+ * tracking (plan or role), Invoices without `invoice.read`, Clients (which
+ * holds projects too) without `client.read` and `project.read`, Expenses
+ * without `expense.read`.
  */
 export default function TabsLayout() {
   const t = useTheme()
   const me = useMe()
+  const canClients = me.data?.permissions.includes("client.read") ?? false
+  const canProjects = me.data?.permissions.includes("project.read") ?? false
   return (
     <NativeTabs tintColor={t.primary}>
       <NativeTabs.Trigger name="index">
@@ -38,11 +41,10 @@ export default function TabsLayout() {
           md="description"
         />
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger
-        name="clients"
-        hidden={!me.data?.permissions.includes("client.read")}
-      >
-        <NativeTabs.Trigger.Label>Clients</NativeTabs.Trigger.Label>
+      <NativeTabs.Trigger name="clients" hidden={!canClients && !canProjects}>
+        <NativeTabs.Trigger.Label>
+          {canClients ? "Clients" : "Projects"}
+        </NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon
           sf={{ default: "person.2", selected: "person.2.fill" }}
           md="group"
