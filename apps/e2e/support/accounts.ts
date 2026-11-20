@@ -37,12 +37,32 @@ export async function signUpAndSignIn(
   return address
 }
 
+/**
+ * A workspace URL no other test or retry has taken: a retried test runs
+ * again in the same database, where its first try's workspace still holds
+ * the plain slug.
+ */
+export const uniqueSlug = (base: string) =>
+  `${base}-${Date.now().toString(36)}${n++}`
+
 /** Create a workspace through onboarding; returns its URL slug. */
 export async function createWorkspace(page: Page, name: string) {
   await page.goto("/onboarding")
   await page.getByLabel("Business name").fill(name)
-  const slug = await page.getByLabel("URL").inputValue()
+  const url = page.getByLabel("URL")
+  const slug = uniqueSlug(await url.inputValue())
+  await url.fill(slug)
   await page.getByRole("button", { name: "Create workspace" }).click()
   await page.waitForURL(new RegExp(`/${slug}(/|$)`))
   return slug
+}
+
+/**
+ * Sign the browser out by dropping its cookies. Leave the app first: a
+ * request still in flight from the open page (a session refresh) can set
+ * the session cookie again after it's cleared.
+ */
+export async function signOutBrowser(page: Page) {
+  await page.goto("about:blank")
+  await page.context().clearCookies()
 }

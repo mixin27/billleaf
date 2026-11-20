@@ -1,6 +1,10 @@
 import { expect, test } from "@playwright/test"
 
-import { createWorkspace, signUpAndSignIn } from "../support/accounts"
+import {
+  createWorkspace,
+  signOutBrowser,
+  signUpAndSignIn,
+} from "../support/accounts"
 import { linkIn, waitForEmail } from "../support/mailpit"
 
 test("forgot password: email link → new password → sign in with it", async ({
@@ -8,7 +12,7 @@ test("forgot password: email link → new password → sign in with it", async (
 }) => {
   const email = await signUpAndSignIn(page, "Rita Owner")
   const slug = await createWorkspace(page, "Rita Studio")
-  await page.context().clearCookies()
+  await signOutBrowser(page)
 
   await page.goto("/sign-in")
   await page.getByLabel("Email").fill(email)
@@ -33,7 +37,7 @@ test("forgot password: email link → new password → sign in with it", async (
   await expect(page).toHaveURL(new RegExp(`/${slug}`))
 
   // The link works once.
-  await page.context().clearCookies()
+  await signOutBrowser(page)
   await page.goto(linkIn(mail, /reset-password/))
   await expect(page.getByText("This link has expired")).toBeVisible()
 })

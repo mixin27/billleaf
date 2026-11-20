@@ -1,6 +1,11 @@
 import { expect, test } from "@playwright/test"
 
-import { PASSWORD, uniqueEmail } from "../support/accounts"
+import {
+  PASSWORD,
+  signOutBrowser,
+  uniqueEmail,
+  uniqueSlug,
+} from "../support/accounts"
 import { linkIn, waitForEmail } from "../support/mailpit"
 
 test("sign up, verify the email from the inbox, and create a workspace", async ({
@@ -20,15 +25,19 @@ test("sign up, verify the email from the inbox, and create a workspace", async (
   await expect(page).toHaveURL(/\/onboarding/)
 
   await page.getByLabel("Business name").fill("Eve Studio")
+  // The URL follows the name; a unique one lets a retry run again.
+  await expect(page.getByLabel("URL")).toHaveValue("eve-studio")
+  const slug = uniqueSlug("eve-studio")
+  await page.getByLabel("URL").fill(slug)
   await page.getByRole("button", { name: "Create workspace" }).click()
-  await expect(page).toHaveURL(/\/eve-studio/)
+  await expect(page).toHaveURL(new RegExp(`/${slug}`))
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible()
 
   // Signing out and back in lands in the workspace.
-  await page.context().clearCookies()
+  await signOutBrowser(page)
   await page.goto("/sign-in")
   await page.getByLabel("Email").fill(email)
   await page.getByLabel("Password").fill(PASSWORD)
   await page.getByRole("button", { name: /sign in/i }).click()
-  await expect(page).toHaveURL(/\/eve-studio/)
+  await expect(page).toHaveURL(new RegExp(`/${slug}`))
 })
