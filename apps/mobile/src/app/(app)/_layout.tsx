@@ -83,6 +83,10 @@ export default function AppLayout() {
             options={{ ...pushed, title: "Invoice", headerBackTitle: "Back" }}
           />
           <Stack.Screen
+            name="quote/[id]"
+            options={{ ...pushed, title: "Quote", headerBackTitle: "Back" }}
+          />
+          <Stack.Screen
             name="client/[id]"
             options={{ ...pushed, title: "Client", headerBackTitle: "Back" }}
           />

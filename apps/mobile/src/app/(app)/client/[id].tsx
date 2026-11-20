@@ -21,6 +21,7 @@ import {
 
 import { InvoiceRow, totalsByCurrency } from "@/components/invoice-row"
 import { ProjectRow } from "@/components/project-row"
+import { QuoteRow } from "@/components/quote-row"
 import { Body, Button, Screen, Section } from "@/components/ui"
 import { Spacing, Type } from "@/constants/theme"
 import { useClient } from "@/features/clients"
@@ -28,6 +29,7 @@ import { useDashboard } from "@/features/dashboard"
 import { useClientInvoices } from "@/features/invoices"
 import { useMe } from "@/features/me"
 import { useProjects } from "@/features/projects"
+import { useQuotes } from "@/features/quotes"
 import { useWorkspaceProfile } from "@/features/workspaces"
 import { useTheme } from "@/hooks/use-theme"
 import { errorMessage } from "@/lib/api"
@@ -50,8 +52,8 @@ const web = (url: string) =>
   /^https?:\/\//i.test(url) ? url : `https://${url}`
 
 /**
- * One client: how to reach them, what they owe, their invoices and
- * projects.
+ * One client: how to reach them, what they owe, their invoices, quotes
+ * and projects.
  * Adding and editing clients and contacts stays on the web.
  */
 export default function ClientScreen() {
@@ -61,6 +63,7 @@ export default function ClientScreen() {
   const client = useClient(id)
   const invoices = useClientInvoices(id, can("invoice.read"))
   const projects = useProjects({ clientId: id }, can("project.read"))
+  const quotes = useQuotes("all", id, can("quote.read"))
   const profile = useWorkspaceProfile().data
   const today = useDashboard().data?.today
   const locale =
@@ -94,6 +97,7 @@ export default function ClientScreen() {
                 client.refetch(),
                 can("invoice.read") ? invoices.refetch() : null,
                 can("project.read") ? projects.refetch() : null,
+                can("quote.read") ? quotes.refetch() : null,
               ])
               setRefreshing(false)
             }}
@@ -126,6 +130,21 @@ export default function ClientScreen() {
                 ) : null}
               </>
             )}
+
+            {can("quote.read") && quotes.data?.items.length ? (
+              <Section title="Quotes">
+                {quotes.data.items.slice(0, 5).map((q, i) => (
+                  <QuoteRow
+                    key={q.id}
+                    quote={q}
+                    locale={locale}
+                    today={today}
+                    first={i === 0}
+                    byNumber
+                  />
+                ))}
+              </Section>
+            ) : null}
 
             {can("project.read") &&
             projects.data &&
