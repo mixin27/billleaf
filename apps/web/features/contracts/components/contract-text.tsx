@@ -5,7 +5,10 @@ import * as React from "react"
 const FIELD = /(\{\{\s*[a-z_.]+\s*\}\})/g
 const IS_FIELD = /^\{\{\s*[a-z_.]+\s*\}\}$/
 
-/** Inline text: **bold** spans, and unresolved {{fields}} as highlighted chips. */
+/**
+ * Inline text: bold, italic and links, and unresolved {{fields}} as
+ * highlighted chips.
+ */
 function Inline({ text }: { text: string }) {
   return (
     <>
@@ -23,13 +26,21 @@ function Inline({ text }: { text: string }) {
             <React.Fragment key={j}>{part}</React.Fragment>
           )
         )
-        return run.bold ? (
-          <strong key={i} className="font-semibold">
-            {content}
-          </strong>
-        ) : (
-          <React.Fragment key={i}>{content}</React.Fragment>
-        )
+        let node: React.ReactNode = content
+        if (run.href)
+          node = (
+            <a
+              href={run.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary underline underline-offset-2"
+            >
+              {node}
+            </a>
+          )
+        if (run.italic) node = <em>{node}</em>
+        if (run.bold) node = <strong className="font-semibold">{node}</strong>
+        return <React.Fragment key={i}>{node}</React.Fragment>
       })}
     </>
   )
@@ -60,6 +71,7 @@ export function ContractText({
             </h3>
           )
         }
+        if (b.type === "rule") return <hr key={i} className="my-1" />
         if (b.type === "list") {
           const List = b.ordered ? "ol" : "ul"
           return (

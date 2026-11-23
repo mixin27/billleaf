@@ -1,6 +1,6 @@
 import { inlineRuns, parseContractText } from "@workspace/contracts"
 import * as React from "react"
-import { StyleSheet, Text, View } from "react-native"
+import { Linking, StyleSheet, Text, View } from "react-native"
 
 import { Spacing, Type } from "@/constants/theme"
 import { useTheme } from "@/hooks/use-theme"
@@ -8,7 +8,7 @@ import { useTheme } from "@/hooks/use-theme"
 const FIELD = /(\{\{\s*[a-z_.]+\s*\}\})/g
 const IS_FIELD = /^\{\{\s*[a-z_.]+\s*\}\}$/
 
-/** **bold** spans, and unresolved {{fields}} highlighted (as on the web). */
+/** Bold, italic and links, and unresolved {{fields}} highlighted (as on the web). */
 function Inline({ text }: { text: string }) {
   const t = useTheme()
   return (
@@ -18,8 +18,19 @@ function Inline({ text }: { text: string }) {
           part ? (
             <Text
               key={`${i}-${j}`}
+              onPress={
+                run.href
+                  ? () => Linking.openURL(run.href!).catch(() => {})
+                  : undefined
+              }
+              accessibilityRole={run.href ? "link" : undefined}
               style={[
                 run.bold && styles.bold,
+                run.italic && styles.italic,
+                run.href && {
+                  color: t.primary,
+                  textDecorationLine: "underline",
+                },
                 IS_FIELD.test(part) && {
                   backgroundColor: t.warningBackground,
                   color: t.warning,
@@ -68,6 +79,13 @@ export function ContractText({ text }: { text: string }) {
               <Inline text={b.text} />
             </Text>
           )
+        if (b.type === "rule")
+          return (
+            <View
+              key={i}
+              style={[styles.rule, { backgroundColor: t.border }]}
+            />
+          )
         if (b.type === "list")
           return (
             <View key={i} style={styles.list}>
@@ -97,6 +115,8 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   gap: { gap: Spacing.three },
   bold: { fontWeight: "600" },
+  italic: { fontStyle: "italic" },
+  rule: { height: StyleSheet.hairlineWidth * 2, marginVertical: Spacing.one },
   line: { lineHeight: 23 },
   headingGap: { marginTop: Spacing.two },
   list: { gap: Spacing.one },

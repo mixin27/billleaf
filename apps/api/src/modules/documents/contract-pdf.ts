@@ -107,7 +107,11 @@ export async function renderContractPdf(d: ContractPdfData): Promise<Buffer> {
   doc.y = y + 16
 
   // Body
-  /** Write a paragraph honouring **bold** spans, flowing across pages. */
+  /**
+   * Write a paragraph honouring bold, italic (slanted) and link runs,
+   * flowing across pages. Every run sets each option, since continued
+   * text keeps the previous run's.
+   */
   const paragraph = (text: string, x: number, w: number, size = 10) => {
     const runs = inlineRuns(text)
     runs.forEach((r, i) => {
@@ -115,17 +119,29 @@ export async function renderContractPdf(d: ContractPdfData): Promise<Buffer> {
         r.text,
         i === 0 ? x : undefined,
         i === 0 ? doc.y : undefined,
-        { width: w, continued: i < runs.length - 1, lineGap: 2 },
-        { bold: r.bold, size, color: INK }
+        {
+          width: w,
+          continued: i < runs.length - 1,
+          lineGap: 2,
+          oblique: r.italic ? 12 : false,
+          underline: Boolean(r.href),
+          link: r.href ?? null,
+        },
+        { bold: r.bold, size, color: r.href ? accent : INK }
       )
     })
   }
+  /** A heading's text without its formatting markers. */
+  const plain = (text: string) =>
+    inlineRuns(text)
+      .map((r) => r.text)
+      .join("")
   for (const block of parseContractText(d.body)) {
     if (block.type === "heading") {
       ensure(40)
       doc.y += block.level === 1 ? 6 : 4
       write(
-        block.text,
+        plain(block.text),
         left,
         doc.y,
         { width },
@@ -136,6 +152,15 @@ export async function renderContractPdf(d: ContractPdfData): Promise<Buffer> {
         }
       )
       doc.y += 4
+    } else if (block.type === "rule") {
+      ensure(20)
+      doc.y += 6
+      doc
+        .moveTo(left, doc.y)
+        .lineTo(left + width, doc.y)
+        .strokeColor(RULE)
+        .stroke()
+      doc.y += 10
     } else if (block.type === "paragraph") {
       ensure(24)
       paragraph(block.text, left, width)

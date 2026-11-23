@@ -52,14 +52,18 @@ export type ContractBlock =
   | { type: "heading"; level: 1 | 2 | 3; text: string }
   | { type: "paragraph"; text: string }
   | { type: "list"; ordered: boolean; items: string[] }
+  | { type: "rule" }
 
 const HEADING = /^(#{1,3})\s+(.*)$/
 const BULLET = /^[-*]\s+(.*)$/
 const NUMBERED = /^\d+[.)]\s+(.*)$/
+/** A line of three or more dashes on its own: a horizontal rule. */
+const RULE = /^-{3,}$/
 
 /**
  * Parse the Markdown subset: `#`/`##`/`###` headings, `-` or `1.` lists,
- * blank-line separated paragraphs (single newlines are kept as line breaks).
+ * `---` rules, blank-line separated paragraphs (single newlines are kept
+ * as line breaks). Inline formatting is handled by `inlineRuns`.
  */
 export function parseContractText(text: string): ContractBlock[] {
   const blocks: ContractBlock[] = []
@@ -75,6 +79,11 @@ export function parseContractText(text: string): ContractBlock[] {
     const line = raw.trimEnd()
     if (!line.trim()) {
       flush()
+      continue
+    }
+    if (RULE.test(line.trim())) {
+      flush()
+      blocks.push({ type: "rule" })
       continue
     }
     const h = HEADING.exec(line)
@@ -143,17 +152,120 @@ This agreement, together with the referenced quote, is the entire agreement betw
 `,
 } as const
 
-/** Split inline `**bold**` spans (unmatched markers stay literal). */
-export function inlineRuns(text: string): { text: string; bold: boolean }[] {
-  const runs: { text: string; bold: boolean }[] = []
-  const re = /\*\*(.+?)\*\*/g
-  let last = 0
-  for (const m of text.matchAll(re)) {
-    if (m.index! > last)
-      runs.push({ text: text.slice(last, m.index), bold: false })
-    runs.push({ text: m[1]!, bold: true })
-    last = m.index! + m[0].length
+export interface InlineRun {
+  text: string
+  bold: boolean
+  /** Set only when true, so plain runs stay `{ text, bold }`. */
+  italic?: true
+  /** A link's address (http, https or mailto only). */
+  href?: string
+}
+
+/**
+ * Characters a backslash makes literal: formatting (`\*`, `\_`, `\[`,
+ * `\]`, `\\`) and what would start a heading, list or rule (`\#`, `\-`,
+ * `1\.`, `1\)`).
+ */
+const ESCAPABLE = new Set(["\\", "*", "_", "[", "]", "#", "-", ".", ")"])
+const LINK = /^\[([^\]\n]+)\]\(((?:https?:\/\/|mailto:)[^\s()]+)\)/i
+const WORD = /[\p{L}\p{N}]/u
+const SPACE = /\s/
+
+/**
+ * Where an `_italic_` or `*italic*` span starting at `i` ends, or -1. The
+ * marker must open before a non-space and close after one, and an
+ * underscore only counts between non-letters, so `snake_case`, `2 * 3` and
+ * `______` signature lines stay as they are.
+ */
+function italicEnd(s: string, i: number, marker: "_" | "*"): number {
+  const next = s[i + 1]
+  if (!next || SPACE.test(next) || next === marker) return -1
+  if (marker === "_" && i > 0 && WORD.test(s[i - 1]!)) return -1
+  for (let j = i + 2; j < s.length; j++) {
+    if (s[j] === "\\") {
+      j++
+      continue
+    }
+    if (s[j] === "{" && s[j + 1] === "{") {
+      // Skip merge fields: their keys have underscores.
+      const close = s.indexOf("}}", j)
+      if (close > 0) j = close + 1
+      continue
+    }
+    if (s[j] !== marker) continue
+    if (marker === "*" && (s[j + 1] === "*" || s[j - 1] === "*")) continue
+    if (SPACE.test(s[j - 1]!)) continue
+    if (marker === "_" && j + 1 < s.length && WORD.test(s[j + 1]!)) continue
+    return j
   }
-  if (last < text.length) runs.push({ text: text.slice(last), bold: false })
+  return -1
+}
+
+/**
+ * Split inline formatting into runs: `**bold**`, `_italic_` (or
+ * `*italic*`), `[links](https://…)`, and backslash escapes. Unmatched
+ * markers stay literal, so older plain-text contracts read as before.
+ */
+export function inlineRuns(text: string): InlineRun[] {
+  const runs: InlineRun[] = []
+  const push = (t: string, style: Omit<InlineRun, "text">) => {
+    if (!t) return
+    const last = runs[runs.length - 1]
+    if (
+      last &&
+      last.bold === style.bold &&
+      last.italic === style.italic &&
+      last.href === style.href
+    )
+      last.text += t
+    else runs.push({ text: t, ...style })
+  }
+  const walk = (s: string, style: Omit<InlineRun, "text">) => {
+    let buf = ""
+    const flush = () => {
+      push(buf, style)
+      buf = ""
+    }
+    for (let i = 0; i < s.length; i++) {
+      const c = s[i]!
+      if (c === "\\" && ESCAPABLE.has(s[i + 1] ?? "")) {
+        buf += s[++i]
+        continue
+      }
+      if (c === "*" && s[i + 1] === "*") {
+        const close = s.indexOf("**", i + 2)
+        if (close > i + 2) {
+          flush()
+          walk(s.slice(i + 2, close), { ...style, bold: true })
+          i = close + 1
+          continue
+        }
+        buf += "**"
+        i++
+        continue
+      }
+      if ((c === "_" || c === "*") && !style.italic) {
+        const close = italicEnd(s, i, c)
+        if (close > 0) {
+          flush()
+          walk(s.slice(i + 1, close), { ...style, italic: true })
+          i = close
+          continue
+        }
+      }
+      if (c === "[" && !style.href) {
+        const m = LINK.exec(s.slice(i))
+        if (m) {
+          flush()
+          walk(m[1]!, { ...style, href: m[2]! })
+          i += m[0].length - 1
+          continue
+        }
+      }
+      buf += c
+    }
+    flush()
+  }
+  walk(text, { bold: false })
   return runs
 }

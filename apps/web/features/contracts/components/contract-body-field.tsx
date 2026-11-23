@@ -12,13 +12,18 @@ import {
 } from "@workspace/ui/components/dropdown-menu"
 import { Tabs, TabsList, TabsTrigger } from "@workspace/ui/components/tabs"
 import { Textarea } from "@workspace/ui/components/textarea"
+import type { Editor } from "@tiptap/react"
 import * as React from "react"
 
+import { ContractBodyEditor } from "./contract-body-editor"
 import { ContractText } from "./contract-text"
 
+type Tab = "write" | "source" | "preview"
+
 /**
- * Contract text editor: Write/Preview tabs, an "Insert field" menu that
- * drops {{merge.fields}} at the cursor, and a short formatting hint.
+ * Contract text: a rich editor (Write), the plain text underneath it
+ * (Source, for pasting or fine control), and a Preview drawn like the PDF.
+ * "Insert field" drops a {{merge.field}} at the cursor in either editor.
  */
 export function ContractBodyField({
   id,
@@ -32,15 +37,22 @@ export function ContractBodyField({
   error?: string
 }) {
   const ref = React.useRef<HTMLTextAreaElement>(null)
-  const [tab, setTab] = React.useState<"write" | "preview">("write")
+  const editor = React.useRef<Editor | null>(null)
+  const [tab, setTab] = React.useState<Tab>("write")
 
   const insert = (key: string) => {
+    if (tab !== "source") {
+      setTab("write")
+      requestAnimationFrame(() =>
+        editor.current?.chain().focus().insertMergeField(key).run()
+      )
+      return
+    }
     const token = `{{${key}}}`
     const el = ref.current
     const start = el?.selectionStart ?? value.length
     const end = el?.selectionEnd ?? value.length
     onChange(value.slice(0, start) + token + value.slice(end))
-    setTab("write")
     requestAnimationFrame(() => {
       el?.focus()
       el?.setSelectionRange(start + token.length, start + token.length)
@@ -53,6 +65,7 @@ export function ContractBodyField({
         <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
           <TabsList>
             <TabsTrigger value="write">Write</TabsTrigger>
+            <TabsTrigger value="source">Source</TabsTrigger>
             <TabsTrigger value="preview">Preview</TabsTrigger>
           </TabsList>
         </Tabs>
@@ -82,25 +95,35 @@ export function ContractBodyField({
         </DropdownMenu>
       </div>
       {tab === "write" ? (
-        <Textarea
+        <ContractBodyEditor
           id={id}
-          ref={ref}
-          rows={18}
           value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="font-mono text-sm"
-          aria-invalid={Boolean(error)}
+          onChange={onChange}
+          invalid={Boolean(error)}
+          editorRef={editor}
         />
+      ) : tab === "source" ? (
+        <>
+          <Textarea
+            id={id}
+            ref={ref}
+            rows={18}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            className="min-h-96 font-mono text-sm"
+            aria-invalid={Boolean(error)}
+          />
+          <p className="text-xs text-muted-foreground">
+            <code># Title</code>, <code>## Section</code>, <code>- item</code>,{" "}
+            <code>1. item</code>, <code>**bold**</code>, <code>_italic_</code>,{" "}
+            <code>[link](https://…)</code> and <code>---</code> for a line.
+          </p>
+        </>
       ) : (
         <div className="min-h-64 rounded-md border p-4">
           <ContractText text={value} />
         </div>
       )}
-      <p className="text-xs text-muted-foreground">
-        Use <code># Heading</code>, <code>## Section</code>, <code>- item</code>
-        , <code>1. item</code> and <code>**bold**</code>. Fields show
-        highlighted until they are filled in.
-      </p>
       {error ? <p className="text-xs text-destructive">{error}</p> : null}
     </div>
   )
