@@ -36,6 +36,7 @@ import {
   type PaymentWithRefs,
 } from "./payments.repository.js"
 import { WebhooksService } from "../webhooks/webhooks.service.js"
+import { DomainEvents } from "../events/domain-events.service.js"
 import { InvoicesService } from "../invoices/invoices.service.js"
 
 export function toPaymentDto(p: PaymentWithRefs): Payment {
@@ -80,7 +81,8 @@ export class PaymentsService {
     private readonly portalLinks: PortalLinksService,
     private readonly audit: AuditService,
     private readonly invoicesService: InvoicesService,
-    private readonly webhooks: WebhooksService
+    private readonly webhooks: WebhooksService,
+    private readonly events: DomainEvents
   ) {}
 
   async list(
@@ -184,7 +186,7 @@ export class PaymentsService {
    */
   async afterRecorded(paymentId: string): Promise<Payment> {
     const payment = await this.get(paymentId)
-    await this.webhooks.emit("payment.recorded", payment)
+    await this.events.publish("payment.recorded", payment)
     const invoice = await this.invoicesService
       .get(payment.invoiceId)
       .catch(() => null)

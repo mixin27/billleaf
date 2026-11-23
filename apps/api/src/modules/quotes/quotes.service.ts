@@ -40,7 +40,7 @@ import {
   QuotesRepository,
   type QuoteWithClient,
 } from "./quotes.repository.js"
-import { WebhooksService } from "../webhooks/webhooks.service.js"
+import { DomainEvents } from "../events/domain-events.service.js"
 
 const DEFAULT_VALIDITY_DAYS = 30
 
@@ -108,7 +108,7 @@ export class QuotesService {
     private readonly audit: AuditService,
     private readonly mail: MailService,
     private readonly portalLinks: PortalLinksService,
-    private readonly webhooks: WebhooksService
+    private readonly events: DomainEvents
   ) {}
 
   private async today() {
@@ -267,7 +267,7 @@ export class QuotesService {
           : undefined,
     })
     const quote = await this.get(id)
-    await this.webhooks.emit(`quote.${outcome}`, quote)
+    await this.events.publish(`quote.${outcome}`, quote)
     return quote
   }
 

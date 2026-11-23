@@ -86,7 +86,8 @@ function setup(
     { documentLink: vi.fn().mockResolvedValue("http://portal.test") } as never,
     { record: vi.fn() } as never,
     { get: vi.fn().mockResolvedValue({ amountDue: 0 }) } as never,
-    { emit: vi.fn() } as never
+    { emit: vi.fn() } as never,
+    { publish: vi.fn() } as never
   )
   return { service, repo, invoices, numbering, tx }
 }

@@ -38,6 +38,10 @@ invalidated via `PermissionResolver.invalidateWorkspace`) and fills
 - Errors: throw Nest HTTP exceptions; the filter renders RFC 9457 problem+json.
 - Side effects that are slow or retryable (email, PDF) → enqueue a BullMQ job.
 - Security-relevant or financial actions → `AuditService.record(...)`.
+- Events the outside should hear about: `DomainEvents.publish(type, object)`
+  (webhooks + push notifications, ADR-0018) after the change commits. Events
+  that never push can call `WebhooksService.emit` directly. To make an event
+  push, map it in `modules/notifications/push-messages.ts`.
 - Changing roles/permissions/membership → call `PermissionResolver.invalidateWorkspace`.
 - Better Auth plugins live in `src/auth/auth.plugins.ts`. After changing them run
   `pnpm --filter api auth:generate && pnpm db:generate`.

@@ -7,6 +7,7 @@ import { MailModule } from "../../mail/mail.module.js"
 import { ProjectsModule } from "../projects/projects.module.js"
 import { RatesModule } from "../rates/rates.module.js"
 import { WebhooksModule } from "../webhooks/webhooks.module.js"
+import { EventsModule } from "../events/events.module.js"
 import { WorkspaceProfileModule } from "../workspace/workspace-profile.module.js"
 import { BudgetsService } from "./budgets.service.js"
 import { ClockifyImportService } from "./clockify-import.service.js"
@@ -31,6 +32,7 @@ import { TimesheetApprovalsService } from "./timesheet-approvals.service.js"
     MailModule,
     WorkspaceProfileModule,
     WebhooksModule,
+    EventsModule,
   ],
   controllers: [
     TimeController,

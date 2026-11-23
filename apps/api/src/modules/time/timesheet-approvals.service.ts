@@ -52,6 +52,7 @@ import { AuditService } from "../../iam/audit/audit.service.js"
 import { MailService } from "../../mail/mail.service.js"
 import { addDays, todayIn } from "../documents/party-snapshot.js"
 import { WebhooksService } from "../webhooks/webhooks.service.js"
+import { DomainEvents } from "../events/domain-events.service.js"
 
 /** Monday of the week containing `iso` (YYYY-MM-DD). */
 export function weekOf(iso: string): string {
@@ -91,6 +92,7 @@ export class TimesheetApprovalsService {
     private readonly entitlements: EntitlementsService,
     private readonly audit: AuditService,
     private readonly webhooks: WebhooksService,
+    private readonly events: DomainEvents,
     private readonly mail: MailService
   ) {}
 
@@ -422,7 +424,7 @@ export class TimesheetApprovalsService {
       resourceId: id,
       metadata: { weekStart, seconds: totals.total },
     })
-    await this.webhooks.emit("timesheet.submitted", approval)
+    await this.events.publish("timesheet.submitted", approval)
     await this.notifyApprovers(approval)
     return approval
   }

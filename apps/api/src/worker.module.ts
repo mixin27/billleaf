@@ -13,6 +13,8 @@ import { RecurringModule } from "./modules/recurring/recurring.module.js"
 import { TimeModule } from "./modules/time/time.module.js"
 import { WebhooksModule } from "./modules/webhooks/webhooks.module.js"
 import { WebhookProcessor } from "./jobs/webhook.processor.js"
+import { PushProcessor } from "./jobs/push.processor.js"
+import { NotificationsModule } from "./modules/notifications/notifications.module.js"
 
 /** Background worker: same codebase, no HTTP. Register queue processors here. */
 @Module({
@@ -24,6 +26,7 @@ import { WebhookProcessor } from "./jobs/webhook.processor.js"
     DataExportModule,
     TimeModule,
     WebhooksModule,
+    NotificationsModule,
   ],
   providers: [
     EmailProcessor,
@@ -31,6 +34,7 @@ import { WebhookProcessor } from "./jobs/webhook.processor.js"
     BillingProcessor,
     ExportProcessor,
     WebhookProcessor,
+    PushProcessor,
     WorkerHeartbeat,
   ],
 })
