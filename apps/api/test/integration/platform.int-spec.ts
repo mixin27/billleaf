@@ -766,6 +766,11 @@ describe("projects & tasks", () => {
     expect(
       (await owner.post(`/v1/projects/from-quote/${quote.id}`)).body.code
     ).toBe("quote_has_project")
+    // The quote now points at its project.
+    expect((await owner.get(`/v1/quotes/${quote.id}`)).body).toMatchObject({
+      projectId: fromQuote.body.id,
+      projectName: "Website",
+    })
 
     // Tasks: create three, move "c" to the top, then move "a" to done.
     const pid = p.body.id

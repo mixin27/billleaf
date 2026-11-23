@@ -213,7 +213,9 @@ export default function QuoteScreen() {
                   </View>
                 </View>
               ) : null}
-              {q.status === "accepted" && can("project.create") ? (
+              {q.status === "accepted" &&
+              !q.projectId &&
+              can("project.create") ? (
                 <Button
                   title="Start project"
                   variant="link"
@@ -360,6 +362,21 @@ function Summary({
         >
           <Text style={[Type.small, { color: t.primary }]}>
             {`Invoiced as ${q.invoiceNumber ?? "a draft invoice"} ›`}
+          </Text>
+        </Pressable>
+      ) : null}
+      {q.projectId ? (
+        <Pressable
+          accessibilityRole="link"
+          onPress={() =>
+            router.push({
+              pathname: "/project/[id]",
+              params: { id: q.projectId! },
+            })
+          }
+        >
+          <Text style={[Type.small, { color: t.primary }]}>
+            {`Project: ${q.projectName ?? "open it"} ›`}
           </Text>
         </Pressable>
       ) : null}

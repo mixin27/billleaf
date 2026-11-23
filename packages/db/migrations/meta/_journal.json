@@ -225,6 +225,13 @@
       "when": 1794924137531,
       "tag": "0031_daily_ultimatum",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1795444438679,
+      "tag": "0032_normal_blackheart",
+      "breakpoints": true
     }
   ]
 }
