@@ -79,12 +79,20 @@ export default function AppLayout() {
           />
           <Stack.Screen name="send" options={{ presentation: "modal" }} />
           <Stack.Screen
+            name="contract-step"
+            options={{ presentation: "modal" }}
+          />
+          <Stack.Screen
             name="invoice/[id]"
             options={{ ...pushed, title: "Invoice", headerBackTitle: "Back" }}
           />
           <Stack.Screen
             name="quote/[id]"
             options={{ ...pushed, title: "Quote", headerBackTitle: "Back" }}
+          />
+          <Stack.Screen
+            name="contract/[id]"
+            options={{ ...pushed, title: "Contract", headerBackTitle: "Back" }}
           />
           <Stack.Screen
             name="client/[id]"

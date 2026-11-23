@@ -1,4 +1,4 @@
-import { formatMoney } from "@workspace/contracts"
+import { formatMoney, type Permission } from "@workspace/contracts"
 import * as React from "react"
 import {
   RefreshControl,
@@ -10,10 +10,16 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context"
 import { create } from "zustand"
 
+import { ContractRow } from "@/components/contract-row"
 import { InvoiceRow, totalsByCurrency } from "@/components/invoice-row"
 import { QuoteRow } from "@/components/quote-row"
 import { Body, Chip, Screen, Title } from "@/components/ui"
 import { Radius, Spacing, Type } from "@/constants/theme"
+import {
+  CONTRACT_FILTERS,
+  type ContractFilter,
+  useContracts,
+} from "@/features/contracts"
 import { useDashboard } from "@/features/dashboard"
 import {
   INVOICE_FILTERS,
@@ -42,38 +48,75 @@ const QUOTES_EMPTY: Record<QuoteFilter, string> = {
   all: "No quotes yet. Write one on the web.",
 }
 
-type Pane = "invoices" | "quotes"
+const CONTRACTS_EMPTY: Record<ContractFilter, string> = {
+  sent: "No contracts waiting for a signature.",
+  draft: "No draft contracts.",
+  signed: "No signed contracts yet.",
+  all: "No contracts yet. Write one on the web.",
+}
 
-/** Kept outside the screen, so the tab reopens on the last half. */
+type Pane = "invoices" | "quotes" | "contracts"
+
+const PANE_LABELS: Record<Pane, string> = {
+  invoices: "Invoices",
+  quotes: "Quotes",
+  contracts: "Contracts",
+}
+
+/** Kept outside the screen, so the tab reopens on the last pane. */
 const usePane = create<{
   pane: Pane
   quoteFilter: QuoteFilter
+  contractFilter: ContractFilter
   setPane: (p: Pane) => void
   setQuoteFilter: (f: QuoteFilter) => void
+  setContractFilter: (f: ContractFilter) => void
 }>((set) => ({
   pane: "invoices",
   quoteFilter: "sent",
+  contractFilter: "sent",
   setPane: (pane) => set({ pane }),
   setQuoteFilter: (quoteFilter) => set({ quoteFilter }),
+  setContractFilter: (contractFilter) => set({ contractFilter }),
 }))
 
 /**
  * Who owes you what: unpaid invoices first, then the rest by filter. The
- * tab holds quotes too (a sixth tab would go under "More" on iPhone).
+ * tab holds quotes and contracts too (a sixth tab would go under "More"
+ * on iPhone).
  */
 export default function InvoicesScreen() {
   const t = useTheme()
   const me = useMe()
-  const canInvoices = me.data?.permissions.includes("invoice.read") ?? false
-  const canQuotes = me.data?.permissions.includes("quote.read") ?? false
-  const { pane: picked, setPane, quoteFilter, setQuoteFilter } = usePane()
-  const pane: Pane = !canInvoices ? "quotes" : !canQuotes ? "invoices" : picked
+  const has = (p: Permission) => me.data?.permissions.includes(p) ?? false
+  const canInvoices = has("invoice.read")
+  const canQuotes = has("quote.read")
+  const canContracts = has("contract.read")
+  const panes = (["invoices", "quotes", "contracts"] as const).filter((p) =>
+    p === "invoices" ? canInvoices : p === "quotes" ? canQuotes : canContracts
+  )
+  const {
+    pane: picked,
+    setPane,
+    quoteFilter,
+    setQuoteFilter,
+    contractFilter,
+    setContractFilter,
+  } = usePane()
+  const pane: Pane = panes.includes(picked as never)
+    ? picked
+    : (panes[0] ?? "invoices")
   const { filter, setFilter } = useInvoiceFilter()
   const list = useInvoices(filter, pane === "invoices" && canInvoices)
   const quotes = useQuotes(
     quoteFilter,
     undefined,
     pane === "quotes" && canQuotes
+  )
+  const contracts = useContracts(
+    contractFilter,
+    undefined,
+    pane === "contracts" && canContracts
   )
   const today = useDashboard().data?.today
   const locale =
@@ -97,28 +140,81 @@ export default function InvoicesScreen() {
               refreshing={refreshing}
               onRefresh={async () => {
                 setRefreshing(true)
-                await (pane === "quotes" ? quotes.refetch() : list.refetch())
+                await (pane === "quotes"
+                  ? quotes.refetch()
+                  : pane === "contracts"
+                    ? contracts.refetch()
+                    : list.refetch())
                 setRefreshing(false)
               }}
             />
           }
         >
-          <Title>{pane === "quotes" ? "Quotes" : "Invoices"}</Title>
-          {canInvoices && canQuotes ? (
+          <Title>{PANE_LABELS[pane]}</Title>
+          {panes.length > 1 ? (
             <View style={styles.panes}>
-              <Chip
-                label="Invoices"
-                selected={pane === "invoices"}
-                onPress={() => setPane("invoices")}
-              />
-              <Chip
-                label="Quotes"
-                selected={pane === "quotes"}
-                onPress={() => setPane("quotes")}
-              />
+              {panes.map((p) => (
+                <Chip
+                  key={p}
+                  label={PANE_LABELS[p]}
+                  selected={pane === p}
+                  onPress={() => setPane(p)}
+                />
+              ))}
             </View>
           ) : null}
-          {pane === "quotes" ? (
+          {pane === "contracts" ? (
+            <>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.bleed}
+                contentContainerStyle={styles.chips}
+              >
+                {CONTRACT_FILTERS.map((f) => (
+                  <Chip
+                    key={f.value}
+                    label={f.label}
+                    selected={contractFilter === f.value}
+                    onPress={() => setContractFilter(f.value)}
+                  />
+                ))}
+              </ScrollView>
+              {contracts.error ? (
+                <Body>{errorMessage(contracts.error)}</Body>
+              ) : !contracts.data ? (
+                <Body muted>Loading…</Body>
+              ) : contracts.data.items.length === 0 ? (
+                <Body muted>{CONTRACTS_EMPTY[contractFilter]}</Body>
+              ) : (
+                <View
+                  style={[
+                    styles.card,
+                    {
+                      backgroundColor: t.backgroundElement,
+                      borderColor: t.border,
+                    },
+                  ]}
+                >
+                  {contracts.data.items.map((c, i) => (
+                    <ContractRow
+                      key={c.id}
+                      contract={c}
+                      locale={locale}
+                      today={today}
+                      first={i === 0}
+                    />
+                  ))}
+                </View>
+              )}
+              {contracts.data &&
+              contracts.data.total > contracts.data.items.length ? (
+                <Body muted style={Type.small}>
+                  Showing the latest 50. Find older contracts on the web.
+                </Body>
+              ) : null}
+            </>
+          ) : pane === "quotes" ? (
             <>
               <ScrollView
                 horizontal

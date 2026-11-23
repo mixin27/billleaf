@@ -6,8 +6,8 @@ import { useTheme } from "@/hooks/use-theme"
 
 /**
  * Home, Time, Invoices, Clients and Expenses. Time is hidden without time
- * tracking (plan or role), Invoices (which holds quotes too) without `invoice.read` and
- * `quote.read`, Clients (which
+ * tracking (plan or role), Invoices (which holds quotes and contracts too)
+ * without `invoice.read`, `quote.read` and `contract.read`, Clients (which
  * holds projects too) without `client.read` and `project.read`, Expenses
  * without `expense.read`.
  */
@@ -16,6 +16,7 @@ export default function TabsLayout() {
   const me = useMe()
   const canInvoices = me.data?.permissions.includes("invoice.read") ?? false
   const canQuotes = me.data?.permissions.includes("quote.read") ?? false
+  const canContracts = me.data?.permissions.includes("contract.read") ?? false
   const canClients = me.data?.permissions.includes("client.read") ?? false
   const canProjects = me.data?.permissions.includes("project.read") ?? false
   return (
@@ -34,9 +35,12 @@ export default function TabsLayout() {
           md="timer"
         />
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="invoices" hidden={!canInvoices && !canQuotes}>
+      <NativeTabs.Trigger
+        name="invoices"
+        hidden={!canInvoices && !canQuotes && !canContracts}
+      >
         <NativeTabs.Trigger.Label>
-          {canInvoices ? "Invoices" : "Quotes"}
+          {canInvoices ? "Invoices" : canQuotes ? "Quotes" : "Contracts"}
         </NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon
           sf={{ default: "doc.text", selected: "doc.text.fill" }}

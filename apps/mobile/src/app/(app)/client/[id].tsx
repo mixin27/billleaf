@@ -19,12 +19,14 @@ import {
   View,
 } from "react-native"
 
+import { ContractRow } from "@/components/contract-row"
 import { InvoiceRow, totalsByCurrency } from "@/components/invoice-row"
 import { ProjectRow } from "@/components/project-row"
 import { QuoteRow } from "@/components/quote-row"
 import { Body, Button, Screen, Section } from "@/components/ui"
 import { Spacing, Type } from "@/constants/theme"
 import { useClient } from "@/features/clients"
+import { useContracts } from "@/features/contracts"
 import { useDashboard } from "@/features/dashboard"
 import { useClientInvoices } from "@/features/invoices"
 import { useMe } from "@/features/me"
@@ -52,8 +54,8 @@ const web = (url: string) =>
   /^https?:\/\//i.test(url) ? url : `https://${url}`
 
 /**
- * One client: how to reach them, what they owe, their invoices, quotes
- * and projects.
+ * One client: how to reach them, what they owe, their invoices, quotes,
+ * contracts and projects.
  * Adding and editing clients and contacts stays on the web.
  */
 export default function ClientScreen() {
@@ -64,6 +66,7 @@ export default function ClientScreen() {
   const invoices = useClientInvoices(id, can("invoice.read"))
   const projects = useProjects({ clientId: id }, can("project.read"))
   const quotes = useQuotes("all", id, can("quote.read"))
+  const contracts = useContracts("all", id, can("contract.read"))
   const profile = useWorkspaceProfile().data
   const today = useDashboard().data?.today
   const locale =
@@ -98,6 +101,7 @@ export default function ClientScreen() {
                 can("invoice.read") ? invoices.refetch() : null,
                 can("project.read") ? projects.refetch() : null,
                 can("quote.read") ? quotes.refetch() : null,
+                can("contract.read") ? contracts.refetch() : null,
               ])
               setRefreshing(false)
             }}
@@ -141,6 +145,21 @@ export default function ClientScreen() {
                     today={today}
                     first={i === 0}
                     byNumber
+                  />
+                ))}
+              </Section>
+            ) : null}
+
+            {can("contract.read") && contracts.data?.items.length ? (
+              <Section title="Contracts">
+                {contracts.data.items.slice(0, 5).map((k, i) => (
+                  <ContractRow
+                    key={k.id}
+                    contract={k}
+                    locale={locale}
+                    today={today}
+                    first={i === 0}
+                    byTitle
                   />
                 ))}
               </Section>

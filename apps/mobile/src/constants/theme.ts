@@ -22,6 +22,9 @@ export const Colors = {
     onPrimary: "#FFFFFF",
     accent: brand.leaf,
     danger: "#B42318",
+    /** Unresolved contract fields (the web's amber chips). */
+    warning: "#92400E",
+    warningBackground: "#FEF3C7",
   },
   dark: {
     text: "#ECF3EF",
@@ -34,6 +37,8 @@ export const Colors = {
     onPrimary: "#0F1A1A",
     accent: "#4ADE80",
     danger: "#F97066",
+    warning: "#FDE68A",
+    warningBackground: "#4A3510",
   },
 } as const
 
