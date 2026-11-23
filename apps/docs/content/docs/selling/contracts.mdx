@@ -15,7 +15,11 @@ description: Write agreements from templates and get them signed online.
 | `{{contract.effective_date}}`, `{{contract.end_date}}`, `{{contract.number}}` | The contract's dates and number |
 | `{{project.name}}`, `{{today}}` | The linked project, the date it's sent |
 
-Simple formatting works: `**bold**`, `## headings` and lists.
+### Writing the text
+
+The editor works like a word processor. The toolbar has a title and two heading sizes, **bold**, _italic_, links, bulleted and numbered lists and a divider line, and it stays in view as you scroll down a long agreement. **Insert field** adds a merge field at the cursor; fields show as labelled chips, and ones Billleaf doesn't know are highlighted. Text pasted from Word or Google Docs keeps the formatting above and drops the rest, so the PDF and the client portal show exactly what you see.
+
+**Source** shows the text underneath, a simple Markdown: `# Title`, `## Section`, `- item`, `1. item`, `**bold**`, `_italic_`, `[link](https://example.com)` and `---` for a divider line. **Preview** shows it as the client will read it.
 
 ## Sending and signing
 
