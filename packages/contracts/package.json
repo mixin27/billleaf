@@ -29,6 +29,6 @@
     "@workspace/typescript-config": "workspace:*",
     "eslint": "^10",
     "typescript": "^5",
-    "vitest": "^5.1.0"
+    "vitest": "^5.1.1"
   }
 }
