@@ -32,6 +32,7 @@ import {
   useSendInvoice,
   useSendReceipt,
 } from "@/features/invoices"
+import { useContract, useEmailContract } from "@/features/contracts"
 import { useMe } from "@/features/me"
 import { useEmailQuote, useQuote } from "@/features/quotes"
 import { useTheme } from "@/hooks/use-theme"
@@ -45,28 +46,39 @@ const isEmail = (s: string) => sendDocumentSchema.shape.to.safeParse(s).success
  * with no address needs one typed here, and can keep it.
  */
 export default function SendScreen() {
-  const { kind, invoiceId, paymentId, quoteId } = useLocalSearchParams<{
-    kind: "invoice" | "receipt" | "quote"
-    invoiceId?: string
-    paymentId?: string
-    quoteId?: string
-  }>()
+  const { kind, invoiceId, paymentId, quoteId, contractId } =
+    useLocalSearchParams<{
+      kind: "invoice" | "receipt" | "quote" | "contract"
+      invoiceId?: string
+      paymentId?: string
+      quoteId?: string
+      contractId?: string
+    }>()
   const receipt = kind === "receipt"
   const isQuote = kind === "quote"
+  const isContract = kind === "contract"
   const t = useTheme()
   const me = useMe()
   const can = (p: Permission) => me.data?.permissions.includes(p) ?? false
-  const invoice = useInvoice(isQuote ? "" : (invoiceId ?? ""))
+  const invoice = useInvoice(invoiceId ?? "")
   const quote = useQuote(isQuote ? (quoteId ?? "") : "")
+  const contract = useContract(isContract ? (contractId ?? "") : "")
   /** The document being sent: its client and number. */
-  const inv = isQuote ? quote.data : invoice.data
+  const inv = isContract ? contract.data : isQuote ? quote.data : invoice.data
   const payments = useInvoicePayments(invoiceId ?? "", receipt)
   const payment = payments.data?.items.find((p) => p.id === paymentId)
   const client = useClient(inv?.clientId, can("client.read"))
   const sendInvoice = useSendInvoice(invoiceId ?? "")
   const sendReceipt = useSendReceipt(paymentId ?? "")
   const sendQuote = useEmailQuote(quoteId ?? "")
-  const send = isQuote ? sendQuote : receipt ? sendReceipt : sendInvoice
+  const sendContract = useEmailContract(contractId ?? "")
+  const send = isContract
+    ? sendContract
+    : isQuote
+      ? sendQuote
+      : receipt
+        ? sendReceipt
+        : sendInvoice
   const setEmail = useSetClientEmail(inv?.clientId ?? "")
 
   const fallback = client.data ? defaultRecipient(client.data) : undefined
@@ -129,9 +141,11 @@ export default function SendScreen() {
             <Title style={styles.flex} numberOfLines={1}>
               {receipt
                 ? "Email receipt"
-                : isQuote
-                  ? "Email quote"
-                  : "Email invoice"}
+                : isContract
+                  ? "Email contract"
+                  : isQuote
+                    ? "Email quote"
+                    : "Email invoice"}
             </Title>
             <Button
               title="Cancel"
@@ -144,9 +158,17 @@ export default function SendScreen() {
             keyboardShouldPersistTaps="handled"
             automaticallyAdjustKeyboardInsets
           >
-            {invoice.error || quote.error || payments.error ? (
+            {invoice.error ||
+            quote.error ||
+            contract.error ||
+            payments.error ? (
               <Body>
-                {errorMessage(invoice.error ?? quote.error ?? payments.error)}
+                {errorMessage(
+                  invoice.error ??
+                    quote.error ??
+                    contract.error ??
+                    payments.error
+                )}
               </Body>
             ) : loading || !inv ? (
               <Body muted>Loading…</Body>
@@ -154,11 +176,13 @@ export default function SendScreen() {
               <>
                 <Body muted>
                   {`${number} goes to ${inv.clientName} as a PDF, with a link to ${
-                    isQuote
-                      ? "accept or decline it"
-                      : receipt
-                        ? "view it"
-                        : "view and pay it"
+                    isContract
+                      ? "read and sign it"
+                      : isQuote
+                        ? "accept or decline it"
+                        : receipt
+                          ? "view it"
+                          : "view and pay it"
                   }. Replies go to your workspace email.`}
                   {lastSentTo ? ` Last sent to ${lastSentTo}.` : ""}
                 </Body>
