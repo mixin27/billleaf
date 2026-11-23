@@ -7585,6 +7585,14 @@
           "invoiceNumber": {
             "type": "string",
             "nullable": true
+          },
+          "projectId": {
+            "type": "string",
+            "nullable": true
+          },
+          "projectName": {
+            "type": "string",
+            "nullable": true
           }
         },
         "required": [
@@ -7615,7 +7623,9 @@
           "clientSnapshot",
           "issuerSnapshot",
           "invoiceId",
-          "invoiceNumber"
+          "invoiceNumber",
+          "projectId",
+          "projectName"
         ],
         "additionalProperties": false
       },

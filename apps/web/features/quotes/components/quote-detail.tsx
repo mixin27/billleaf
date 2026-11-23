@@ -128,6 +128,17 @@ function QuoteDetailView({ quote }: { quote: Quote }) {
                 </Link>
               </p>
             ) : null}
+            {quote.projectId ? (
+              <p className="mt-1 text-sm">
+                Project{" "}
+                <Link
+                  className="underline"
+                  href={`/${slug}/projects/${quote.projectId}`}
+                >
+                  {quote.projectName ?? "Open project"}
+                </Link>
+              </p>
+            ) : null}
           </>
         }
         actions={
@@ -195,7 +206,9 @@ function QuoteDetailView({ quote }: { quote: Quote }) {
                   render={<Button variant="outline">More</Button>}
                 />
                 <DropdownMenuContent align="end">
-                  {quote.status === "accepted" && can("project.create") ? (
+                  {quote.status === "accepted" &&
+                  !quote.projectId &&
+                  can("project.create") ? (
                     <DropdownMenuItem
                       onClick={() =>
                         startProject.mutate(undefined, {

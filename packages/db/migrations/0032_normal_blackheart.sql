@@ -1,0 +1,1 @@
+ALTER TABLE "projects" ADD CONSTRAINT "projects_quoteId_unique" UNIQUE("quote_id");

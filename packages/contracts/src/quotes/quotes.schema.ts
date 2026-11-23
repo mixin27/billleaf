@@ -62,6 +62,9 @@ export const quoteSchema = quoteSummarySchema.extend({
   /** Set once an accepted quote has been converted to an invoice. */
   invoiceId: z.string().nullable(),
   invoiceNumber: z.string().nullable(),
+  /** Set once a project was started from this accepted quote. */
+  projectId: z.string().nullable(),
+  projectName: z.string().nullable(),
 })
 export type Quote = z.infer<typeof quoteSchema>
 

@@ -4306,6 +4306,8 @@ export interface components {
       } | null
       invoiceId: string | null
       invoiceNumber: string | null
+      projectId: string | null
+      projectName: string | null
     }
     CreateQuoteDto: {
       /** Format: uuid */

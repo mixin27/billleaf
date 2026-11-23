@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common"
 import {
   clients,
   invoices,
+  projects,
   quoteLines,
   quotes,
   type Transaction,
@@ -19,6 +20,9 @@ export type QuoteWithClient = QuoteRow & {
   /** Present on detail lookups once converted to an invoice. */
   invoiceId?: string | null
   invoiceNumber?: string | null
+  /** Present on detail lookups once a project was started from it. */
+  projectId?: string | null
+  projectName?: string | null
 }
 export type QuoteValues = Omit<
   typeof quotes.$inferInsert,
@@ -112,10 +116,13 @@ export class QuotesRepository {
         clientName: clients.name,
         invoiceId: invoices.id,
         invoiceNumber: invoices.number,
+        projectId: projects.id,
+        projectName: projects.name,
       })
       .from(quotes)
       .innerJoin(clients, eq(clients.id, quotes.clientId))
       .leftJoin(invoices, eq(invoices.quoteId, quotes.id))
+      .leftJoin(projects, eq(projects.quoteId, quotes.id))
       .where(and(this.scope(), eq(quotes.id, id)))
       .limit(1)
     const [row] = opts.forUpdate
@@ -127,6 +134,8 @@ export class QuotesRepository {
           clientName: row.clientName,
           invoiceId: row.invoiceId,
           invoiceNumber: row.invoiceNumber,
+          projectId: row.projectId,
+          projectName: row.projectName,
         }
       : null
   }

@@ -88,6 +88,8 @@ function toQuote(
     issuerSnapshot: q.issuerSnapshot ?? null,
     invoiceId: q.invoiceId ?? null,
     invoiceNumber: q.invoiceNumber ?? null,
+    projectId: q.projectId ?? null,
+    projectName: q.projectName ?? null,
   }
 }
 

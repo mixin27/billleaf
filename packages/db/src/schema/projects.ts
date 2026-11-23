@@ -7,6 +7,7 @@ import {
   pgTable,
   text,
   timestamp,
+  unique,
   uuid,
 } from "drizzle-orm/pg-core"
 
@@ -50,6 +51,8 @@ export const projects = pgTable(
     index().on(t.workspaceId, t.status),
     index().on(t.workspaceId, t.id),
     index().on(t.clientId),
+    // One project per quote (NULLs are distinct, so internal projects are fine).
+    unique().on(t.quoteId),
   ]
 )
 

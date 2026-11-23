@@ -153,17 +153,28 @@ export class ProjectsService {
         code: "quote_has_project",
       })
     }
-    return this.create(
-      {
-        name: quote.title ?? `${quote.clientName} — ${quote.number}`,
-        clientId: quote.clientId,
-        billing: "fixed",
-        currency: quote.currency,
-        budgetAmount: quote.total,
-        description: quote.notes,
-      },
-      quoteId
-    )
+    try {
+      return await this.create(
+        {
+          name: quote.title ?? `${quote.clientName} — ${quote.number}`,
+          clientId: quote.clientId,
+          billing: "fixed",
+          currency: quote.currency,
+          budgetAmount: quote.total,
+          description: quote.notes,
+        },
+        quoteId
+      )
+    } catch (e) {
+      // Unique (quote_id) lost a race with a concurrent request.
+      if ((e as { cause?: { code?: string } }).cause?.code === "23505") {
+        throw new ConflictException({
+          message: "A project already exists for this quote",
+          code: "quote_has_project",
+        })
+      }
+      throw e
+    }
   }
 
   async update(id: string, input: UpdateProjectInput): Promise<Project> {
