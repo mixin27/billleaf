@@ -78,6 +78,7 @@ const REFRESH: Record<PushType, string[]> = {
   "contract.signed": ["contracts"],
   "payment.received": ["invoices", "payments", "dashboard", "clients"],
   "timesheet.submitted": ["time"],
+  "timesheet.reviewed": ["time"],
 }
 
 function refresh(qc: QueryClient, type: PushType) {
@@ -120,8 +121,9 @@ export function useNotificationResponse() {
   React.useEffect(() => {
     if (!pending || active !== pending.workspaceId) return
     setPending(null)
-    if (pending.path === "/time" || pending.path === "/")
-      router.navigate(pending.path)
+    // Tabs are navigated to (not stacked); "/time?week=…" too.
+    if (pending.path === "/" || pending.path.split("?")[0] === "/time")
+      router.navigate(pending.path as never)
     else router.push(pending.path as never)
   }, [pending, active])
 

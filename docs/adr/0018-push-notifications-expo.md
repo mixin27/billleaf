@@ -33,3 +33,7 @@ We will send push notifications through **Expo's push service**, behind a small 
 - **Direct APNs and FCM.** No dependency on Expo, but two integrations, Apple and Google keys in our secrets, and twice the code. The provider interface keeps this open if we ever need it.
 - **A third-party notification service** (OneSignal and similar). Another account, SDK and data processor for something Expo already does for free.
 - **An outbox table and a general event bus.** Sturdier delivery guarantees, but a larger change than these notifications need. `DomainEvents` is the seam where one could go later.
+
+## Updates
+
+- **2026-11-24:** Timesheet approvals came to the app. `timesheet.submitted` now opens the week in the app, and a fifth type, `timesheet.reviewed` (from `timesheet.approved` and `timesheet.rejected`), goes only to the member whose week it is (`toOwner` in `PUSH_TYPES`; the push names that member and the recipient query skips the permission check). The reviewer is never told about their own review.

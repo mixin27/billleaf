@@ -51,7 +51,6 @@ import { InjectDb, type Database } from "../../core/database/database.module.js"
 import { AuditService } from "../../iam/audit/audit.service.js"
 import { MailService } from "../../mail/mail.service.js"
 import { addDays, todayIn } from "../documents/party-snapshot.js"
-import { WebhooksService } from "../webhooks/webhooks.service.js"
 import { DomainEvents } from "../events/domain-events.service.js"
 
 /** Monday of the week containing `iso` (YYYY-MM-DD). */
@@ -91,7 +90,6 @@ export class TimesheetApprovalsService {
     private readonly ctx: RequestContext,
     private readonly entitlements: EntitlementsService,
     private readonly audit: AuditService,
-    private readonly webhooks: WebhooksService,
     private readonly events: DomainEvents,
     private readonly mail: MailService
   ) {}
@@ -515,7 +513,8 @@ export class TimesheetApprovalsService {
         reopened: current.status === "approved" || undefined,
       },
     })
-    await this.webhooks.emit(`timesheet.${status}`, approval)
+    // Webhooks, and a push to the member (never to yourself).
+    await this.events.publish(`timesheet.${status}`, approval)
     if (approval.memberId !== this.ctx.memberId)
       await this.notifyMember(approval, status === "approved")
     return approval

@@ -86,6 +86,31 @@ describe("pushContent", () => {
     })
   })
 
+  it("tells the member their week was approved or sent back", () => {
+    const week = {
+      id: "a1",
+      memberId: "m1",
+      weekStart: "2026-11-16",
+      totalSeconds: 8 * 3600,
+      reviewedByName: "Ada",
+      note: null,
+    }
+    expect(pushContent("timesheet.approved", week)).toEqual({
+      type: "timesheet.reviewed",
+      title: "Your week of 2026-11-16 was approved",
+      body: "8 h · Ada",
+      path: "/time?week=2026-11-16",
+      memberId: "m1",
+    })
+    expect(
+      pushContent("timesheet.rejected", { ...week, note: "Split Monday" })
+    ).toMatchObject({
+      title: "Your week of 2026-11-16 was sent back",
+      body: "Ada: Split Monday",
+      memberId: "m1",
+    })
+  })
+
   it("ignores events that don't notify", () => {
     expect(isPushEvent("invoice.paid")).toBe(false)
     expect(pushContent("invoice.paid", {})).toBeNull()
@@ -94,5 +119,6 @@ describe("pushContent", () => {
   it("maps types to the permission that sees them", () => {
     expect(permissionFor("payment.received")).toBe("invoice.read")
     expect(permissionFor("timesheet.submitted")).toBe("time.approve")
+    expect(permissionFor("timesheet.reviewed")).toBe("time.track")
   })
 })
