@@ -74,14 +74,15 @@ describe("pushContent", () => {
     })
     expect(
       pushContent("timesheet.submitted", {
+        id: "a1",
         memberName: "Sam",
         weekStart: "2026-11-16",
         totalSeconds: 37 * 3600 + 30 * 60,
       })
     ).toMatchObject({
       type: "timesheet.submitted",
-      body: "Week of 2026-11-16 · 37:30. Review it on the web.",
-      path: null,
+      body: "Week of 2026-11-16 · 37:30",
+      path: "/approval/a1",
     })
   })
 

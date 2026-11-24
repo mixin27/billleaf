@@ -45,6 +45,14 @@ export class TimesheetApprovalsController {
     return this.approvals.list(q)
   }
 
+  /** One week (a push opens it); approvers see anyone's, others their own. */
+  @Get(":id")
+  @RequireWorkspace()
+  @ZodResponse({ status: 200, type: ApprovalDto })
+  get(@Param("id", ParseUUIDPipe) id: string) {
+    return this.approvals.read(id)
+  }
+
   @Post("submit")
   @RequireWorkspace()
   @ZodResponse({ status: 201, type: ApprovalDto })

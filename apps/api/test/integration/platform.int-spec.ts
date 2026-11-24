@@ -5197,6 +5197,11 @@ describe("timesheet approvals", () => {
       })
       expect(sent.map((m) => m.to)).toEqual([ownerEmail])
       expect(sent[0].subject).toContain("Timesheet Member submitted")
+      // One week by id (what a push opens): the member and approvers.
+      for (const c of [owner, member])
+        expect(
+          (await c.get(`/v1/timesheet-approvals/${submitted.body.id}`)).body
+        ).toMatchObject({ id: submitted.body.id, status: "submitted" })
       expect(
         (await member.post("/v1/timesheet-approvals/submit", { week: monday }))
           .body.code

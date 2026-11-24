@@ -2148,6 +2148,22 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  "/v1/timesheet-approvals/{id}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["TimesheetApprovalsController_get_v1"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   "/v1/timesheet-approvals/submit": {
     parameters: {
       query?: never
@@ -5992,10 +6008,6 @@ export interface components {
       available: boolean
       enabled: boolean
     }
-    WeekDto: {
-      /** Format: date */
-      week: string
-    }
     ApprovalDto_Output: {
       id: string
       memberId: string
@@ -6012,6 +6024,10 @@ export interface components {
       reviewedAt: string | null
       reviewedByName: string | null
       note: string | null
+    }
+    WeekDto: {
+      /** Format: date */
+      week: string
     }
     ReviewDto: {
       note?: string
@@ -11094,6 +11110,27 @@ export interface operations {
         }
         content: {
           "application/json": components["schemas"]["ApprovalListDto_Output"]
+        }
+      }
+    }
+  }
+  TimesheetApprovalsController_get_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["ApprovalDto_Output"]
         }
       }
     }

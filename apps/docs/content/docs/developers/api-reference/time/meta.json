@@ -30,6 +30,7 @@
     "time-reports-undo-import",
     "time-reports-import-time",
     "timesheet-approvals-list",
+    "timesheet-approvals-get",
     "timesheet-approvals-submit",
     "timesheet-approvals-withdraw",
     "timesheet-approvals-approve",

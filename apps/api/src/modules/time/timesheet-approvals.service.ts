@@ -277,6 +277,14 @@ export class TimesheetApprovalsService {
     return this.toDto(row)
   }
 
+  /** One week for the reader: approvers see anyone's, others their own. */
+  async read(id: string): Promise<TimesheetApproval> {
+    const approval = await this.get(id)
+    if (!this.canApprove() && approval.memberId !== this.ctx.memberId)
+      throw new NotFoundException("Timesheet not found")
+    return approval
+  }
+
   /** A member's approval for a week, if submitted. */
   async forWeek(
     memberId: string,
