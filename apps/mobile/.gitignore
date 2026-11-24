@@ -17,6 +17,9 @@ expo-env.d.ts
 *.p12
 *.key
 *.mobileprovision
+# Firebase config for push (see README)
+google-services.json
+GoogleService-Info.plist
 
 # Metro
 .metro-health-check*

@@ -50,7 +50,7 @@
         {
           "icon": "../../packages/brand/assets/notification-icon-96.png",
           "color": "#15803D",
-          "enableRemoteNotifications": false
+          "enableRemoteNotifications": true
         }
       ]
     ],

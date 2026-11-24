@@ -11,6 +11,7 @@ import {
   View,
 } from "react-native"
 
+import { NotificationSettings } from "@/components/notification-settings"
 import { Body, Button, Chip, Screen, Section } from "@/components/ui"
 import { Radius, Spacing, Type } from "@/constants/theme"
 import { useMe } from "@/features/me"
@@ -25,8 +26,8 @@ import { useReminderSettings } from "@/stores/reminder-settings"
 import { useWorkspaceStore } from "@/stores/workspace-store"
 
 /**
- * You and this phone: who's signed in, the workspace you're in, the timer
- * reminder, and signing out. Profile, password and two-factor settings
+ * You and this phone: who's signed in, the workspace you're in,
+ * notifications, the timer reminder, and signing out. Profile, password and two-factor settings
  * are on the web.
  */
 export default function AccountScreen() {
@@ -41,7 +42,7 @@ export default function AccountScreen() {
   const confirmSignOut = () =>
     Alert.alert(
       "Sign out?",
-      "This phone forgets your session and its timer reminder. Your data stays in Billleaf.",
+      "This phone forgets your session and its timer reminder, and stops getting notifications. Your data stays in Billleaf.",
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -112,6 +113,8 @@ export default function AccountScreen() {
             <Text style={[Type.body, { color: t.primary }]}>Switch</Text>
           </Pressable>
         </Section>
+
+        <NotificationSettings />
 
         {canTrackTime(me.data) ? <ReminderSetting /> : null}
 
