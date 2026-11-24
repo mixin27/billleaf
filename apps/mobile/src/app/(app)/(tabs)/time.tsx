@@ -24,7 +24,9 @@ import {
   Title,
 } from "@/components/ui"
 import { Radius, Spacing, Type } from "@/constants/theme"
+import { useTimesheetApprovals } from "@/features/approvals"
 import { useDashboard } from "@/features/dashboard"
+import { useMe } from "@/features/me"
 import {
   useContinueEntry,
   useRunningTimer,
@@ -102,6 +104,7 @@ export default function TimeScreen() {
             }
           >
             <Title>Time</Title>
+            <ApprovalsLink />
             {running.isPending ? (
               <TimerCardShell />
             ) : (
@@ -128,6 +131,40 @@ export default function TimeScreen() {
         </KeyboardAvoid>
       </SafeAreaView>
     </Screen>
+  )
+}
+
+/**
+ * Approvers, with approvals on: how many weeks are waiting, opening the
+ * list. Hidden otherwise.
+ */
+function ApprovalsLink() {
+  const t = useTheme()
+  const canApprove = useMe().data?.permissions.includes("time.approve") ?? false
+  const list = useTimesheetApprovals("submitted", canApprove)
+  if (!canApprove || !list.data?.enabled) return null
+  const n = list.data.pendingCount
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityHint="Opens timesheet approvals"
+      onPress={() => router.push("/approvals")}
+      style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+    >
+      <Card style={styles.approvals}>
+        <View style={styles.flex}>
+          <Text style={[Type.body, { color: t.text, fontWeight: "600" }]}>
+            Timesheet approvals
+          </Text>
+          <Text style={[Type.small, { color: t.textSecondary }]}>
+            {n === 0
+              ? "Nothing waiting"
+              : `${n} ${n === 1 ? "week" : "weeks"} waiting for you`}
+          </Text>
+        </View>
+        <Text style={[Type.body, { color: t.primary }]}>›</Text>
+      </Card>
+    </Pressable>
   )
 }
 
@@ -527,6 +564,7 @@ function DayEntries({
 }
 
 const styles = StyleSheet.create({
+  approvals: { flexDirection: "row", alignItems: "center", gap: Spacing.three },
   flex: { flex: 1 },
   content: { padding: Spacing.four, gap: Spacing.four },
   bold: { fontWeight: "600" },

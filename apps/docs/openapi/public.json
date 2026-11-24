@@ -5453,6 +5453,40 @@
         ]
       }
     },
+    "/v1/timesheet-approvals/{id}": {
+      "get": {
+        "operationId": "timesheet-approvals-get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalDto_Output"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["time"],
+        "summary": "Get timesheet approval",
+        "security": [
+          {
+            "apiKey": []
+          }
+        ]
+      }
+    },
     "/v1/timesheet-approvals/submit": {
       "post": {
         "operationId": "timesheet-approvals-submit",
@@ -13773,17 +13807,6 @@
         "required": ["items", "pendingCount", "available", "enabled"],
         "additionalProperties": false
       },
-      "WeekDto": {
-        "type": "object",
-        "properties": {
-          "week": {
-            "type": "string",
-            "format": "date",
-            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
-          }
-        },
-        "required": ["week"]
-      },
       "ApprovalDto_Output": {
         "type": "object",
         "properties": {
@@ -13849,6 +13872,17 @@
           "note"
         ],
         "additionalProperties": false
+      },
+      "WeekDto": {
+        "type": "object",
+        "properties": {
+          "week": {
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+          }
+        },
+        "required": ["week"]
       },
       "ReviewDto": {
         "type": "object",

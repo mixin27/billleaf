@@ -116,8 +116,8 @@ export function pushContent(
       return {
         type: "timesheet.submitted",
         title: `${a.memberName} submitted a timesheet`,
-        body: `Week of ${a.weekStart} · ${hours(a.totalSeconds)}. Review it on the web.`,
-        path: null,
+        body: `Week of ${a.weekStart} · ${hours(a.totalSeconds)}`,
+        path: `/approval/${a.id}`,
       }
     }
     default:
