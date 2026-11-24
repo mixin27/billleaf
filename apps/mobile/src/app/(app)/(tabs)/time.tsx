@@ -24,7 +24,11 @@ import {
   Title,
 } from "@/components/ui"
 import { Radius, Spacing, Type } from "@/constants/theme"
-import { useTimesheetApprovals } from "@/features/approvals"
+import {
+  useMyWeek,
+  useTimesheetApprovals,
+  useWeekSubmission,
+} from "@/features/approvals"
 import { useDashboard } from "@/features/dashboard"
 import { useMe } from "@/features/me"
 import {
@@ -42,6 +46,7 @@ import { useElapsed } from "@/hooks/use-elapsed"
 import { useTheme } from "@/hooks/use-theme"
 import { ApiError, errorMessage } from "@/lib/api"
 import { formatClock } from "@/lib/clock"
+import { shortDate } from "@/lib/format"
 import { queryClient } from "@/lib/query-client"
 import { useReminderSettings } from "@/stores/reminder-settings"
 import { useTimerDraft } from "@/stores/timer-draft"
@@ -82,11 +87,11 @@ export default function TimeScreen() {
 
   const refresh = async () => {
     setRefreshing(true)
+    // Everything under "time" (timer, entries, favourites, the week and
+    // approvals cards), plus Home's numbers.
     await Promise.all([
-      running.refetch(),
-      favorites.refetch(),
+      queryClient.invalidateQueries({ queryKey: ["time"] }),
       dashboard.refetch(),
-      day ? entries.refetch() : null,
     ])
     setRefreshing(false)
   }
@@ -126,6 +131,7 @@ export default function TimeScreen() {
                 error={entries.error}
               />
             ) : null}
+            {day && today ? <WeekCard day={day} today={today} /> : null}
             <ReminderLink />
           </ScrollView>
         </KeyboardAvoid>
@@ -165,6 +171,114 @@ function ApprovalsLink() {
         <Text style={[Type.body, { color: t.primary }]}>›</Text>
       </Card>
     </Pressable>
+  )
+}
+
+/**
+ * With approvals on: the week the list shows, where it stands, and the
+ * one thing to do next (submit, withdraw, submit again).
+ */
+function WeekCard({ day, today }: { day: string; today: string }) {
+  const t = useTheme()
+  const week = useMyWeek(day)
+  const { submit, withdraw } = useWeekSubmission()
+  const locale =
+    useWorkspaceProfile().data?.locale ??
+    Intl.DateTimeFormat().resolvedOptions().locale
+  const sheet = week.data
+  if (!sheet?.approvalsEnabled) return null
+
+  const a = sheet.approval
+  const date = (iso: string) => shortDate(iso.slice(0, 10), locale, today)
+  const total = sheet.rows.reduce(
+    (sum, r) => sum + r.seconds.reduce((x, y) => x + y, 0),
+    0
+  )
+  const future = sheet.weekStart > today
+  const reviewer = a?.reviewedAt
+    ? `${a.reviewedByName ?? "an approver"} on ${date(a.reviewedAt)}`
+    : "an approver"
+  const status = !a
+    ? "Not submitted"
+    : a.status === "submitted"
+      ? "Waiting for approval"
+      : a.status === "approved"
+        ? "Approved"
+        : "Sent back"
+  const text = !a
+    ? future
+      ? "You can submit this week once it starts."
+      : total === 0
+        ? "No time in this week yet."
+        : "Submit the week when it's complete. It can't change while it's waiting or approved, and only approved time is invoiced."
+    : a.status === "submitted"
+      ? `Submitted ${date(a.submittedAt)}. Withdraw it to make changes.`
+      : a.status === "approved"
+        ? `Approved by ${reviewer}. Ask an approver to reopen it if something needs to change.`
+        : `Sent back by ${reviewer}. Make the changes, then submit it again.`
+  const fail = (title: string) => (e: unknown) =>
+    Alert.alert(title, errorMessage(e))
+
+  return (
+    <Card
+      style={a?.status === "rejected" ? { borderColor: t.danger } : undefined}
+    >
+      <View style={styles.weekHeader}>
+        <View style={styles.flex}>
+          <Text style={[Type.small, { color: t.textSecondary }]}>
+            {`Week of ${date(sheet.weekStart)} – ${date(addDays(sheet.weekStart, 6))}`}
+          </Text>
+          <Text
+            style={[
+              Type.body,
+              styles.bold,
+              {
+                color:
+                  a?.status === "approved"
+                    ? t.primary
+                    : a?.status === "rejected"
+                      ? t.danger
+                      : t.text,
+              },
+            ]}
+          >
+            {status}
+          </Text>
+        </View>
+        <Text style={[Type.body, styles.bold, { color: t.text }]}>
+          {formatDuration(total)}
+        </Text>
+      </View>
+      <Body muted style={Type.small}>
+        {text}
+      </Body>
+      {a?.note && a.status !== "submitted" ? (
+        <Text style={[Type.small, { color: t.text }]}>{`“${a.note}”`}</Text>
+      ) : null}
+      {!a || a.status === "rejected" ? (
+        <Button
+          title={a ? "Submit again" : "Submit for approval"}
+          loading={submit.isPending}
+          disabled={future || total === 0}
+          onPress={() =>
+            submit.mutate(sheet.weekStart, {
+              onError: fail("Couldn't submit the week"),
+            })
+          }
+        />
+      ) : a.status === "submitted" ? (
+        <Button
+          title="Withdraw"
+          variant="secondary"
+          loading={withdraw.isPending}
+          onPress={() =>
+            withdraw.mutate(sheet.weekStart, {
+              onError: fail("Couldn't withdraw it"),
+            })
+          }
+        />
+      ) : null}
+    </Card>
   )
 }
 
@@ -565,6 +679,11 @@ function DayEntries({
 
 const styles = StyleSheet.create({
   approvals: { flexDirection: "row", alignItems: "center", gap: Spacing.three },
+  weekHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.three,
+  },
   flex: { flex: 1 },
   content: { padding: Spacing.four, gap: Spacing.four },
   bold: { fontWeight: "600" },
