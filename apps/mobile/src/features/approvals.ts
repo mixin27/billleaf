@@ -125,3 +125,46 @@ export function useReviewWeek(id: string) {
       ),
   })
 }
+
+/**
+ * Your own week (any date in it), with its approval: what the Time tab's
+ * week card shows. Same endpoint as the web's timesheet.
+ */
+export function useMyWeek(day: string | undefined) {
+  const ws = useWs()
+  return useQuery({
+    queryKey: ["time", ws, "timesheet", day ?? "", "me"],
+    queryFn: () =>
+      unwrap(
+        api.GET("/v1/time/timesheet", { params: { query: { week: day! } } })
+      ),
+    enabled: Boolean(ws && day),
+    placeholderData: (prev) => prev,
+  })
+}
+
+/**
+ * Submit your week for approval (again, after it was sent back), or
+ * withdraw it while it waits. Either changes which entries are locked and
+ * what can be invoiced, so time and projects refresh.
+ */
+export function useWeekSubmission() {
+  const qc = useQueryClient()
+  const refresh = () =>
+    Promise.all(
+      ["time", "projects", "dashboard"].map((k) =>
+        qc.invalidateQueries({ queryKey: [k] })
+      )
+    )
+  const submit = useMutation({
+    mutationFn: (week: string) =>
+      unwrap(api.POST("/v1/timesheet-approvals/submit", { body: { week } })),
+    onSuccess: refresh,
+  })
+  const withdraw = useMutation({
+    mutationFn: (week: string) =>
+      unwrap(api.POST("/v1/timesheet-approvals/withdraw", { body: { week } })),
+    onSuccess: refresh,
+  })
+  return { submit, withdraw }
+}
