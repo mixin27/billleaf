@@ -18,6 +18,7 @@ export default [
       "ios/**",
       "android/**",
       "metro.config.js",
+      "app.config.js",
       "expo-env.d.ts",
     ],
   },

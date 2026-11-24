@@ -60,6 +60,6 @@ Phases are scope buckets, not dates. Each phase ends with a production deploy. C
 - ✅ Timesheet approvals: members submit and withdraw their week; approvers approve, send back or reopen.
 - Writing documents (invoices, quotes, contracts) stays on the web.
 
-**Exit:** the app is in the App Store and Google Play. Remaining: real push delivery (an EAS project plus Apple and Firebase keys), testing on Android, and store builds and listings.
+**Exit:** the app is in the App Store and Google Play. Remaining: push on iOS (an APNs key; Android delivery works), a pass through the app on Android, and store builds and listings.
 
 Related: [Modules](modules.md) · [Business model](business-model.md)

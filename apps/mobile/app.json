@@ -58,6 +58,12 @@
       "typedRoutes": false,
       "reactCompiler": true
     },
-    "platforms": ["ios", "android"]
+    "platforms": ["ios", "android"],
+    "extra": {
+      "eas": {
+        "projectId": "26201fe6-5231-436d-9cd9-795e98e07479"
+      }
+    },
+    "owner": "kyawzayartun27s-team"
   }
 }

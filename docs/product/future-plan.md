@@ -37,8 +37,8 @@ Work we've agreed to do later, with enough detail to pick up without re-research
 
 Production deploy is on hold until there's budget for it (see [On hold](#on-hold)). Until then, build in this order:
 
-1. **Turn on real push delivery** (needs the owner's accounts): `eas init` and commit the project id, add `google-services.json` and the FCM key, upload the APNs key with `eas credentials`, and set `PUSH_PROVIDER=expo` on the worker. Steps: `apps/mobile/README.md`.
-2. **Test the app on Android**, with real pushes: push, timesheet approvals and submitting your week (#85–#88) were tested on the iOS simulator only. Also check what the simulator couldn't: tapping a push while the app is closed, switching workspace from a push, and removing the push token on sign-out.
+1. **Push on iOS** (needs the Apple Developer Program): upload an APNs key with `eas credentials` → iOS, then check delivery on a real iPhone. Android delivery works: the Expo project, Firebase and the FCM key are set up, and real pushes were tested on an emulator, including taps with the app in the background or closed and the token being removed on sign-out.
+2. **Go through the app on Android**: screen by screen, since most mobile work was checked on the iOS simulator. Also check switching workspace from a push, which needs an account in two workspaces.
 3. **Small follow-ups** (table below), when someone needs them.
 
 ## On hold
