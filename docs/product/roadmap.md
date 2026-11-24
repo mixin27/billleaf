@@ -28,7 +28,7 @@ Phases are scope buckets, not dates. Each phase ends with a production deploy. C
 
 - ✅ Projects & tasks (task board, assignees, start a project from an accepted quote).
 - ✅ Time tracking (global timer, week timesheet, manual entries) → billable time to invoice lines.
-- ✅ Contracts (templates with merge fields, from a quote, PDF + email, recorded signatures; e-sign later).
+- ✅ Contracts (templates with merge fields, from a quote, PDF + email, recorded signatures; e-signed in the client portal), written in a rich editor that saves the same Markdown.
 - ✅ Recurring invoices (weekly → yearly, draft or auto-send, idempotent hourly generation, Pro/Team).
 - ✅ SaaS billing core: plans, enforced limits, subscription lifecycle, signed webhooks, Settings → Billing, test provider ([ADR-0011](../adr/0011-billing-core-with-test-provider.md)).
 - ✅ Payment instructions on invoices (bank / wallet / QR) and proof of payment from the client portal.
@@ -50,9 +50,16 @@ Phases are scope buckets, not dates. Each phase ends with a production deploy. C
 - ✅ Outgoing webhooks ([ADR-0014](../adr/0014-outgoing-webhooks.md)) and the Developer API with workspace API keys ([ADR-0015](../adr/0015-workspace-api-keys.md)); OAuth apps and Zapier/Make templates later.
 - i18n.
 
-## Phase 4 — Mobile
+## Phase 4 — Mobile _(feature-complete)_
 
-- Expo / React Native app in `apps/mobile`, reusing `packages/contracts`, `packages/api-client`, and Better Auth's Expo client. The API adds one auth plugin (`expo`) and trusts the app scheme ([ADR-0017](../adr/0017-mobile-app-expo-native-auth.md)).
-- Focus: timers, quick invoices, notifications.
+- ✅ Expo / React Native app in `apps/mobile`, reusing `packages/contracts`, `packages/api-client`, and Better Auth's Expo client. The API adds one auth plugin (`expo`) and trusts the app scheme ([ADR-0017](../adr/0017-mobile-app-expo-native-auth.md)).
+- ✅ Time: the timer (with a forgotten-timer reminder), favourites, logging and editing entries, a day at a time.
+- ✅ Getting paid: invoices (share the PDF, email, record a payment and send the receipt), quotes (send, record the answer, invoice or start a project), and contracts (send, record a signature, decline, void).
+- ✅ Clients and projects (tasks, invoicing unbilled time) and expenses with receipt photos.
+- ✅ Push notifications through Expo's push service: quotes answered, contracts signed, payments and proofs, timesheets submitted and reviewed, each switchable per person ([ADR-0018](../adr/0018-push-notifications-expo.md)).
+- ✅ Timesheet approvals: members submit and withdraw their week; approvers approve, send back or reopen.
+- Writing documents (invoices, quotes, contracts) stays on the web.
+
+**Exit:** the app is in the App Store and Google Play. Remaining: real push delivery (an EAS project plus Apple and Firebase keys), testing on Android, and store builds and listings.
 
 Related: [Modules](modules.md) · [Business model](business-model.md)

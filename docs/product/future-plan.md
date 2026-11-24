@@ -28,15 +28,22 @@ Work we've agreed to do later, with enough detail to pick up without re-research
 - **Export with PDFs:** owners get a ZIP of every record plus all document PDFs by email; admins see each workspace's plan payments.
 - **Docs site and brand:** a public help center and developer docs (Fumadocs, static, with search and a generated API reference) linked from the app; the unfurling-leaf logo with icons for web, email and mobile ([ADR-0016](../adr/0016-docs-site.md), [brand](brand.md)).
 - **Deploy readiness:** production compose stack, pinned images, approval gate, smoke test, [Dokploy runbook](../infrastructure/dokploy-runbook.md).
+- **Quotes know their project:** an accepted quote links to the project started from it (one per quote), on the web and the phone.
+- **Rich contract editor:** contracts and templates are written in a WYSIWYG editor (headings, lists, bold, italic, links, rules, merge-field chips, paste from Word or Google Docs, a Source tab). It still saves the same Markdown, so PDFs, the portal and signature evidence are unchanged.
+- **Mobile app** ([ADR-0017](../adr/0017-mobile-app-expo-native-auth.md)): sign in, workspaces, Home, the timer and time entries, invoices and payments, quotes, contracts, clients and projects, expenses with receipt photos, and timesheet approvals in both directions.
+- **Push notifications** ([ADR-0018](../adr/0018-push-notifications-expo.md)): through Expo's push service, behind a provider interface. Quotes answered, contracts signed, payments and proofs, timesheets submitted, and your own week reviewed; each type can be turned off per person.
 
 ## Next, in order
 
 Production deploy is on hold until there's budget for it (see [On hold](#on-hold)). Until then, build in this order:
 
-1. **Small follow-ups** (table below), when someone needs them.
+1. **Turn on real push delivery** (needs the owner's accounts): `eas init` and commit the project id, add `google-services.json` and the FCM key, upload the APNs key with `eas credentials`, and set `PUSH_PROVIDER=expo` on the worker. Steps: `apps/mobile/README.md`.
+2. **Test the app on Android**, with real pushes: push, timesheet approvals and submitting your week (#85–#88) were tested on the iOS simulator only. Also check what the simulator couldn't: tapping a push while the app is closed, switching workspace from a push, and removing the push token on sign-out.
+3. **Small follow-ups** (table below), when someone needs them.
 
 ## On hold
 
+- **App store release.** EAS builds, store listings and screenshots, and the Apple and Google developer accounts. After the production deploy, since the app needs a public API.
 - **Production deploy.** The repo is ready (production compose stack, smoke test, [Dokploy runbook](../infrastructure/dokploy-runbook.md)). It can share the existing server with another app; the only new costs are a domain and possibly more server memory. When there's budget:
   - run the deploy session (Dokploy, DNS, R2, email, secrets) with the runbook;
   - set prices and Billleaf's payment methods in `/admin/pricing`;
@@ -68,3 +75,4 @@ When a provider serves the operating country (a Merchant of Record for subscript
 | Item                    | Notes                                                                       | Size |
 | ----------------------- | --------------------------------------------------------------------------- | ---- |
 | Past-due banner (other) | For a future online provider's `past_due` status (manual plans have theirs) | S    |
+| Writing on mobile       | Create and edit invoices, quotes and contracts in the app (now web-only)    | L    |
