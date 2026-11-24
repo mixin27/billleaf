@@ -1,6 +1,11 @@
 import { Stack } from "expo-router"
 import * as React from "react"
 
+import {
+  useForegroundPushRefresh,
+  useNotificationResponse,
+  usePushRegistration,
+} from "@/features/notifications"
 import { useTimerReminder } from "@/features/timer-reminder"
 import { useWorkspaces } from "@/features/workspaces"
 import { useTheme } from "@/hooks/use-theme"
@@ -28,6 +33,14 @@ function useHydrated() {
  * on the picker. The remembered workspace is checked against your current
  * memberships (you may have left it), and a single workspace is picked for you.
  */
+/** Pushes for whoever is signed in, with or without a workspace open. */
+function PushNotifications() {
+  usePushRegistration()
+  useForegroundPushRefresh()
+  useNotificationResponse()
+  return null
+}
+
 export default function AppLayout() {
   const t = useTheme()
   const hydrated = useHydrated()
@@ -60,6 +73,7 @@ export default function AppLayout() {
 
   return (
     <>
+      <PushNotifications />
       {workspace ? <TimerReminder /> : null}
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Protected guard={Boolean(workspace)}>

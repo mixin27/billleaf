@@ -17,6 +17,42 @@ The first `ios` run generates `ios/` (gitignored), installs CocoaPods and builds
 - These are debug builds (Metro serves the JS). Expo Go isn't used: the app's scheme is `billleaf://`, which the API trusts; Expo Go would need `exp://**` in the API's `TRUSTED_ORIGINS`.
 - `expo-dev-client` isn't installed: its 58.0.x launcher doesn't compile with Xcode 27.0 (`axisBehavior` is missing from the iOS 27.0 SDK). Add it back once a fixed release is out.
 
+## Push notifications setup
+
+Push delivery needs an Expo project and Apple and Google credentials. The app builds and runs without them; it just can't get a push token. One-time setup:
+
+1. **Expo project.** Create a free account at expo.dev, then from `apps/mobile` run `npx eas-cli@latest login` and `npx eas-cli@latest init`. That writes `extra.eas.projectId` (and `owner`) into `app.json`: commit it.
+2. **Android (FCM).** In the Firebase console, add an Android app with package `com.billleaf.app` and download `google-services.json` into `apps/mobile/` (it's gitignored). Add `"googleServicesFile": "./google-services.json"` under `android` in `app.json`. Then upload an FCM V1 service-account key to Expo: `npx eas-cli@latest credentials` → Android → Google Service Account → "Push Notifications (FCM V1)". Test on an emulator with a **Google Play** system image.
+3. **iOS (APNs).** Needs the Apple Developer Program. `npx eas-cli@latest credentials` → iOS → Push Notifications: let it create an APNs key, or upload one. Pushes reach a real iPhone; the simulator only gets them with `xcrun simctl push` (below).
+4. **Server.** Set `PUSH_PROVIDER=expo` on the API worker, and `EXPO_ACCESS_TOKEN` if you turned on "enhanced push security" for the project. Locally `PUSH_PROVIDER=log` (the default) writes each push to the worker's log instead.
+
+After changing `app.json`, run `npx expo prebuild` and rebuild.
+
+To try tap handling in the iOS simulator without any of that, send a payload shaped like the API's (`Simulator Target Bundle` is the app id):
+
+```bash
+xcrun simctl push booted com.billleaf.app push.apns
+```
+
+```json
+{
+  "Simulator Target Bundle": "com.billleaf.app",
+  "aps": {
+    "alert": {
+      "title": "Northwind accepted QUO-0001",
+      "body": "$480.00 · Care plan"
+    }
+  },
+  "body": {
+    "type": "quote.answered",
+    "path": "/quote/<id>",
+    "workspace": { "id": "<id>", "slug": "<slug>", "name": "<name>" }
+  }
+}
+```
+
+expo-notifications reads a remote notification's `data` from the payload's `body` key, which is where Expo's service puts it.
+
 ## How it talks to the API
 
 - `src/lib/auth-client.ts`: Better Auth with `@better-auth/expo/client`. The session cookie is stored in the keychain (expo-secure-store) and sent with `expo-origin: billleaf://`.
@@ -32,9 +68,10 @@ The first `ios` run generates `ios/` (gitignored), installs CocoaPods and builds
 - Date and time-zone helpers (`weekStart`, `addDays`, `parseDuration`, `zonedParts`, `zonedToUtc`, `hhmm`, `parseHhmm`) come from `@workspace/contracts` (`common/dates.ts`), shared with the web.
 - `app/(app)/entry-edit.tsx`: log new time (no `id`; `?date=` pre-fills the day) or edit or delete an entry. There's no single-entry GET, so it reads the entry from the cached time list (`useCachedEntry`).
 - Tests: `pnpm --filter mobile test` (Vitest) covers the pure modules in `src/lib` only (`clock`, `amount`, `api-error`, `format`, `reminder-schedule`); no React Native runtime.
-- Timer reminder: `features/timer-reminder.ts` (mounted in `app/(app)/_layout.tsx`) watches the running timer and keeps one local notification (`expo-notifications`, id `running-timer`) scheduled some hours after its start (`lib/reminder-schedule.ts`; 4, 6, 8 or 10, or off, picked under **Timer reminder** on the Account screen and kept in `stores/reminder-settings.ts`, SecureStore, default 8); it's replaced when the timer or the setting changes and removed when it stops. `syncTimerReminder` and `cancelTimerReminder` run one at a time and the latest call wins, so a sync waiting on a permission prompt can't schedule after the timer stopped. There's no push server: a timer started on the web is picked up when the app next fetches it. The notification's **Stop timer** action opens the app, checks the running timer is still the same entry, then stops it. On Android it declares `SCHEDULE_EXACT_ALARM` and asks once (`askForExactAlarms`, remembered in SecureStore) to open the "Alarms & reminders" setting: without it expo-notifications falls back to an inexact alarm, which Android may deliver up to ¾ of the wait late (hours, for 8 hours). Remote notifications are off in the plugin config (no `aps-environment` entitlement); the Android status bar icon is `packages/brand/assets/notification-icon-96.png`.
+- Timer reminder: `features/timer-reminder.ts` (mounted in `app/(app)/_layout.tsx`) watches the running timer and keeps one local notification (`expo-notifications`, id `running-timer`) scheduled some hours after its start (`lib/reminder-schedule.ts`; 4, 6, 8 or 10, or off, picked under **Timer reminder** on the Account screen and kept in `stores/reminder-settings.ts`, SecureStore, default 8); it's replaced when the timer or the setting changes and removed when it stops. `syncTimerReminder` and `cancelTimerReminder` run one at a time and the latest call wins, so a sync waiting on a permission prompt can't schedule after the timer stopped. A timer started on the web is picked up when the app next fetches it (the reminder is local, not a push). The notification's **Stop timer** action opens the app, checks the running timer is still the same entry, then stops it. On Android it declares `SCHEDULE_EXACT_ALARM` and asks once (`askForExactAlarms`, remembered in SecureStore) to open the "Alarms & reminders" setting: without it expo-notifications falls back to an inexact alarm, which Android may deliver up to ¾ of the wait late (hours, for 8 hours). The Android status bar icon is `packages/brand/assets/notification-icon-96.png`.
 - `app/(app)/account.tsx` (pushed from the initials button on Home): who's signed in, the workspace and plan with **Switch**, the timer reminder setting, a link to the web account page (`WEB_URL/{slug}/account`), and Sign out (asks first). The Time tab keeps a one-line link to the reminder setting. `initials()` is in `lib/format.ts`.
-- `src/lib/session.ts`: `signOut()` clears the session, the workspace, the query cache and the timer reminder.
+- Push notifications ([ADR-0018](../../docs/adr/0018-push-notifications-expo.md)): the API decides who gets what and sends through Expo's push service; the app only registers. `lib/push.ts` gets the Expo push token (`getExpoPushTokenAsync` with the EAS project id from `app.json`) and `POST`s it to `/v1/me/push-devices`, once per launch, remembering it in SecureStore so `signOut()` can `DELETE` it first (the route needs the session). The Android channel is `activity`, which the API sends on. `features/notifications.ts`: `usePushRegistration` (mounted in `app/(app)/_layout.tsx` whenever you're signed in) registers quietly if notifications are already allowed, again when the app comes back to the foreground, and when the OS rotates the token; it never shows the system prompt. That's asked from **Turn on notifications** on the Account screen (`components/notification-settings.tsx`), which also has one switch per kind (`GET`/`PUT /v1/me/notification-settings`, saved per user on the server, changed optimistically). `useNotificationResponse` handles every notification tap: a push's `data` is `{ type, path, workspace }`, the timer reminder's `{ entryId, workspace }`; it switches to that workspace, then opens `path` (or Home) once the switch is in. `useForegroundPushRefresh` invalidates the queries a push is about when it arrives while the app is open. Without an EAS project id the app works and the Account screen says the build isn't set up for push.
+- `src/lib/session.ts`: `signOut()` removes this phone's push token, then clears the session, the workspace, the query cache and the timer reminder.
 - `src/lib/query-client.ts`: TanStack Query; refetches when the app returns to the foreground.
 
 ## Layout
