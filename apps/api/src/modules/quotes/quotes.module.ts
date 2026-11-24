@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common"
 
 import { IamModule } from "../../iam/iam.module.js"
 import { WebhooksModule } from "../webhooks/webhooks.module.js"
+import { EventsModule } from "../events/events.module.js"
 import { MailModule } from "../../mail/mail.module.js"
 import { PortalLinksModule } from "../portal/portal-links.module.js"
 import { ClientsModule } from "../clients/clients.module.js"
@@ -15,6 +16,7 @@ import { QuotesService } from "./quotes.service.js"
   imports: [
     IamModule,
     WebhooksModule,
+    EventsModule,
     MailModule,
     PortalLinksModule,
     ClientsModule,

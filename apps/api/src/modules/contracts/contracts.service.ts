@@ -42,7 +42,7 @@ import {
   ContractsRepository,
   type TemplateRow,
 } from "./contracts.repository.js"
-import { WebhooksService } from "../webhooks/webhooks.service.js"
+import { DomainEvents } from "../events/domain-events.service.js"
 
 export function toContractSummary(c: ContractRow): ContractSummary {
   return {
@@ -86,7 +86,7 @@ export class ContractsService {
     private readonly audit: AuditService,
     private readonly mail: MailService,
     private readonly portalLinks: PortalLinksService,
-    private readonly webhooks: WebhooksService
+    private readonly events: DomainEvents
   ) {}
 
   // ── Templates ──────────────────────────────────────────────────────────
@@ -284,7 +284,7 @@ export class ContractsService {
       },
     })
     const contract = await this.get(id)
-    await this.webhooks.emit("contract.signed", contract)
+    await this.events.publish("contract.signed", contract)
     return contract
   }
 

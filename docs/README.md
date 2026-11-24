@@ -74,6 +74,7 @@ Customer and developer help pages are **not** here: they live in `apps/docs/cont
 | [0015](adr/0015-workspace-api-keys.md)                | Workspace API keys that act as their creator, scoped            | Accepted |
 | [0016](adr/0016-docs-site.md)                         | Public docs site with Fumadocs, statically exported             | Accepted |
 | [0017](adr/0017-mobile-app-expo-native-auth.md)       | Mobile app on Expo, signed in through Better Auth's expo plugin | Accepted |
+| [0018](adr/0018-push-notifications-expo.md)           | Push notifications through Expo's push service                  | Accepted |
 
 New ADR: copy [the template](adr/template.md).
 

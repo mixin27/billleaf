@@ -12,6 +12,8 @@ export const QUEUES = {
   exports: "exports",
   /** Outgoing webhook deliveries (retried with backoff) and log cleanup. */
   webhooks: "webhooks",
+  /** Push notifications to the mobile app, and their delivery receipts. */
+  push: "push",
 } as const
 
 /**
@@ -39,7 +41,8 @@ export const QUEUES = {
       { name: QUEUES.recurring },
       { name: QUEUES.billing },
       { name: QUEUES.exports },
-      { name: QUEUES.webhooks }
+      { name: QUEUES.webhooks },
+      { name: QUEUES.push }
     ),
   ],
   exports: [BullModule],

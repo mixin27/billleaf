@@ -93,6 +93,16 @@ export const envSchema = z.object({
     .optional()
     .transform((v) => (v === undefined ? undefined : v === "true")),
 
+  // Push notifications to the mobile app (ADR-0018). "log" writes them to
+  // the worker log instead of sending (development, CI); "expo" sends them
+  // through Expo's push service.
+  PUSH_PROVIDER: z.enum(["log", "expo"]).default("log"),
+  /** Expo access token, when the Expo project requires one for sending. */
+  EXPO_ACCESS_TOKEN: z
+    .string()
+    .optional()
+    .transform((v) => v || undefined),
+
   SMTP_URL: z.string().default("smtp://127.0.0.1:1025"),
   EMAIL_FROM: z.string().default("Billleaf <no-reply@billleaf.local>"),
 })

@@ -36,6 +36,10 @@ import { SubscriptionRemindersService } from "../../src/billing/manual/subscript
 import { MailService } from "../../src/mail/mail.service.js"
 import type { TestBillingProvider } from "../../src/billing/providers/test-billing.provider.js"
 import { RecurringService } from "../../src/modules/recurring/recurring.service.js"
+import { getQueueToken } from "@nestjs/bullmq"
+import type { Queue } from "bullmq"
+import { QUEUES } from "../../src/core/queue/queue.module.js"
+import type { PushJob } from "../../src/modules/notifications/notifications.service.js"
 import { Client, startApp, type TestApp } from "./harness.js"
 
 let t: TestApp
@@ -5983,5 +5987,109 @@ describe("mobile (Expo) sign-in", () => {
     expect(cookie).toMatch(/billleaf\.two_factor=[^;]+/)
     // The session cookie is cleared (empty), not issued.
     expect(cookie).not.toMatch(/billleaf\.session_token=[^;]+/)
+  })
+})
+
+describe("push notifications", () => {
+  it("pushes to members who can see it, never the actor or who turned it off", async () => {
+    const owner = new Client(t)
+    await owner.signUp("Pusher")
+    const ws = await owner.createWorkspace("Push")
+    await t.db
+      .update(workspaceSubscriptions)
+      .set({ planKey: "team" })
+      .where(eq(workspaceSubscriptions.workspaceId, ws.id))
+    const accountant = (await owner.get("/v1/roles")).body.find(
+      (r: { slug: string }) => r.slug === "accountant"
+    )
+    const teammate = new Client(t)
+    const { email } = await teammate.signUp("Teammate")
+    const inv = await owner.post("/v1/invitations", {
+      email,
+      roleId: accountant.id,
+    })
+    await teammate.post("/api/auth/organization/accept-invitation", {
+      invitationId: inv.body.id,
+    })
+    teammate.workspaceId = ws.id
+
+    const ownerToken = `ExponentPushToken[owner-${ws.id}]`
+    const mateToken = `ExponentPushToken[mate-${ws.id}]`
+    expect(
+      (
+        await owner.post("/v1/me/push-devices", {
+          token: ownerToken,
+          platform: "ios",
+        })
+      ).status
+    ).toBe(204)
+    await teammate.post("/v1/me/push-devices", {
+      token: mateToken,
+      platform: "android",
+      deviceName: "Pixel",
+    })
+
+    const queue = t.app.get<Queue>(getQueueToken(QUEUES.push))
+    const pushes = async () =>
+      (await queue.getJobs(["waiting", "delayed", "prioritized"]))
+        .map((j) => j.data as PushJob)
+        .filter((d) => d.data?.workspace?.id === ws.id)
+
+    // The owner accepts a quote: only the teammate hears about it.
+    const client = (await owner.post("/v1/clients", { name: "Northwind" })).body
+    const accept = async () => {
+      const q = (
+        await owner.post("/v1/quotes", {
+          clientId: client.id,
+          title: "Care plan",
+          lines: [{ description: "Care", quantity: 1, unitPrice: 48_000 }],
+        })
+      ).body
+      await owner.post(`/v1/quotes/${q.id}/send`)
+      await owner.post(`/v1/quotes/${q.id}/accept`)
+      return q
+    }
+    const q = await accept()
+    const sent = await pushes()
+    expect(sent).toHaveLength(1)
+    expect(sent[0]).toMatchObject({
+      type: "quote.answered",
+      title: "Northwind accepted QUO-0001",
+      body: "$480.00 · Care plan",
+      tokens: [mateToken],
+      data: { path: `/quote/${q.id}`, workspace: { id: ws.id, name: "Push" } },
+    })
+
+    // Turned off: nobody left to tell, so nothing is queued.
+    const settings = await teammate.put("/v1/me/notification-settings", {
+      type: "quote.answered",
+      enabled: false,
+    })
+    expect(settings.status).toBe(200)
+    expect(
+      settings.body.items.find(
+        (i: { type: string }) => i.type === "quote.answered"
+      )
+    ).toMatchObject({ enabled: false })
+    await accept()
+    expect(await pushes()).toHaveLength(1)
+
+    // Signing out on the phone removes its token.
+    expect(
+      (
+        await teammate.del(
+          `/v1/me/push-devices/${encodeURIComponent(mateToken)}`
+        )
+      ).status
+    ).toBe(204)
+    await teammate.put("/v1/me/notification-settings", {
+      type: "quote.answered",
+      enabled: true,
+    })
+    await accept()
+    expect(await pushes()).toHaveLength(1)
+
+    for (const j of await queue.getJobs(["waiting", "delayed"]))
+      if ((j.data as PushJob).data?.workspace?.id === ws.id) await j.remove()
   })
 })

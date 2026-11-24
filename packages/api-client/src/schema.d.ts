@@ -1028,6 +1028,54 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  "/v1/me/push-devices": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["NotificationsController_registerDevice_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/me/push-devices/{token}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    delete: operations["NotificationsController_removeDevice_v1"]
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/me/notification-settings": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["NotificationsController_settings_v1"]
+    put: operations["NotificationsController_update_v1"]
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   "/v1/payments": {
     parameters: {
       query?: never
@@ -4347,6 +4395,34 @@ export interface components {
         /** @default 0 */
         taxRateBps: number
       }[]
+    }
+    RegisterPushDeviceDto: {
+      token: string
+      /** @enum {string} */
+      platform: "ios" | "android"
+      deviceName?: string
+      appVersion?: string
+    }
+    NotificationSettingsDto_Output: {
+      items: {
+        /** @enum {string} */
+        type:
+          | "quote.answered"
+          | "contract.signed"
+          | "payment.received"
+          | "timesheet.submitted"
+        label: string
+        enabled: boolean
+      }[]
+    }
+    UpdateNotificationSettingDto: {
+      /** @enum {string} */
+      type:
+        | "quote.answered"
+        | "contract.signed"
+        | "payment.received"
+        | "timesheet.submitted"
+      enabled: boolean
     }
     PaymentListDto_Output: {
       items: {
@@ -8867,6 +8943,88 @@ export interface operations {
         }
         content: {
           "application/json": components["schemas"]["QuoteDto_Output"]
+        }
+      }
+    }
+  }
+  NotificationsController_registerDevice_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RegisterPushDeviceDto"]
+      }
+    }
+    responses: {
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  NotificationsController_removeDevice_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        token: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  NotificationsController_settings_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["NotificationSettingsDto_Output"]
+        }
+      }
+    }
+  }
+  NotificationsController_update_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateNotificationSettingDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["NotificationSettingsDto_Output"]
         }
       }
     }

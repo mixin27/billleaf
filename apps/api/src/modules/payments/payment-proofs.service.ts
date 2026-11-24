@@ -40,7 +40,7 @@ import { FilesService } from "../files/files.service.js"
 import { PortalLinksService } from "../portal/portal-links.service.js"
 import { WorkspaceProfileService } from "../workspace/workspace-profile.service.js"
 import { PaymentsService } from "./payments.service.js"
-import { WebhooksService } from "../webhooks/webhooks.service.js"
+import { DomainEvents } from "../events/domain-events.service.js"
 
 const PROOF_MAX_BYTES = 2 * 1024 * 1024
 const MAX_PENDING_PER_INVOICE = 3
@@ -66,7 +66,7 @@ export class PaymentProofsService {
     private readonly mail: MailService,
     private readonly portalLinks: PortalLinksService,
     private readonly audit: AuditService,
-    private readonly webhooks: WebhooksService
+    private readonly events: DomainEvents
   ) {}
 
   private scope(): SQL {
@@ -228,7 +228,7 @@ export class PaymentProofsService {
       resourceId: row!.id,
       metadata: { invoiceId: invoice.id, amount: input.amount, via: "portal" },
     })
-    await this.webhooks.emit("payment_proof.submitted", {
+    await this.events.publish("payment_proof.submitted", {
       id: row!.id,
       invoiceId: invoice.id,
       invoiceNumber: invoice.number,
