@@ -22,11 +22,11 @@ The first `ios` run generates `ios/` (gitignored), installs CocoaPods and builds
 Push delivery needs an Expo project and Apple and Google credentials. The app builds and runs without them; it just can't get a push token. One-time setup:
 
 1. **Expo project.** Create a free account at expo.dev, then from `apps/mobile` run `npx eas-cli@latest login` and `npx eas-cli@latest init`. That writes `extra.eas.projectId` (and `owner`) into `app.json`: commit it.
-2. **Android (FCM).** In the Firebase console, add an Android app with package `com.billleaf.app` and download `google-services.json` into `apps/mobile/` (it's gitignored). Add `"googleServicesFile": "./google-services.json"` under `android` in `app.json`. Then upload an FCM V1 service-account key to Expo: `npx eas-cli@latest credentials` → Android → Google Service Account → "Push Notifications (FCM V1)". Test on an emulator with a **Google Play** system image.
+2. **Android (FCM).** In the Firebase console, add an Android app with package `com.billleaf.app` and download `google-services.json` into `apps/mobile/` (it's gitignored). `app.config.js` adds it to the build when the file is there (on EAS Build, upload it as a file environment variable named `GOOGLE_SERVICES_JSON`). Then upload an FCM V1 service-account key to Expo: `npx eas-cli@latest credentials` → Android → Google Service Account → "Push Notifications (FCM V1)". Test on an emulator with a **Google Play** system image.
 3. **iOS (APNs).** Needs the Apple Developer Program. `npx eas-cli@latest credentials` → iOS → Push Notifications: let it create an APNs key, or upload one. Pushes reach a real iPhone; the simulator only gets them with `xcrun simctl push` (below).
 4. **Server.** Set `PUSH_PROVIDER=expo` on the API worker, and `EXPO_ACCESS_TOKEN` if you turned on "enhanced push security" for the project. Locally `PUSH_PROVIDER=log` (the default) writes each push to the worker's log instead.
 
-After changing `app.json`, run `npx expo prebuild` and rebuild.
+After changing `app.json` or adding the Firebase file, run `npx expo prebuild --clean` and rebuild, then check the emulator got the new build (`expo run:android` can build and still fail to install). The emulator needs internet for Firebase: if the app says notifications are on but no token reaches the API, and `adb shell ping firebaseinstallations.googleapis.com` says "unknown host", start the emulator with `-dns-server 8.8.8.8`.
 
 To try tap handling in the iOS simulator without any of that, send a payload shaped like the API's (`Simulator Target Bundle` is the app id):
 
