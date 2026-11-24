@@ -81,8 +81,9 @@ export class NotificationsService {
   }
 
   /**
-   * Queue a push for `event` to the members who can see it, except the one
-   * who did it (portal actions have no member, so everyone is told). Call
+   * Queue a push for `event` to the members who can see it (or, for your
+   * own week, to you alone), except the one who did it (portal actions
+   * have no member, so everyone is told). Call
    * after the change is committed. Never throws.
    */
   async notify(event: string, object: unknown): Promise<void> {
@@ -113,6 +114,7 @@ export class NotificationsService {
         permission: permissionFor(content.type),
         type: content.type,
         excludeUserId: this.ctx.optionalUserId,
+        memberId: content.memberId,
       })
       if (!recipients.length) return
       const [ws] = await this.db

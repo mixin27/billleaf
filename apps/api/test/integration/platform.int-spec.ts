@@ -6097,4 +6097,91 @@ describe("push notifications", () => {
     for (const j of await queue.getJobs(["waiting", "delayed"]))
       if ((j.data as PushJob).data?.workspace?.id === ws.id) await j.remove()
   })
+
+  it("tells only the member when their week is approved or sent back", async () => {
+    const owner = new Client(t)
+    await owner.signUp("Reviewer")
+    const ws = await owner.createWorkspace("Review push")
+    await t.db
+      .update(workspaceSubscriptions)
+      .set({ planKey: "team" })
+      .where(eq(workspaceSubscriptions.workspaceId, ws.id))
+    await owner.patch("/v1/workspace", {
+      timezone: "UTC",
+      timesheetApprovals: true,
+    })
+    const memberRole = (await owner.get("/v1/roles")).body.find(
+      (r: { slug: string }) => r.slug === "member"
+    )
+    const member = new Client(t)
+    const { email } = await member.signUp("Weekly Member")
+    const inv = await owner.post("/v1/invitations", {
+      email,
+      roleId: memberRole.id,
+    })
+    await member.post("/api/auth/organization/accept-invitation", {
+      invitationId: inv.body.id,
+    })
+    member.workspaceId = ws.id
+
+    const ownerToken = `ExponentPushToken[reviewer-${ws.id}]`
+    const memberToken = `ExponentPushToken[member-${ws.id}]`
+    await owner.post("/v1/me/push-devices", {
+      token: ownerToken,
+      platform: "ios",
+    })
+    await member.post("/v1/me/push-devices", {
+      token: memberToken,
+      platform: "android",
+    })
+
+    const queue = t.app.get<Queue>(getQueueToken(QUEUES.push))
+    const pushes = async () =>
+      (await queue.getJobs(["waiting", "delayed", "prioritized"]))
+        .map((j) => j.data as PushJob)
+        .filter((d) => d.data?.workspace?.id === ws.id)
+
+    const lastWeek = new Date(Date.now() - 7 * 86_400_000)
+      .toISOString()
+      .slice(0, 10)
+    await member.post("/v1/time-entries", {
+      entryDate: lastWeek,
+      durationMinutes: 90,
+    })
+    const submitted = (
+      await member.post("/v1/timesheet-approvals/submit", { week: lastWeek })
+    ).body
+    expect((await pushes()).map((p) => [p.type, p.tokens])).toEqual([
+      ["timesheet.submitted", [ownerToken]],
+    ])
+
+    // Sent back: the member alone, with the note; the reviewer isn't told.
+    await owner.post(`/v1/timesheet-approvals/${submitted.id}/reject`, {
+      note: "Add the client call",
+    })
+    const reviewed = (await pushes()).filter(
+      (p) => p.type === "timesheet.reviewed"
+    )
+    expect(reviewed).toHaveLength(1)
+    expect(reviewed[0]).toMatchObject({
+      title: `Your week of ${submitted.weekStart} was sent back`,
+      body: "Reviewer: Add the client call",
+      tokens: [memberToken],
+      data: { path: `/time?week=${submitted.weekStart}` },
+    })
+
+    // Turned off: approving the resubmitted week tells nobody.
+    await member.put("/v1/me/notification-settings", {
+      type: "timesheet.reviewed",
+      enabled: false,
+    })
+    await member.post("/v1/timesheet-approvals/submit", { week: lastWeek })
+    await owner.post(`/v1/timesheet-approvals/${submitted.id}/approve`, {})
+    expect(
+      (await pushes()).filter((p) => p.type === "timesheet.reviewed")
+    ).toHaveLength(1)
+
+    for (const j of await queue.getJobs(["waiting", "delayed"]))
+      if ((j.data as PushJob).data?.workspace?.id === ws.id) await j.remove()
+  })
 })

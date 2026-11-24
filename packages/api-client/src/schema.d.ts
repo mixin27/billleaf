@@ -4427,6 +4427,7 @@ export interface components {
           | "contract.signed"
           | "payment.received"
           | "timesheet.submitted"
+          | "timesheet.reviewed"
         label: string
         enabled: boolean
       }[]
@@ -4438,6 +4439,7 @@ export interface components {
         | "contract.signed"
         | "payment.received"
         | "timesheet.submitted"
+        | "timesheet.reviewed"
       enabled: boolean
     }
     PaymentListDto_Output: {

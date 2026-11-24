@@ -16,6 +16,8 @@ export const PUSH_EVENTS = [
   "payment.recorded",
   "payment_proof.submitted",
   "timesheet.submitted",
+  "timesheet.approved",
+  "timesheet.rejected",
 ] as const
 export type PushEvent = (typeof PUSH_EVENTS)[number]
 
@@ -38,6 +40,8 @@ export interface PushContent {
   body: string
   /** Where the app opens it (an expo-router path), or null for Home. */
   path: string | null
+  /** Only this member hears about it (their own week), not everyone with the permission. */
+  memberId?: string
 }
 
 const money = (amount: number, currency: string, locale?: string) => {
@@ -118,6 +122,23 @@ export function pushContent(
         title: `${a.memberName} submitted a timesheet`,
         body: `Week of ${a.weekStart} · ${hours(a.totalSeconds)}`,
         path: `/approval/${a.id}`,
+      }
+    }
+    case "timesheet.approved":
+    case "timesheet.rejected": {
+      // Sent back or reopened (both "rejected"): the note says what to change.
+      const a = object as TimesheetApproval
+      const approved = event === "timesheet.approved"
+      return {
+        type: "timesheet.reviewed",
+        title: approved
+          ? `Your week of ${a.weekStart} was approved`
+          : `Your week of ${a.weekStart} was sent back`,
+        body: a.note
+          ? `${a.reviewedByName ?? "An approver"}: ${a.note}`
+          : `${hours(a.totalSeconds)} · ${a.reviewedByName ?? "An approver"}`,
+        path: `/time?week=${a.weekStart}`,
+        memberId: a.memberId,
       }
     }
     default:

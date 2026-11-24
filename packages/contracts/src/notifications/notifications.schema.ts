@@ -5,7 +5,9 @@ import type { Permission } from "../iam/permissions.js"
 /**
  * What can send a push to your phone, and who it goes to: members of the
  * workspace who hold `permission` (and haven't turned the type off), never
- * the member who did it.
+ * the member who did it. A type with `toOwner` goes only to the member the
+ * thing belongs to (your own week); its `permission` is what you need to
+ * have one at all.
  */
 export const PUSH_TYPES = [
   {
@@ -28,10 +30,17 @@ export const PUSH_TYPES = [
     label: "Timesheet submitted for approval",
     permission: "time.approve",
   },
+  {
+    type: "timesheet.reviewed",
+    label: "Your timesheet approved or sent back",
+    permission: "time.track",
+    toOwner: true,
+  },
 ] as const satisfies readonly {
   type: string
   label: string
   permission: Permission
+  toOwner?: true
 }[]
 
 export const pushTypeSchema = z.enum([
@@ -39,6 +48,7 @@ export const pushTypeSchema = z.enum([
   "contract.signed",
   "payment.received",
   "timesheet.submitted",
+  "timesheet.reviewed",
 ])
 export type PushType = z.infer<typeof pushTypeSchema>
 

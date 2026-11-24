@@ -1,5 +1,5 @@
 import { addDays, formatDuration, type TimeEntry } from "@workspace/contracts"
-import { router } from "expo-router"
+import { router, useLocalSearchParams } from "expo-router"
 import * as React from "react"
 import {
   Alert,
@@ -78,6 +78,13 @@ export default function TimeScreen() {
   const favorites = useTimeFavorites()
   /** The day the list shows (null = today); step back to fix older time. */
   const [picked, setPicked] = React.useState<string | null>(null)
+  // A "your week was reviewed" push opens the tab on that week (?week=).
+  const { week } = useLocalSearchParams<{ week?: string }>()
+  React.useEffect(() => {
+    if (!week || !/^\d{4}-\d{2}-\d{2}$/.test(week)) return
+    setPicked(today && week >= today ? null : week)
+    router.setParams({ week: undefined })
+  }, [week, today])
   const day = picked ?? today
   const entries = useTimeEntries(
     { from: day ?? "", to: day ?? "", memberId: "me" },

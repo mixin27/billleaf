@@ -26,6 +26,8 @@ export class NotificationsRepository {
     permission: string
     type: string
     excludeUserId: string | null
+    /** Only this member (it's about their own work): no permission check. */
+    memberId?: string
   }): Promise<{ userId: string; token: string }[]> {
     const grants = this.db
       .select({ one: sql`1` })
@@ -64,7 +66,9 @@ export class NotificationsRepository {
       .where(
         and(
           eq(member.organizationId, opts.workspaceId),
-          or(eq(member.role, "owner"), exists(grants)),
+          opts.memberId
+            ? eq(member.id, opts.memberId)
+            : or(eq(member.role, "owner"), exists(grants)),
           notExists(turnedOff),
           opts.excludeUserId ? ne(member.userId, opts.excludeUserId) : undefined
         )
