@@ -73,6 +73,8 @@ In Cloudflare → your domain → **DNS**, add **A** records to the server IP:
    With separate tokens, a leaked app key can't delete your backups.
 
 3. Optionally, on the backups bucket add a **lifecycle rule** to delete objects after 30 days, as a second line of defence besides `BACKUP_RETENTION_DAYS`.
+4. **Test each token before relying on it**: list its bucket with the AWS CLI (`aws s3 ls s3://<bucket> --endpoint-url <endpoint>`) using that token's keys. A token without **Object Read & Write** on the bucket fails here, and nightly backups would fail the same way, silently, until the day you need a restore.
+5. **On a server shared with another app**, give Billleaf its own buckets (or at least its own prefix and token), never the other app's backup bucket.
 
 ## 5. Email (Resend)
 
@@ -190,4 +192,5 @@ All of these are in the repo's **Settings**.
 | Smoke test: deep check `worker` down              | Check the worker logs. Usually Redis is unreachable or the worker crashed at boot (a missing env var).                                                                        |
 | Smoke test: deep check `storage` down             | R2 endpoint, bucket name or token scope is wrong (`S3_*`).                                                                                                                    |
 | Smoke test waits, then "not serving …"            | Dokploy didn't redeploy (check the webhook secret and Dokploy → Deployments), or the new containers are unhealthy (logs).                                                     |
+| A domain or env change has no effect              | Dokploy only applies **Domains** and **Environment** changes to compose containers on the next **Deploy**. Save, then Deploy.                                                 |
 | Emails not arriving                               | Worker logs show the SMTP error. Check that the Resend domain is verified and `EMAIL_FROM` uses that domain.                                                                  |
