@@ -5,6 +5,7 @@ import "@workspace/ui/globals.css"
 import { cn } from "@workspace/ui/lib/utils"
 
 import { siteConfig } from "@/config/site"
+import { env } from "@/lib/env"
 
 import { Providers } from "./providers"
 
@@ -12,6 +13,9 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
 const fontMono = Geist_Mono({ subsets: ["latin"], variable: "--font-mono" })
 
 export const metadata: Metadata = {
+  // Absolute URLs in link previews (og:image and the like). Without it,
+  // Next falls back to http://localhost:<port>.
+  metadataBase: new URL(env.NEXT_PUBLIC_APP_URL),
   title: { default: siteConfig.name, template: `%s · ${siteConfig.name}` },
   description: siteConfig.description,
 }
