@@ -16,3 +16,5 @@ Active methods that match an invoice's currency appear:
 - in a **How to pay** section on the invoice PDF,
 - in the invoice email,
 - on the invoice in the client portal, where clients can copy numbers and enlarge QR codes.
+
+If none of your active methods take an invoice's currency, for example a USD invoice when your only methods are MMK wallets, the client sees no payment details anywhere. The invoice page warns you (**Your client won't see how to pay this invoice**) on drafts and on issued invoices that are still owed, and so does the send dialog and the invoice screen in the mobile app. Add a method for that currency, or one with no currencies set, and the warning goes away.

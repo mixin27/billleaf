@@ -38,6 +38,7 @@ import { SendDialog } from "@/components/documents/send-dialog"
 import { usePermissions } from "@/components/permissions/can"
 import { useClient } from "@/features/clients"
 import { CreditNoteDialog, InvoiceCreditNotes } from "@/features/credit-notes"
+import { useHasPaymentMethodFor } from "@/features/payment-accounts"
 import {
   InvoicePayments,
   PaymentProofsPanel,
@@ -94,6 +95,18 @@ function InvoiceDetailView({ invoice }: { invoice: Invoice }) {
   const locale = profile.data?.locale
   const draft = invoice.status === "draft"
   const issued = invoice.status === "issued"
+  // Clients only see payment methods that take the invoice's currency.
+  const canPay = useHasPaymentMethodFor(invoice.currency)
+  const noWayToPay =
+    canPay === false && (draft || (issued && invoice.amountDue > 0))
+  const noWayToPayNotice = noWayToPay ? (
+    <NoPaymentMethodNotice
+      currency={invoice.currency}
+      settingsHref={
+        can("workspace.update") ? `/${slug}/settings/payment-methods` : null
+      }
+    />
+  ) : null
   const primaryEmail =
     client.data?.contacts.find((c) => c.isPrimary && c.email)?.email ??
     client.data?.email ??
@@ -241,6 +254,8 @@ function InvoiceDetailView({ invoice }: { invoice: Invoice }) {
         }
       />
 
+      {noWayToPayNotice}
+
       {invoice.status === "issued" ? (
         <PaymentProofsPanel invoiceId={invoice.id} locale={locale} />
       ) : null}
@@ -327,6 +342,7 @@ function InvoiceDetailView({ invoice }: { invoice: Invoice }) {
         title={`Email ${invoice.number ?? "invoice"}`}
         defaultTo={primaryEmail}
         pending={send.isPending}
+        notice={noWayToPayNotice}
         onSend={(input) =>
           send.mutate(input, {
             onSuccess: (r) => {
@@ -418,6 +434,40 @@ function InvoiceDetailView({ invoice }: { invoice: Invoice }) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+    </div>
+  )
+}
+
+/**
+ * No active payment method takes this currency, so the PDF, the email and
+ * the client portal show the client no way to pay.
+ */
+function NoPaymentMethodNotice({
+  currency,
+  settingsHref,
+}: {
+  currency: string
+  settingsHref: string | null
+}) {
+  return (
+    <div
+      role="status"
+      className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100"
+    >
+      <p className="font-medium">
+        Your client won&apos;t see how to pay this invoice
+      </p>
+      <p className="mt-1">
+        None of your payment methods accept {currency}, so the PDF, the email
+        and the client portal show no payment details.{" "}
+        {settingsHref ? (
+          <Link className="font-medium underline" href={settingsHref}>
+            Add one for {currency} in Payment methods
+          </Link>
+        ) : (
+          `Ask an owner or admin to add one for ${currency} in Settings → Payment methods.`
+        )}
+      </p>
     </div>
   )
 }

@@ -23,6 +23,7 @@ export function SendDialog({
   defaultTo,
   pending,
   onSend,
+  notice,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -30,6 +31,8 @@ export function SendDialog({
   defaultTo?: string | null
   pending: boolean
   onSend: (input: { to?: string; message?: string }) => void
+  /** Shown above the form, e.g. a warning about the document. */
+  notice?: React.ReactNode
 }) {
   const [to, setTo] = React.useState("")
   const [message, setMessage] = React.useState("")
@@ -49,6 +52,7 @@ export function SendDialog({
             The PDF is attached. Replies go to your workspace email.
           </DialogDescription>
         </DialogHeader>
+        {notice}
         <form
           id="send-form"
           className="grid gap-4"
