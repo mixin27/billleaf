@@ -40,7 +40,7 @@ flowchart LR
   run --> build[Build api + web → env-sha-xxx]
   build --> approve[Approval: GitHub environment]
   approve --> point[Move env tag → this build]
-  point --> hook[Dokploy webhook]
+  point --> hook[Dokploy API: compose.deploy]
   hook --> smoke[infra/smoke.sh until the new version is live]
 ```
 

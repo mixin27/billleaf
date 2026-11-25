@@ -10,8 +10,8 @@ name: Deploy
 #      <env>-sha-<7>  (and vX.Y.Z for production releases)
 #    The web image is built per environment because Next inlines its
 #    NEXT_PUBLIC_* URLs at build time.
-# 2. deploy (after approval): move the <env> tag to this build, call the
-#    Dokploy webhook, then run infra/smoke.sh until the new build is live.
+# 2. deploy (after approval): move the <env> tag to this build, ask Dokploy's
+#    API to deploy, then run infra/smoke.sh until the new build is live.
 #
 # Rollback: set IMAGE_TAG=<env>-sha-<7> in Dokploy and redeploy (or re-run
 # this workflow on that commit).
@@ -21,8 +21,11 @@ name: Deploy
 #   <ENV>_WEB_URL         e.g. https://app.example.com
 #   <ENV>_API_URL         e.g. https://api.example.com
 #   <ENV>_WEB_SENTRY_DSN  optional, Sentry DSN for the browser
-# Environment secrets (Settings → Environments → staging / production):
-#   DOKPLOY_WEBHOOK       the compose app's deploy webhook URL
+# Environment variables (Settings → Environments → staging / production):
+#   DOKPLOY_URL           e.g. https://dokploy.example.com
+#   DOKPLOY_COMPOSE_ID    the compose app's id (in its Dokploy URL, after /compose/)
+# Environment secrets (same place):
+#   DOKPLOY_API_KEY       Dokploy → Profile → API/CLI Keys
 #   HEALTH_CHECK_TOKEN    same value as in Dokploy (enables the deep check)
 
 on:
@@ -154,16 +157,30 @@ jobs:
               --tag "$image:$ENV_NAME" "$image:$ENV_NAME-sha-$SHA"
           done
 
+      # Dokploy's API, not its webhook: the webhook only works with
+      # Autodeploy on, which would also deploy every push to main.
       - name: Trigger Dokploy deploy
         env:
-          WEBHOOK: ${{ secrets.DOKPLOY_WEBHOOK }}
+          DOKPLOY_URL: ${{ vars.DOKPLOY_URL }}
+          COMPOSE_ID: ${{ vars.DOKPLOY_COMPOSE_ID }}
+          API_KEY: ${{ secrets.DOKPLOY_API_KEY }}
         run: |
-          if [ -z "$WEBHOOK" ]; then
-            echo "::warning::DOKPLOY_WEBHOOK is not set for $ENV_NAME; images are tagged but nothing was deployed."
+          if [ -z "$DOKPLOY_URL" ] || [ -z "$COMPOSE_ID" ] || [ -z "$API_KEY" ]; then
+            echo "::warning::DOKPLOY_URL, DOKPLOY_COMPOSE_ID or DOKPLOY_API_KEY is not set for $ENV_NAME; images are tagged but nothing was deployed."
             echo "SKIP_SMOKE=1" >> "$GITHUB_ENV"
             exit 0
           fi
-          curl -fsS -X POST "$WEBHOOK"
+          body=$(jq -nc --arg id "$COMPOSE_ID" --arg title "Release $SHA" \
+            '{composeId: $id, title: $title, description: "GitHub Actions deploy"}')
+          status=$(curl -sS -o /tmp/dokploy.out -w '%{http_code}' -X POST \
+            "${DOKPLOY_URL%/}/api/compose.deploy" \
+            -H "x-api-key: $API_KEY" -H "Content-Type: application/json" \
+            --data "$body")
+          if [ "${status:0:1}" != "2" ]; then
+            echo "::error::Dokploy answered HTTP $status: $(head -c 500 /tmp/dokploy.out)"
+            exit 1
+          fi
+          echo "Dokploy accepted the deploy (HTTP $status)."
 
       - name: Smoke test
         if: env.SKIP_SMOKE != '1'
