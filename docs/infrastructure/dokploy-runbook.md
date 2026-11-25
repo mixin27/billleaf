@@ -114,9 +114,9 @@ All of these are in the repo's **Settings**.
    | `STAGING_WEB_SENTRY_DSN`    | (optional)                                                         |
    | `SUPPORT_EMAIL`             | `support@example.com`: shown on the public site, Terms and Privacy |
 
-3. **Environments → production → Environment secrets** (and the same for staging):
-   - `DOKPLOY_WEBHOOK`: added in step 8.
-   - `HEALTH_CHECK_TOKEN`: generate it with `openssl rand -base64 36`. Use the same value in Dokploy.
+3. **Environments → production** (and the same for staging):
+   - **Environment variables:** `DOKPLOY_URL` (e.g. `https://dokploy.example.com`) and `DOKPLOY_COMPOSE_ID` (added in step 8).
+   - **Environment secrets:** `DOKPLOY_API_KEY` (added in step 8), and `HEALTH_CHECK_TOKEN`: generate it with `openssl rand -base64 36` and use the same value in Dokploy. Keys and tokens go under **secrets**, never **variables**: variables are shown in plain text.
 
 ## 8. The Billleaf app in Dokploy
 
@@ -140,7 +140,10 @@ All of these are in the repo's **Settings**.
 
    Dokploy adds the routing labels and its network to those services.
 
-6. **Deployments** (or **General → Webhook**): copy the **webhook URL** into the GitHub `production` environment secret `DOKPLOY_WEBHOOK`.
+6. **Let GitHub deploy it.** The workflow calls Dokploy's API (`POST /api/compose.deploy`), not the deploy webhook: the webhook only works with Autodeploy on, and Autodeploy would also deploy every push to `main`.
+   - **Profile → API/CLI Keys → Generate New Key**, named after the app (e.g. `billleaf-github-production`). Save it in the GitHub `production` environment as the secret `DOKPLOY_API_KEY`.
+   - The compose app's id is in its Dokploy URL, after `/services/compose/`. Save it as the environment variable `DOKPLOY_COMPOSE_ID`.
+   - If Cloudflare proxies the Dokploy dashboard, make sure Bot Fight Mode or WAF rules don't block GitHub's runners (**Security → Events** shows blocked requests).
 7. **Backups:** the stack's `backup` service already dumps Postgres nightly to R2. Dokploy's own database backups only cover databases created as Dokploy services, so they aren't needed here.
 
 **Staging (optional, same server):** repeat step 8 in a project `billleaf-staging` with these changes:
@@ -148,7 +151,7 @@ All of these are in the repo's **Settings**.
 - `STACK_NAME=staging` and `IMAGE_TAG=staging`;
 - the staging URLs and domains;
 - its own R2 buckets, tokens and secrets;
-- its webhook in the GitHub `staging` environment.
+- its compose id and an API key in the GitHub `staging` environment.
 
 ## 9. First deploy
 
@@ -191,6 +194,8 @@ All of these are in the repo's **Settings**.
 | Smoke test: "does not allow origin"               | `WEB_URL` in Dokploy doesn't match the browser URL exactly (scheme, sub-domain, no trailing slash).                                                                           |
 | Smoke test: deep check `worker` down              | Check the worker logs. Usually Redis is unreachable or the worker crashed at boot (a missing env var).                                                                        |
 | Smoke test: deep check `storage` down             | R2 endpoint, bucket name or token scope is wrong (`S3_*`).                                                                                                                    |
-| Smoke test waits, then "not serving …"            | Dokploy didn't redeploy (check the webhook secret and Dokploy → Deployments), or the new containers are unhealthy (logs).                                                     |
+| Deploy step: "Dokploy answered HTTP 401"          | `DOKPLOY_API_KEY` is wrong or was deleted in Dokploy. Generate a new key and update the GitHub secret.                                                                        |
+| Deploy step: "Dokploy answered HTTP 403"          | Cloudflare in front of the Dokploy dashboard blocked GitHub's runner. Check **Security → Events** and allow it.                                                               |
+| Smoke test waits, then "not serving …"            | Dokploy didn't redeploy (check `DOKPLOY_*` in the GitHub environment and Dokploy → Deployments), or the new containers are unhealthy (logs).                                  |
 | A domain or env change has no effect              | Dokploy only applies **Domains** and **Environment** changes to compose containers on the next **Deploy**. Save, then Deploy.                                                 |
 | Emails not arriving                               | Worker logs show the SMTP error. Check that the Resend domain is verified and `EMAIL_FROM` uses that domain.                                                                  |

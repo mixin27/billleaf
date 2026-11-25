@@ -68,7 +68,8 @@ Dokploy is a web app you install once on your VPS (one command). Under the hood 
 | **Domains**        | Map a hostname to a service and port. Traefik gets the Let's Encrypt certificate automatically.                             |
 | **Environment**    | Env vars per app or compose, stored by Dokploy (never in Git).                                                              |
 | **Registry**       | Saved credentials for pulling private images (a GHCR token with `read:packages`).                                           |
-| **Deploy webhook** | A secret URL; calling it redeploys. GitHub Actions calls it after pushing a new image.                                      |
+| **Deploy webhook** | A secret URL; calling it redeploys, but only while Autodeploy is on. Billleaf calls the API with a key instead.             |
+| **API keys**       | Profile → API/CLI Keys. `POST /api/compose.deploy` with `x-api-key` deploys an app whatever its Autodeploy setting.         |
 | **Deployments**    | History of every deploy, with logs. **Rollback** means redeploying an earlier one.                                          |
 | **Monitoring**     | CPU, memory, disk and network per container and for the server.                                                             |
 | **Remote servers** | Optional: one Dokploy dashboard can manage several VPSs over SSH, e.g. separate servers for two SaaS products.              |
@@ -76,7 +77,7 @@ Dokploy is a web app you install once on your VPS (one command). Under the hood 
 ### What a deploy looks like
 
 1. You merge a PR. GitHub Actions runs the tests, builds the images and pushes them to GHCR as `sha-<commit>`.
-2. Actions calls the Dokploy webhook with the new tag.
+2. Actions asks Dokploy's API to deploy the app.
 3. Dokploy pulls the images and runs the **migrate** container first. If it fails, the deploy stops and the old version keeps running.
 4. Dokploy starts the new api/worker/web containers. Traefik switches traffic **only after the health check passes**, so there's no downtime.
 5. To roll back, redeploy the previous tag. This is safe because migrations are always backward compatible (add columns first, remove them in a later release).
@@ -182,7 +183,7 @@ If you currently SSH in and run `docker pull` + `docker compose up` by hand with
 4. **Data:** take a `pg_dump` on the old server, restore it into the new Postgres, and copy the uploaded files (or point both at the same R2 bucket).
 5. **Domains:** add them in Dokploy. To test before switching DNS, point a temporary subdomain at the new server.
 6. **Switch:** lower the DNS TTL beforehand, put the old app in maintenance mode (or accept a short window), take a final dump and restore, then point DNS at the new IP.
-7. **Automate:** copy the Dokploy deploy webhook into a GitHub Actions secret and call it after the image push.
+7. **Automate:** create a Dokploy API key, save it as a GitHub Actions secret, and have the workflow call `POST /api/compose.deploy` after the image push. (The deploy webhook needs Autodeploy on, which also deploys every push.)
 8. **Backups:** add a scheduled Postgres backup to R2 in Dokploy, then do a test restore.
 9. Keep the old server for a week, then delete it.
 
@@ -209,7 +210,7 @@ Copy this per product (Billleaf, FOM Order Manager, …):
   - registry credentials;
   - env vars;
   - domains;
-  - the deploy webhook saved in GitHub secrets.
+  - a Dokploy API key saved in GitHub secrets, with the compose id as a variable.
 - [ ] **Cloudflare:** DNS records proxied (orange cloud), SSL mode **Full (strict)**.
 - [ ] **R2:** one bucket per product per environment; CORS for browser uploads; a lifecycle rule for old backups.
 - [ ] **Email:** domain verified (SPF, DKIM, DMARC) with Resend or SES.
