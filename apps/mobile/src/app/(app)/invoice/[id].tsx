@@ -18,7 +18,7 @@ import {
 
 import { LineItems, Total } from "@/components/line-items"
 import { Body, Button, Screen, Section } from "@/components/ui"
-import { Spacing, Type } from "@/constants/theme"
+import { Radius, Spacing, Type } from "@/constants/theme"
 import { useDashboard } from "@/features/dashboard"
 import {
   INVOICE_STATUS_LABELS,
@@ -27,9 +27,11 @@ import {
   useInvoicePayments,
 } from "@/features/invoices"
 import { useMe } from "@/features/me"
+import { useHasPaymentMethodFor } from "@/features/payment-accounts"
 import { useWorkspaceProfile } from "@/features/workspaces"
 import { useTheme } from "@/hooks/use-theme"
 import { errorMessage } from "@/lib/api"
+import { queryClient } from "@/lib/query-client"
 import { shortDate } from "@/lib/format"
 
 /**
@@ -52,6 +54,12 @@ export default function InvoiceScreen() {
   const [refreshing, setRefreshing] = React.useState(false)
 
   const inv = invoice.data
+  // Clients only see payment methods that take the invoice's currency.
+  const canPay = useHasPaymentMethodFor(inv?.currency)
+  const noWayToPay =
+    canPay === false &&
+    !!inv &&
+    (inv.status === "draft" || (inv.status === "issued" && inv.amountDue > 0))
   const money = (amount: number) =>
     formatMoney({ amount, currency: inv?.currency ?? "USD" }, locale)
   const date = (iso: string) => shortDate(iso, locale, today)
@@ -90,6 +98,10 @@ export default function InvoiceScreen() {
               await Promise.all([
                 invoice.refetch(),
                 can("payment.read") ? payments.refetch() : null,
+                // You may have just added a payment method on the web.
+                queryClient.invalidateQueries({
+                  queryKey: ["payment-accounts"],
+                }),
               ])
               setRefreshing(false)
             }}
@@ -108,6 +120,23 @@ export default function InvoiceScreen() {
               date={date}
               canOpenClient={can("client.read")}
             />
+
+            {noWayToPay ? (
+              <View
+                accessibilityRole="alert"
+                style={[
+                  styles.notice,
+                  { backgroundColor: t.warningBackground },
+                ]}
+              >
+                <Text style={[Type.body, styles.bold, { color: t.warning }]}>
+                  Your client won't see how to pay this invoice
+                </Text>
+                <Text style={[Type.small, { color: t.warning }]}>
+                  {`None of your payment methods accept ${inv.currency}, so the PDF, the email and the client portal show no payment details. Add one for ${inv.currency} in Settings → Payment methods on the web.`}
+                </Text>
+              </View>
+            ) : null}
 
             <View style={styles.actions}>
               {inv.status === "issued" &&
@@ -340,6 +369,7 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   content: { padding: Spacing.four, gap: Spacing.four },
   summary: { gap: Spacing.one },
+  notice: { borderRadius: Radius.lg, padding: Spacing.three, gap: Spacing.one },
   big: { fontSize: 34, fontWeight: "700", fontVariant: ["tabular-nums"] },
   actions: { gap: Spacing.two },
   row: { flexDirection: "row", gap: Spacing.two },

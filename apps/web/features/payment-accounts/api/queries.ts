@@ -51,6 +51,20 @@ export function usePaymentAccounts() {
   })
 }
 
+/**
+ * Whether clients get any way to pay in `currency`: an active payment
+ * method that takes it (no currencies listed = any). Matches the API's
+ * PaymentAccountsService.forCurrency. `null` while loading.
+ */
+export function useHasPaymentMethodFor(currency: string): boolean | null {
+  const accounts = usePaymentAccounts()
+  if (!accounts.data) return null
+  return accounts.data.some(
+    (a) =>
+      a.active && (a.currencies.length === 0 || a.currencies.includes(currency))
+  )
+}
+
 function useInvalidate() {
   const qc = useQueryClient()
   const { key } = useSource()
