@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { clients, files, invoices, member } from "@workspace/db"
+import { cashbooks, clients, files, invoices, member } from "@workspace/db"
 import { and, count, eq, gte, isNotNull, isNull, sum } from "drizzle-orm"
 
 import { RequestContext } from "../common/context/request-context.js"
@@ -61,18 +61,34 @@ export class UsageService {
     return Math.ceil((Number(r?.bytes ?? 0) / 1_048_576) * 10) / 10
   }
 
+  /** Active (not archived) cashbooks. */
+  async cashbooks(): Promise<number> {
+    const [r] = await this.db
+      .select({ n: count() })
+      .from(cashbooks)
+      .where(
+        and(
+          eq(cashbooks.workspaceId, this.ctx.workspaceId),
+          isNull(cashbooks.archivedAt)
+        )
+      )
+    return r?.n ?? 0
+  }
+
   async all(timeZone: string): Promise<Record<LimitKey, number>> {
-    const [members, clientsN, invoicesN, storage] = await Promise.all([
+    const [members, clientsN, invoicesN, storage, books] = await Promise.all([
       this.members(),
       this.clients(),
       this.invoicesPerMonth(timeZone),
       this.storageMb(),
+      this.cashbooks(),
     ])
     return {
       members,
       clients: clientsN,
       invoicesPerMonth: invoicesN,
       storageMb: storage,
+      cashbooks: books,
     }
   }
 }

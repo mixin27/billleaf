@@ -253,6 +253,13 @@
       "when": 1795707016898,
       "tag": "0035_mixed_tyrannus",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1795709754360,
+      "tag": "0036_watery_living_lightning",
+      "breakpoints": true
     }
   ]
 }

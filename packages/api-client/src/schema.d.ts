@@ -1700,6 +1700,262 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  "/v1/cashbooks": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["CashbookController_list_v1"]
+    put?: never
+    post: operations["CashbookController_create_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/cashbooks/{bookId}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["CashbookController_get_v1"]
+    put?: never
+    post?: never
+    delete: operations["CashbookController_remove_v1"]
+    options?: never
+    head?: never
+    patch: operations["CashbookController_update_v1"]
+    trace?: never
+  }
+  "/v1/cashbooks/{bookId}/members": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["CashbookController_members_v1"]
+    put?: never
+    post: operations["CashbookController_addMember_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/cashbooks/{bookId}/members/{memberId}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    delete: operations["CashbookController_removeMember_v1"]
+    options?: never
+    head?: never
+    patch: operations["CashbookController_setMemberRole_v1"]
+    trace?: never
+  }
+  "/v1/cashbooks/{bookId}/{kind}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["CashbookController_options_v1"]
+    put?: never
+    post: operations["CashbookController_createOption_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/cashbooks/{bookId}/{kind}/{id}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    delete: operations["CashbookController_removeOption_v1"]
+    options?: never
+    head?: never
+    patch: operations["CashbookController_updateOption_v1"]
+    trace?: never
+  }
+  "/v1/cashbooks/{bookId}/entries": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["CashbookController_listEntries_v1"]
+    put?: never
+    post: operations["CashbookController_createEntry_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/cashbooks/{bookId}/entries/delete": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["CashbookController_deleteEntries_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/cashbooks/{bookId}/entries/transfer": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["CashbookController_transfer_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/cashbooks/{bookId}/entries/{id}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["CashbookController_getEntry_v1"]
+    put?: never
+    post?: never
+    delete: operations["CashbookController_deleteEntry_v1"]
+    options?: never
+    head?: never
+    patch: operations["CashbookController_updateEntry_v1"]
+    trace?: never
+  }
+  "/v1/cashbooks/{bookId}/entries/{id}/activity": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["CashbookController_activity_v1"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/cashbooks/{bookId}/entries/{id}/attachments": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["CashbookController_addAttachment_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/cashbooks/{bookId}/entries/{id}/attachments/{fileId}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    delete: operations["CashbookController_removeAttachment_v1"]
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/cashbooks/{bookId}/report": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["CashbookController_report_v1"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/cashbooks/{bookId}/export.csv": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["CashbookController_csv_v1"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/v1/cashbooks/{bookId}/statement.pdf": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["CashbookController_pdf_v1"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   "/v1/projects": {
     parameters: {
       query?: never
@@ -3224,6 +3480,8 @@ export interface components {
         | "expense.create"
         | "expense.update"
         | "expense.delete"
+        | "cashbook.create"
+        | "cashbook.manage"
         | "payment.read"
         | "payment.record"
         | "payment.refund"
@@ -3292,6 +3550,8 @@ export interface components {
         | "expense.create"
         | "expense.update"
         | "expense.delete"
+        | "cashbook.create"
+        | "cashbook.manage"
         | "payment.read"
         | "payment.record"
         | "payment.refund"
@@ -3358,6 +3618,8 @@ export interface components {
         | "expense.create"
         | "expense.update"
         | "expense.delete"
+        | "cashbook.create"
+        | "cashbook.manage"
         | "payment.read"
         | "payment.record"
         | "payment.refund"
@@ -3422,6 +3684,8 @@ export interface components {
         | "expense.create"
         | "expense.update"
         | "expense.delete"
+        | "cashbook.create"
+        | "cashbook.manage"
         | "payment.read"
         | "payment.record"
         | "payment.refund"
@@ -3481,6 +3745,8 @@ export interface components {
         | "expense.create"
         | "expense.update"
         | "expense.delete"
+        | "cashbook.create"
+        | "cashbook.manage"
         | "payment.read"
         | "payment.record"
         | "payment.refund"
@@ -3562,6 +3828,7 @@ export interface components {
         clients: number
         invoicesPerMonth: number
         storageMb: number
+        cashbooks: number
       }
     }
     CheckoutDto: {
@@ -5556,6 +5823,277 @@ export interface components {
         currency: string
         collected: number
         paid: number
+      }[]
+    }
+    CashbookListDto_Output: {
+      items: {
+        id: string
+        name: string
+        currency: string
+        fields: {
+          contact: boolean
+          category: boolean
+          mode: boolean
+        }
+        /** Format: date-time */
+        archivedAt: string | null
+        /** @enum {string} */
+        role: "owner" | "admin" | "operator" | "viewer"
+        balance: number
+        totalIn: number
+        totalOut: number
+        entryCount: number
+        memberCount: number
+        /** Format: date-time */
+        lastActivityAt: string | null
+        /** Format: date-time */
+        createdAt: string
+      }[]
+    }
+    CreateCashbookDto: {
+      name: string
+      currency?: string
+      fields?: {
+        contact?: boolean
+        category?: boolean
+        mode?: boolean
+      }
+    }
+    CashbookDto_Output: {
+      id: string
+      name: string
+      currency: string
+      fields: {
+        contact: boolean
+        category: boolean
+        mode: boolean
+      }
+      /** Format: date-time */
+      archivedAt: string | null
+      /** @enum {string} */
+      role: "owner" | "admin" | "operator" | "viewer"
+      balance: number
+      totalIn: number
+      totalOut: number
+      entryCount: number
+      memberCount: number
+      /** Format: date-time */
+      lastActivityAt: string | null
+      /** Format: date-time */
+      createdAt: string
+    }
+    UpdateCashbookDto: {
+      name?: string
+      currency?: string
+      fields?: {
+        contact?: boolean
+        category?: boolean
+        mode?: boolean
+      }
+      archived?: boolean
+    }
+    CashbookMemberListDto_Output: {
+      items: {
+        memberId: string
+        name: string
+        email: string
+        image: string | null
+        /** @enum {string} */
+        role: "owner" | "admin" | "operator" | "viewer"
+      }[]
+    }
+    AddCashbookMemberDto: {
+      /** Format: uuid */
+      memberId: string
+      /** @enum {string} */
+      role: "owner" | "admin" | "operator" | "viewer"
+    }
+    UpdateCashbookMemberDto: {
+      /** @enum {string} */
+      role: "owner" | "admin" | "operator" | "viewer"
+    }
+    CashbookOptionListDto_Output: {
+      items: {
+        id: string
+        name: string
+        archived: boolean
+      }[]
+    }
+    SaveCashbookOptionDto: {
+      name: string
+      archived?: boolean
+    }
+    CashbookOptionDto_Output: {
+      id: string
+      name: string
+      archived: boolean
+    }
+    UpdateCashbookOptionDto: {
+      name?: string
+      archived?: boolean
+    }
+    CashbookEntryListDto_Output: {
+      items: {
+        id: string
+        bookId: string
+        /** @enum {string} */
+        type: "in" | "out"
+        amount: number
+        /** Format: date */
+        entryDate: string
+        entryTime: string
+        remark: string | null
+        contactName: string | null
+        categoryId: string | null
+        categoryName: string | null
+        modeId: string | null
+        modeName: string | null
+        balance: number
+        createdBy: {
+          memberId: string
+          name: string
+        } | null
+        editable: boolean
+        edited: boolean
+        attachments: {
+          id: string
+          filename: string
+          contentType: string
+          size: number
+          url: string
+        }[]
+        /** Format: date-time */
+        createdAt: string
+        /** Format: date-time */
+        updatedAt: string
+      }[]
+      total: number
+      page: number
+      pageSize: number
+      totals: {
+        totalIn: number
+        totalOut: number
+        net: number
+      }
+    }
+    CreateCashbookEntryDto: {
+      /** @enum {string} */
+      type: "in" | "out"
+      amount: number
+      /** Format: date */
+      entryDate?: string
+      entryTime?: string
+      remark?: string | null
+      contactName?: string | null
+      /** Format: uuid */
+      categoryId?: string | null
+      /** Format: uuid */
+      modeId?: string | null
+    }
+    CashbookEntryDto_Output: {
+      id: string
+      bookId: string
+      /** @enum {string} */
+      type: "in" | "out"
+      amount: number
+      /** Format: date */
+      entryDate: string
+      entryTime: string
+      remark: string | null
+      contactName: string | null
+      categoryId: string | null
+      categoryName: string | null
+      modeId: string | null
+      modeName: string | null
+      balance: number
+      createdBy: {
+        memberId: string
+        name: string
+      } | null
+      editable: boolean
+      edited: boolean
+      attachments: {
+        id: string
+        filename: string
+        contentType: string
+        size: number
+        url: string
+      }[]
+      /** Format: date-time */
+      createdAt: string
+      /** Format: date-time */
+      updatedAt: string
+    }
+    DeleteCashbookEntriesDto: {
+      entryIds: string[]
+    }
+    DeletedDto_Output: {
+      deleted: number
+    }
+    TransferCashbookEntriesDto: {
+      entryIds: string[]
+      /** Format: uuid */
+      toBookId: string
+      /** @enum {string} */
+      mode: "move" | "copy"
+    }
+    CountDto_Output: {
+      count: number
+    }
+    UpdateCashbookEntryDto: {
+      /** @enum {string} */
+      type?: "in" | "out"
+      amount?: number
+      /** Format: date */
+      entryDate?: string
+      entryTime?: string
+      remark?: string | null
+      contactName?: string | null
+      /** Format: uuid */
+      categoryId?: string | null
+      /** Format: uuid */
+      modeId?: string | null
+    }
+    CashbookEntryActivityDto_Output: {
+      items: {
+        /** @enum {string} */
+        action: "created" | "updated" | "deleted" | "moved" | "copied"
+        /** Format: date-time */
+        at: string
+        by: string | null
+        changes: {
+          [key: string]: [unknown, unknown]
+        }
+      }[]
+    }
+    CashbookReportDto_Output: {
+      /** Format: date */
+      from: string | null
+      /** Format: date */
+      to: string | null
+      currency: string
+      openingBalance: number
+      totalIn: number
+      totalOut: number
+      closingBalance: number
+      byDay: {
+        /** Format: date */
+        date: string
+        totalIn: number
+        totalOut: number
+        balance: number
+      }[]
+      byCategory: {
+        id: string | null
+        name: string
+        totalIn: number
+        totalOut: number
+      }[]
+      byMode: {
+        id: string | null
+        name: string
+        totalIn: number
+        totalOut: number
       }[]
     }
     ProjectListDto_Output: {
@@ -10538,6 +11076,627 @@ export interface operations {
         content: {
           "application/json": components["schemas"]["ProfitLossDto_Output"]
         }
+      }
+    }
+  }
+  CashbookController_list_v1: {
+    parameters: {
+      query?: {
+        archived?: "true" | "false"
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["CashbookListDto_Output"]
+        }
+      }
+    }
+  }
+  CashbookController_create_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateCashbookDto"]
+      }
+    }
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["CashbookDto_Output"]
+        }
+      }
+    }
+  }
+  CashbookController_get_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        bookId: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["CashbookDto_Output"]
+        }
+      }
+    }
+  }
+  CashbookController_remove_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        bookId: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  CashbookController_update_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        bookId: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateCashbookDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["CashbookDto_Output"]
+        }
+      }
+    }
+  }
+  CashbookController_members_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        bookId: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["CashbookMemberListDto_Output"]
+        }
+      }
+    }
+  }
+  CashbookController_addMember_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        bookId: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AddCashbookMemberDto"]
+      }
+    }
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["CashbookMemberListDto_Output"]
+        }
+      }
+    }
+  }
+  CashbookController_removeMember_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        bookId: string
+        memberId: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  CashbookController_setMemberRole_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        bookId: string
+        memberId: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateCashbookMemberDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["CashbookMemberListDto_Output"]
+        }
+      }
+    }
+  }
+  CashbookController_options_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        bookId: string
+        kind: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["CashbookOptionListDto_Output"]
+        }
+      }
+    }
+  }
+  CashbookController_createOption_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        bookId: string
+        kind: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SaveCashbookOptionDto"]
+      }
+    }
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["CashbookOptionDto_Output"]
+        }
+      }
+    }
+  }
+  CashbookController_removeOption_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        bookId: string
+        kind: string
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  CashbookController_updateOption_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        bookId: string
+        kind: string
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateCashbookOptionDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["CashbookOptionDto_Output"]
+        }
+      }
+    }
+  }
+  CashbookController_listEntries_v1: {
+    parameters: {
+      query?: {
+        page?: number
+        pageSize?: number
+        from?: string
+        to?: string
+        type?: "in" | "out"
+        categoryId?: string
+        modeId?: string
+        memberId?: string
+        q?: string
+      }
+      header?: never
+      path: {
+        bookId: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["CashbookEntryListDto_Output"]
+        }
+      }
+    }
+  }
+  CashbookController_createEntry_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        bookId: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateCashbookEntryDto"]
+      }
+    }
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["CashbookEntryDto_Output"]
+        }
+      }
+    }
+  }
+  CashbookController_deleteEntries_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        bookId: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DeleteCashbookEntriesDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["DeletedDto_Output"]
+        }
+      }
+    }
+  }
+  CashbookController_transfer_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        bookId: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["TransferCashbookEntriesDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["CountDto_Output"]
+        }
+      }
+    }
+  }
+  CashbookController_getEntry_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        bookId: string
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["CashbookEntryDto_Output"]
+        }
+      }
+    }
+  }
+  CashbookController_deleteEntry_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        bookId: string
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  CashbookController_updateEntry_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        bookId: string
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateCashbookEntryDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["CashbookEntryDto_Output"]
+        }
+      }
+    }
+  }
+  CashbookController_activity_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        bookId: string
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["CashbookEntryActivityDto_Output"]
+        }
+      }
+    }
+  }
+  CashbookController_addAttachment_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        bookId: string
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["CashbookEntryDto_Output"]
+        }
+      }
+    }
+  }
+  CashbookController_removeAttachment_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        bookId: string
+        id: string
+        fileId: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["CashbookEntryDto_Output"]
+        }
+      }
+    }
+  }
+  CashbookController_report_v1: {
+    parameters: {
+      query?: {
+        from?: string
+        to?: string
+        type?: "in" | "out"
+        categoryId?: string
+        modeId?: string
+        memberId?: string
+        q?: string
+      }
+      header?: never
+      path: {
+        bookId: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["CashbookReportDto_Output"]
+        }
+      }
+    }
+  }
+  CashbookController_csv_v1: {
+    parameters: {
+      query?: {
+        from?: string
+        to?: string
+        type?: "in" | "out"
+        categoryId?: string
+        modeId?: string
+        memberId?: string
+        q?: string
+      }
+      header?: never
+      path: {
+        bookId: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  CashbookController_pdf_v1: {
+    parameters: {
+      query?: {
+        from?: string
+        to?: string
+        type?: "in" | "out"
+        categoryId?: string
+        modeId?: string
+        memberId?: string
+        q?: string
+      }
+      header?: never
+      path: {
+        bookId: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
       }
     }
   }

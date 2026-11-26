@@ -20,6 +20,7 @@ export const files = pgTable(
         "payment_qr",
         "payment_proof",
         "expense_receipt",
+        "cashbook_attachment",
       ],
     }).notNull(),
     filename: text().notNull(),
