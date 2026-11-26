@@ -116,7 +116,7 @@ export function RecordPaymentDialog({
               id="pay-date"
               value={paidOn}
               onChange={(v) => setPaidOn(v)}
-              required
+              placeholder="Today"
             />
           </Field>
           <Field label="Method" htmlFor="pay-method">
