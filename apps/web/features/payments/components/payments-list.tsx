@@ -2,6 +2,7 @@
 
 import {
   PAYMENT_METHOD_LABELS,
+  PAYMENT_STATUS_LABELS,
   type Payment,
   type PaymentStatus,
 } from "@workspace/contracts"
@@ -27,11 +28,9 @@ import { PaymentActions } from "./payment-actions"
 const STATUSES = [
   "completed",
   "refunded",
+  "void",
 ] as const satisfies readonly PaymentStatus[]
-const STATUS_LABELS: Record<PaymentStatus, string> = {
-  completed: "Received",
-  refunded: "Refunded",
-}
+const STATUS_LABELS = PAYMENT_STATUS_LABELS
 const col = columnsFor<Payment>()
 
 function useColumns(locale: string | undefined, slug: string | undefined) {
@@ -51,9 +50,9 @@ function useColumns(locale: string | undefined, slug: string | undefined) {
       cell: ({ row }) => (
         <span className="font-medium">
           {row.original.receiptNumber}
-          {row.original.status === "refunded" ? (
+          {row.original.status !== "completed" ? (
             <Badge variant="outline" className="ml-2">
-              Refunded
+              {STATUS_LABELS[row.original.status]}
             </Badge>
           ) : null}
         </span>

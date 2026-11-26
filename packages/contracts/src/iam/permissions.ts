@@ -94,7 +94,7 @@ export const PERMISSION_CATALOG = {
   payment: {
     read: "View payments and receipts",
     record: "Record payments and issue receipts",
-    refund: "Refund payments",
+    refund: "Refund or void payments",
   },
 } as const satisfies Record<string, Record<string, string>>
 

@@ -1140,6 +1140,22 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  "/v1/payments/{id}/void": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["PaymentsController_void_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   "/v1/payments/{id}/receipt/pdf": {
     parameters: {
       query?: never
@@ -4581,10 +4597,13 @@ export interface components {
         reference: string | null
         notes: string | null
         /** @enum {string} */
-        status: "completed" | "refunded"
+        status: "completed" | "refunded" | "void"
         /** Format: date-time */
         refundedAt: string | null
         refundReason: string | null
+        /** Format: date-time */
+        voidedAt: string | null
+        voidReason: string | null
         receiptId: string | null
         receiptNumber: string | null
         /** Format: date-time */
@@ -4618,10 +4637,13 @@ export interface components {
       reference: string | null
       notes: string | null
       /** @enum {string} */
-      status: "completed" | "refunded"
+      status: "completed" | "refunded" | "void"
       /** Format: date-time */
       refundedAt: string | null
       refundReason: string | null
+      /** Format: date-time */
+      voidedAt: string | null
+      voidReason: string | null
       receiptId: string | null
       receiptNumber: string | null
       /** Format: date-time */
@@ -4649,6 +4671,9 @@ export interface components {
       notes?: string | null
     }
     RefundPaymentDto: {
+      reason: string
+    }
+    VoidPaymentDto: {
       reason: string
     }
     SendReceiptDto: {
@@ -6578,7 +6603,7 @@ export interface components {
           | "online"
           | "other"
         /** @enum {string} */
-        status: "completed" | "refunded"
+        status: "completed" | "refunded" | "void"
       }[]
       paymentAccounts: {
         id: string
@@ -6686,7 +6711,7 @@ export interface components {
           | "online"
           | "other"
         /** @enum {string} */
-        status: "completed" | "refunded"
+        status: "completed" | "refunded" | "void"
       }[]
     }
     AdminOverviewDto_Output: {
@@ -9316,7 +9341,7 @@ export interface operations {
         sort?: string
         invoiceId?: string
         clientId?: string
-        status?: "completed" | "refunded"
+        status?: "completed" | "refunded" | "void"
         q?: string
       }
       header?: never
@@ -9393,6 +9418,31 @@ export interface operations {
     requestBody: {
       content: {
         "application/json": components["schemas"]["RefundPaymentDto"]
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["PaymentDto_Output"]
+        }
+      }
+    }
+  }
+  PaymentsController_void_v1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["VoidPaymentDto"]
       }
     }
     responses: {

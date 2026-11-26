@@ -1,5 +1,6 @@
 "use client"
 
+import { PAYMENT_STATUS_LABELS } from "@workspace/contracts"
 import { Button } from "@workspace/ui/components/button"
 import { Card, CardContent } from "@workspace/ui/components/card"
 import { Skeleton } from "@workspace/ui/components/skeleton"
@@ -194,7 +195,9 @@ export function PortalInvoiceView({ slug, id }: { slug: string; id: string }) {
                 >
                   <span className="flex-1">
                     {formatDate(r.paidOn)} · {r.receiptNumber}
-                    {r.status === "refunded" ? " · Refunded" : ""}
+                    {r.status !== "completed"
+                      ? ` · ${PAYMENT_STATUS_LABELS[r.status]}`
+                      : ""}
                   </span>
                   <span className="font-medium tabular-nums">
                     {money(r.amount, r.currency)}

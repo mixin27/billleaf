@@ -549,11 +549,50 @@ describe("payments & receipts", () => {
       displayStatus: "partially_paid",
     })
 
+    // A payment recorded by mistake is voided: balance reopens, receipt is
+    // stamped VOID and can't be emailed, can't void twice.
+    const mistake = await owner.post(`/v1/invoices/${draft.id}/payments`, {
+      amount: 2_000,
+    })
+    expect(mistake.body.receiptNumber).toBe("RCT-0004")
+    const voided = await owner.post(`/v1/payments/${mistake.body.id}/void`, {
+      reason: "Recorded on the wrong invoice",
+    })
+    expect(voided.status).toBe(200)
+    expect(voided.body).toMatchObject({
+      status: "void",
+      voidReason: "Recorded on the wrong invoice",
+      refundedAt: null,
+    })
+    expect(
+      (
+        await owner.post(`/v1/payments/${mistake.body.id}/void`, {
+          reason: "again!",
+        })
+      ).status
+    ).toBe(409)
+    expect(
+      (await owner.post(`/v1/payments/${mistake.body.id}/receipt/send`, {}))
+        .status
+    ).toBe(409)
+    const voidPdf = await t.app.inject({
+      method: "GET",
+      url: `/v1/payments/${mistake.body.id}/receipt/pdf`,
+      headers: owner.headers(),
+    })
+    expect(voidPdf.statusCode).toBe(200)
+    inv = (await owner.get(`/v1/invoices/${draft.id}`)).body
+    expect(inv).toMatchObject({ amountPaid: 8_000, amountDue: 2_000 })
+
     const list = (await owner.get(`/v1/payments?invoiceId=${draft.id}`)).body
       .items
-    expect(list).toHaveLength(3)
+    expect(list).toHaveLength(4)
     expect(
       list.filter((p: { status: string }) => p.status === "refunded")
+    ).toHaveLength(1)
+    expect(
+      (await owner.get(`/v1/payments?invoiceId=${draft.id}&status=void`)).body
+        .items
     ).toHaveLength(1)
     expect(
       (await owner.get("/v1/payments?q=RCT-0003")).body.items

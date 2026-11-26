@@ -25,9 +25,32 @@ import { usePermissions } from "@/components/permissions/can"
 import { errorMessage } from "@/lib/api"
 import { openPdf } from "@/lib/download"
 
-import { useRefundPayment, useSendReceipt } from "../api/mutations"
+import {
+  useRefundPayment,
+  useSendReceipt,
+  useVoidPayment,
+} from "../api/mutations"
 
-/** Receipt PDF / email and refund for one payment. */
+const REVERSE = {
+  void: {
+    title: "Void this payment?",
+    description: (receipt: string | null) =>
+      `For a payment recorded by mistake, e.g. the money never arrived or it went on the wrong invoice. The invoice balance goes back up, receipt ${receipt ?? ""} is marked void, and the payment no longer counts as income.`,
+    placeholder: "Reason, e.g. recorded on the wrong invoice",
+    action: "Void payment",
+    done: "Payment voided",
+  },
+  refund: {
+    title: "Refund this payment?",
+    description: (receipt: string | null) =>
+      `Records that the money was returned: the invoice balance goes back up and receipt ${receipt ?? ""} is marked refunded. Billleaf does not move money itself.`,
+    placeholder: "Reason",
+    action: "Refund",
+    done: "Payment refunded",
+  },
+} as const
+
+/** Receipt PDF / email, refund and void for one payment. */
 export function PaymentActions({
   payment,
   defaultEmail,
@@ -37,8 +60,14 @@ export function PaymentActions({
 }) {
   const { can } = usePermissions()
   const refund = useRefundPayment(payment.id)
+  const voidPayment = useVoidPayment(payment.id)
   const send = useSendReceipt(payment.id)
-  const [dialog, setDialog] = React.useState<"refund" | "send" | null>(null)
+  const [dialog, setDialog] = React.useState<"refund" | "void" | "send" | null>(
+    null
+  )
+  const reverse = dialog === "refund" || dialog === "void" ? dialog : null
+  const copy = REVERSE[reverse ?? "refund"]
+  const mutation = reverse === "void" ? voidPayment : refund
   const [reason, setReason] = React.useState("")
   const completed = payment.status === "completed"
 
@@ -70,12 +99,20 @@ export function PaymentActions({
             </DropdownMenuItem>
           ) : null}
           {completed && can("payment.refund") ? (
-            <DropdownMenuItem
-              variant="destructive"
-              onClick={() => setDialog("refund")}
-            >
-              Refund
-            </DropdownMenuItem>
+            <>
+              <DropdownMenuItem
+                variant="destructive"
+                onClick={() => setDialog("refund")}
+              >
+                Refund
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                variant="destructive"
+                onClick={() => setDialog("void")}
+              >
+                Void
+              </DropdownMenuItem>
+            </>
           ) : null}
         </DropdownMenuContent>
       </DropdownMenu>
@@ -98,20 +135,24 @@ export function PaymentActions({
       />
 
       <Dialog
-        open={dialog === "refund"}
-        onOpenChange={(o) => setDialog(o ? "refund" : null)}
+        open={reverse !== null}
+        onOpenChange={(o) => {
+          if (!o) {
+            setDialog(null)
+            setReason("")
+          }
+        }}
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Refund this payment?</DialogTitle>
+            <DialogTitle>{copy.title}</DialogTitle>
             <DialogDescription>
-              Records that the money was returned: the invoice balance goes back
-              up and receipt {payment.receiptNumber} is marked refunded.
-              Billleaf does not move money itself.
+              {copy.description(payment.receiptNumber)}
             </DialogDescription>
           </DialogHeader>
           <Textarea
-            placeholder="Reason"
+            aria-label="Reason"
+            placeholder={copy.placeholder}
             value={reason}
             onChange={(e) => setReason(e.target.value)}
           />
@@ -121,11 +162,11 @@ export function PaymentActions({
             </Button>
             <Button
               variant="destructive"
-              disabled={reason.trim().length < 3 || refund.isPending}
+              disabled={reason.trim().length < 3 || mutation.isPending}
               onClick={() =>
-                refund.mutate(reason.trim(), {
+                mutation.mutate(reason.trim(), {
                   onSuccess: () => {
-                    toast.success("Payment refunded")
+                    toast.success(copy.done)
                     setDialog(null)
                     setReason("")
                   },
@@ -133,7 +174,7 @@ export function PaymentActions({
                 })
               }
             >
-              Refund
+              {copy.action}
             </Button>
           </DialogFooter>
         </DialogContent>

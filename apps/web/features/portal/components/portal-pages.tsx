@@ -2,6 +2,7 @@
 
 import {
   PAYMENT_METHOD_LABELS,
+  PAYMENT_STATUS_LABELS,
   type PortalContractSummary,
   type PortalInvoiceSummary,
   type PortalQuoteSummary,
@@ -376,9 +377,9 @@ export function PortalReceiptsPage({ slug }: { slug: string }) {
             <div className="min-w-0 flex-1">
               <p className="font-medium">
                 {r.receiptNumber}
-                {r.status === "refunded" ? (
+                {r.status !== "completed" ? (
                   <span className="ml-2 text-xs text-muted-foreground">
-                    Refunded
+                    {PAYMENT_STATUS_LABELS[r.status]}
                   </span>
                 ) : null}
               </p>

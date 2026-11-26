@@ -1,6 +1,9 @@
 "use client"
 
-import { PAYMENT_METHOD_LABELS } from "@workspace/contracts"
+import {
+  PAYMENT_METHOD_LABELS,
+  PAYMENT_STATUS_LABELS,
+} from "@workspace/contracts"
 import { Badge } from "@workspace/ui/components/badge"
 import {
   Card,
@@ -47,12 +50,14 @@ export function InvoicePayments({
               <div>
                 <p className="flex items-center gap-2 font-medium">
                   <span
-                    className={p.status === "refunded" ? "line-through" : ""}
+                    className={p.status !== "completed" ? "line-through" : ""}
                   >
                     {money(p.amount, p.currency, locale)}
                   </span>
-                  {p.status === "refunded" ? (
-                    <Badge variant="outline">Refunded</Badge>
+                  {p.status !== "completed" ? (
+                    <Badge variant="outline">
+                      {PAYMENT_STATUS_LABELS[p.status]}
+                    </Badge>
                   ) : null}
                 </p>
                 <p className="text-xs text-muted-foreground">
@@ -60,6 +65,7 @@ export function InvoicePayments({
                   {PAYMENT_METHOD_LABELS[p.method]}
                   {p.reference ? ` · ${p.reference}` : ""} · {p.receiptNumber}
                   {p.refundReason ? ` · ${p.refundReason}` : ""}
+                  {p.voidReason ? ` · ${p.voidReason}` : ""}
                 </p>
               </div>
               <PaymentActions payment={p} defaultEmail={defaultEmail} />

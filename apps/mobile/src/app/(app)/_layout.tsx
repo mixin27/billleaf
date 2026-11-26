@@ -97,6 +97,10 @@ export default function AppLayout() {
             options={{ presentation: "modal" }}
           />
           <Stack.Screen
+            name="payment-void"
+            options={{ presentation: "modal" }}
+          />
+          <Stack.Screen
             name="invoice/[id]"
             options={{ ...pushed, title: "Invoice", headerBackTitle: "Back" }}
           />
