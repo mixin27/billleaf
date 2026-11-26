@@ -7,7 +7,7 @@ import {
   invoices,
   payments,
 } from "@workspace/db"
-import { and, eq, gte, inArray, lte, sql } from "drizzle-orm"
+import { and, eq, gte, inArray, lte, ne, sql } from "drizzle-orm"
 
 import { RequestContext } from "../../common/context/request-context.js"
 import { InjectDb, type Database } from "../../core/database/database.module.js"
@@ -47,6 +47,7 @@ export class ProfitLossService {
           .where(
             and(
               eq(payments.workspaceId, ws),
+              ne(payments.status, "void"),
               gte(payments.paidOn, from),
               lte(payments.paidOn, to)
             )

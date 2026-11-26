@@ -248,7 +248,7 @@ describe("InvoicesService", () => {
       setup({
         existing: invoice({ status: "issued", amountPaid: 1 }),
       }).service.void("i1", "x x x")
-    ).rejects.toThrow("Refund them before voiding")
+    ).rejects.toThrow("Refund or void them before voiding")
     await expect(setup().service.void("i1", "draft!")).rejects.toBeInstanceOf(
       ConflictException
     )

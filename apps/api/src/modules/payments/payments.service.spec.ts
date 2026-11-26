@@ -33,6 +33,8 @@ const payment = (over: Record<string, unknown> = {}) => ({
   status: "completed",
   refundedAt: null,
   refundReason: null,
+  voidedAt: null,
+  voidReason: null,
   createdAt: now,
   receipt: {
     id: "r1",
@@ -165,5 +167,35 @@ describe("PaymentsService", () => {
     await expect(service.refund("p1", "again")).rejects.toBeInstanceOf(
       ConflictException
     )
+  })
+
+  it("voids a payment recorded by mistake", async () => {
+    const { service, repo, invoices, tx } = setup({
+      invoice: invoice({ amountPaid: 6_000 }),
+    })
+    await service.void("p1", "Entered on the wrong invoice")
+    expect(repo.updatePayment).toHaveBeenCalledWith(
+      tx,
+      "p1",
+      expect.objectContaining({
+        status: "void",
+        voidReason: "Entered on the wrong invoice",
+      })
+    )
+    expect(invoices.update).toHaveBeenCalledWith(tx, "i1", {
+      amountPaid: 2_000,
+    })
+    expect(repo.updateReceipt).toHaveBeenCalledWith(tx, "r1", {
+      voidedAt: expect.any(Date),
+    })
+  })
+
+  it("only voids completed payments", async () => {
+    for (const status of ["refunded", "void"]) {
+      const { service } = setup({ payment: payment({ status }) })
+      await expect(service.void("p1", "again")).rejects.toBeInstanceOf(
+        ConflictException
+      )
+    }
   })
 })
