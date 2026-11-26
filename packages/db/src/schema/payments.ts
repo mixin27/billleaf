@@ -54,11 +54,14 @@ export const payments = pgTable(
     }).notNull(),
     reference: text(),
     notes: text(),
-    status: text({ enum: ["completed", "refunded"] })
+    /** `void`: recorded by mistake, the money never arrived. */
+    status: text({ enum: ["completed", "refunded", "void"] })
       .notNull()
       .default("completed"),
     refundedAt: timestamp({ withTimezone: true }),
     refundReason: text(),
+    voidedAt: timestamp({ withTimezone: true }),
+    voidReason: text(),
     recordedBy: uuid(),
     ...timestamps,
   },

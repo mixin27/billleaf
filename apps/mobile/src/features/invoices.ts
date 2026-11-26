@@ -201,6 +201,21 @@ export function useRecordPayment(invoiceId: string) {
   })
 }
 
+/** A payment recorded by mistake: off the invoice, receipt void, not income. */
+export function useVoidPayment(paymentId: string) {
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: (reason: string) =>
+      unwrap(
+        api.POST("/v1/payments/{id}/void", {
+          params: { path: { id: paymentId } },
+          body: { reason },
+        })
+      ),
+    onSettled: invalidate,
+  })
+}
+
 /**
  * Email the invoice (PDF attached). Without `to`, the API picks the
  * client's primary contact, else the client email.

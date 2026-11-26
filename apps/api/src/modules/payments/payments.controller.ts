@@ -17,6 +17,7 @@ import {
   paymentSchema,
   recordPaymentSchema,
   refundPaymentSchema,
+  voidPaymentSchema,
   sendDocumentSchema,
 } from "@workspace/contracts"
 import type { FastifyReply } from "fastify"
@@ -29,6 +30,7 @@ class PaymentDto extends createZodDto(paymentSchema) {}
 class PaymentListDto extends createZodDto(paymentListSchema) {}
 class RecordPaymentDto extends createZodDto(recordPaymentSchema) {}
 class RefundPaymentDto extends createZodDto(refundPaymentSchema) {}
+class VoidPaymentDto extends createZodDto(voidPaymentSchema) {}
 class ListPaymentsQueryDto extends createZodDto(listPaymentsQuerySchema) {}
 class SendReceiptDto extends createZodDto(sendDocumentSchema) {}
 
@@ -69,6 +71,14 @@ export class PaymentsController {
   @ZodResponse({ status: 200, type: PaymentDto })
   refund(@Param("id", uuid) id: string, @Body() body: RefundPaymentDto) {
     return this.payments.refund(id, body.reason)
+  }
+
+  @Post("payments/:id/void")
+  @HttpCode(200)
+  @RequirePermission("payment.refund")
+  @ZodResponse({ status: 200, type: PaymentDto })
+  void(@Param("id", uuid) id: string, @Body() body: VoidPaymentDto) {
+    return this.payments.void(id, body.reason)
   }
 
   @Get("payments/:id/receipt/pdf")

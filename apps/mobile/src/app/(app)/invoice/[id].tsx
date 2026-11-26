@@ -3,6 +3,7 @@ import {
   type Invoice,
   type Permission,
   PAYMENT_METHOD_LABELS,
+  PAYMENT_STATUS_LABELS,
 } from "@workspace/contracts"
 import { router, Stack, useLocalSearchParams } from "expo-router"
 import * as React from "react"
@@ -203,10 +204,10 @@ export default function InvoiceScreen() {
             {can("payment.read") && payments.data?.items.length ? (
               <Section title="Payments">
                 {payments.data.items.map((p, i) => {
+                  const completed = p.status === "completed"
                   const sendable =
-                    p.receiptId &&
-                    p.status !== "refunded" &&
-                    can("payment.record")
+                    p.receiptId && completed && can("payment.record")
+                  const voidable = completed && can("payment.refund")
                   return (
                     <View
                       key={p.id}
@@ -229,9 +230,10 @@ export default function InvoiceScreen() {
                             {[
                               p.receiptNumber && `Receipt ${p.receiptNumber}`,
                               p.reference,
-                              p.status === "refunded" && "Refunded",
+                              !completed && PAYMENT_STATUS_LABELS[p.status],
+                              p.voidReason,
                               p.receiptLastSentAt &&
-                                p.status !== "refunded" &&
+                                completed &&
                                 `Sent ${date(p.receiptLastSentAt.slice(0, 10))}`,
                             ]
                               .filter(Boolean)
@@ -244,27 +246,41 @@ export default function InvoiceScreen() {
                             styles.num,
                             {
                               color: t.text,
-                              textDecorationLine:
-                                p.status === "refunded"
-                                  ? "line-through"
-                                  : "none",
+                              textDecorationLine: completed
+                                ? "none"
+                                : "line-through",
                             },
                           ]}
                         >
                           {money(p.amount)}
                         </Text>
                       </View>
-                      {sendable ? (
+                      {sendable || voidable ? (
                         <View style={styles.paymentAction}>
-                          <Button
-                            title={
-                              p.receiptLastSentAt
-                                ? "Send receipt again"
-                                : "Send receipt"
-                            }
-                            variant="link"
-                            onPress={() => email(p.id)}
-                          />
+                          {sendable ? (
+                            <Button
+                              title={
+                                p.receiptLastSentAt
+                                  ? "Send receipt again"
+                                  : "Send receipt"
+                              }
+                              variant="link"
+                              onPress={() => email(p.id)}
+                            />
+                          ) : null}
+                          {voidable ? (
+                            <Button
+                              title="Void"
+                              variant="link"
+                              accessibilityHint="For a payment recorded by mistake"
+                              onPress={() =>
+                                router.push({
+                                  pathname: "/payment-void",
+                                  params: { invoiceId: id, paymentId: p.id },
+                                })
+                              }
+                            />
+                          ) : null}
                         </View>
                       ) : null}
                     </View>
@@ -384,6 +400,7 @@ const styles = StyleSheet.create({
   payment: { paddingBottom: Spacing.one },
   // Line the link text up with the row (the button pads its sides).
   paymentAction: {
+    flexDirection: "row",
     alignItems: "flex-start",
     marginTop: -Spacing.one,
     marginLeft: -Spacing.three,

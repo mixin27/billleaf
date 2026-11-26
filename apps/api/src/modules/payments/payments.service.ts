@@ -55,6 +55,8 @@ export function toPaymentDto(p: PaymentWithRefs): Payment {
     status: p.status,
     refundedAt: p.refundedAt?.toISOString() ?? null,
     refundReason: p.refundReason,
+    voidedAt: p.voidedAt?.toISOString() ?? null,
+    voidReason: p.voidReason,
     receiptId: p.receipt?.id ?? null,
     receiptNumber: p.receipt?.number ?? null,
     receiptLastSentAt: p.receipt?.lastSentAt?.toISOString() ?? null,
@@ -195,35 +197,60 @@ export class PaymentsService {
     return payment
   }
 
-  async refund(id: string, reason: string): Promise<Payment> {
+  /** The money went back to the client. Still counts as received, then refunded. */
+  refund(id: string, reason: string): Promise<Payment> {
+    return this.reverse(id, "refunded", reason)
+  }
+
+  /** Recorded by mistake: the payment never happened. */
+  void(id: string, reason: string): Promise<Payment> {
+    return this.reverse(id, "void", reason)
+  }
+
+  /**
+   * Take a completed payment off its invoice: the balance goes back up and
+   * the receipt is voided. Nothing is deleted; issued receipts keep their
+   * numbers.
+   */
+  private async reverse(
+    id: string,
+    to: "refunded" | "void",
+    reason: string
+  ): Promise<Payment> {
     await this.repo.database.transaction(async (tx) => {
       const payment = await this.repo.findById(id, tx, { forUpdate: true })
       if (!payment) throw new NotFoundException("Payment not found")
-      if (payment.status === "refunded")
-        throw new ConflictException("Payment was already refunded")
+      if (payment.status !== "completed")
+        throw new ConflictException(
+          payment.status === "refunded"
+            ? "Payment was already refunded"
+            : "Payment was already voided"
+        )
       const invoice = await this.invoices.findById(payment.invoiceId, tx, {
         forUpdate: true,
       })
       if (!invoice) throw new NotFoundException("Invoice not found")
 
-      await this.repo.updatePayment(tx, id, {
-        status: "refunded",
-        refundedAt: new Date(),
-        refundReason: reason,
-      })
+      const now = new Date()
+      await this.repo.updatePayment(
+        tx,
+        id,
+        to === "refunded"
+          ? { status: to, refundedAt: now, refundReason: reason }
+          : { status: to, voidedAt: now, voidReason: reason }
+      )
       await this.invoices.update(tx, invoice.id, {
         amountPaid: Math.max(0, invoice.amountPaid - payment.amount),
       })
       if (payment.receipt)
         await this.repo.updateReceipt(tx, payment.receipt.id, {
-          voidedAt: new Date(),
+          voidedAt: now,
         })
     })
-    await this.audit.record("payment.refunded", {
-      resourceType: "payment",
-      resourceId: id,
-      metadata: { reason },
-    })
+    await this.audit.record(
+      to === "refunded" ? "payment.refunded" : "payment.voided",
+      { resourceType: "payment", resourceId: id, metadata: { reason } }
+    )
     return this.get(id)
   }
 
@@ -237,7 +264,12 @@ export class PaymentsService {
     const content = await renderDocumentPdf({
       title: "Receipt",
       number: receipt.number,
-      stamp: receipt.voidedAt ? "REFUNDED" : "PAID",
+      stamp:
+        payment.status === "void"
+          ? "VOID"
+          : receipt.voidedAt
+            ? "REFUNDED"
+            : "PAID",
       meta: [
         { label: "Receipt", value: receipt.number },
         {
@@ -274,7 +306,9 @@ export class PaymentsService {
       notes:
         payment.status === "refunded"
           ? `Refunded: ${payment.refundReason ?? ""}`
-          : payment.notes,
+          : payment.status === "void"
+            ? `Void: ${payment.voidReason ?? ""}`
+            : payment.notes,
       ...(await this.profile.documentBranding()),
     })
     return { filename: `${receipt.number}.pdf`, content }
@@ -287,8 +321,12 @@ export class PaymentsService {
     const payment = await this.require(paymentId)
     if (!payment.receipt)
       throw new NotFoundException("This payment has no receipt")
-    if (payment.status === "refunded")
-      throw new ConflictException("Refunded payments' receipts can't be sent")
+    if (payment.status !== "completed")
+      throw new ConflictException(
+        payment.status === "refunded"
+          ? "Refunded payments' receipts can't be sent"
+          : "Voided payments' receipts can't be sent"
+      )
     let to = opts.to
     if (!to) {
       const [client, contacts] = await Promise.all([

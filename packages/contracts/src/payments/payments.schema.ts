@@ -7,7 +7,9 @@ import { paged, pageQuerySchema, sortQuery } from "../common/pagination.js"
  * Payments are recorded against issued invoices (always in the invoice's
  * currency, never more than the amount due). Each payment automatically gets
  * a receipt with a gap-free per-workspace number (RCT-0001). A refund marks
- * the payment refunded, voids its receipt and reduces the invoice's amountPaid.
+ * the payment refunded (money returned), voids its receipt and reduces the
+ * invoice's amountPaid. Voiding does the same for a payment recorded by
+ * mistake, and leaves it out of income entirely.
  */
 export const paymentMethodSchema = z.enum([
   "bank_transfer",
@@ -30,8 +32,14 @@ export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   other: "Other",
 }
 
-export const paymentStatusSchema = z.enum(["completed", "refunded"])
+export const paymentStatusSchema = z.enum(["completed", "refunded", "void"])
 export type PaymentStatus = z.infer<typeof paymentStatusSchema>
+
+export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
+  completed: "Received",
+  refunded: "Refunded",
+  void: "Void",
+}
 
 const isoDate = z.iso.date()
 
@@ -50,6 +58,8 @@ export const paymentSchema = z.object({
   status: paymentStatusSchema,
   refundedAt: z.iso.datetime().nullable(),
   refundReason: z.string().nullable(),
+  voidedAt: z.iso.datetime().nullable(),
+  voidReason: z.string().nullable(),
   receiptId: z.string().nullable(),
   receiptNumber: z.string().nullable(),
   receiptLastSentAt: z.iso.datetime().nullable(),
@@ -72,6 +82,9 @@ export const refundPaymentSchema = z.object({
   reason: z.string().trim().min(3, "Give a short reason").max(500),
 })
 export type RefundPaymentInput = z.input<typeof refundPaymentSchema>
+
+export const voidPaymentSchema = refundPaymentSchema
+export type VoidPaymentInput = z.input<typeof voidPaymentSchema>
 
 export const listPaymentsQuerySchema = pageQuerySchema.extend({
   sort: sortQuery(["paidOn", "amount", "clientName", "createdAt"]),

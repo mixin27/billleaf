@@ -51,6 +51,20 @@ export function useRefundPayment(id: string) {
   })
 }
 
+export function useVoidPayment(id: string) {
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: (reason: string) =>
+      unwrap(
+        api.POST("/v1/payments/{id}/void", {
+          params: { path: { id } },
+          body: { reason },
+        })
+      ),
+    onSuccess: invalidate,
+  })
+}
+
 export function useSendReceipt(id: string) {
   const invalidate = useInvalidate()
   return useMutation({

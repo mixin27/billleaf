@@ -342,7 +342,8 @@ export class InvoicesService {
         throw new ConflictException("Only issued invoices can be voided")
       if (invoice.amountPaid > 0) {
         throw new ConflictException({
-          message: "This invoice has payments. Refund them before voiding.",
+          message:
+            "This invoice has payments. Refund or void them before voiding the invoice.",
           code: "invoice_has_payments",
         })
       }

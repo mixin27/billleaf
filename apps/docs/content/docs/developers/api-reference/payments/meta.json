@@ -5,6 +5,7 @@
     "payments-get",
     "payments-record",
     "payments-refund",
+    "payments-void",
     "payments-receipt-pdf",
     "payments-send-receipt",
     "payment-proofs-list",
