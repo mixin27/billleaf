@@ -41,6 +41,7 @@ import { parseAsStringLiteral, useQueryState } from "nuqs"
 import * as React from "react"
 import { toast } from "sonner"
 
+import { DateInput } from "@/components/form/date-input"
 import { usePermissions } from "@/components/permissions/can"
 import { useWorkspaceProfile, useWorkspaceStore } from "@/features/workspace"
 import { errorMessage } from "@/lib/api"
@@ -729,12 +730,12 @@ function TimeRangePopover({
               className="h-8 px-1.5"
             />
           </div>
-          <Input
-            type="date"
+          <DateInput
             aria-label="Date"
+            className="w-[9.5rem]"
             value={date}
-            onChange={(ev) => setDate(ev.target.value)}
-            className="h-8 px-1.5"
+            onChange={(v) => setDate(v)}
+            required
           />
           <Button type="submit" size="sm">
             Save

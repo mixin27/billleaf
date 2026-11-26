@@ -23,6 +23,7 @@ import { parseAsString, parseAsStringLiteral, useQueryState } from "nuqs"
 import * as React from "react"
 import { toast } from "sonner"
 
+import { DateInput } from "@/components/form/date-input"
 import { usePermissions } from "@/components/permissions/can"
 import { Field } from "@/components/form/field"
 import { PageHeader } from "@/components/page-header"
@@ -276,13 +277,12 @@ export function SubscriptionPay() {
               Tell us about your payment
             </p>
             <Field label="Paid on" htmlFor="pay-date">
-              <Input
+              <DateInput
                 id="pay-date"
-                type="date"
                 required
                 max={today}
                 value={paidOn}
-                onChange={(e) => setPaidOn(e.target.value)}
+                onChange={(v) => setPaidOn(v)}
               />
             </Field>
             {usable.length ? (

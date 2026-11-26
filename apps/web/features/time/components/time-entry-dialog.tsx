@@ -15,6 +15,7 @@ import { Label } from "@workspace/ui/components/label"
 import * as React from "react"
 import { toast } from "sonner"
 
+import { DateInput } from "@/components/form/date-input"
 import { Field } from "@/components/form/field"
 import { errorMessage } from "@/lib/api"
 
@@ -108,11 +109,10 @@ export function TimeEntryDialog({
             onChange={setTarget}
           />
           <Field label="Date" htmlFor="time-date">
-            <Input
+            <DateInput
               id="time-date"
-              type="date"
               value={date}
-              onChange={(e) => setDate(e.target.value)}
+              onChange={(v) => setDate(v)}
               required
             />
           </Field>

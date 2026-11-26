@@ -8,7 +8,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@workspace/ui/components/card"
-import { Input } from "@workspace/ui/components/input"
 import {
   Select,
   SelectContent,
@@ -20,6 +19,7 @@ import { Skeleton } from "@workspace/ui/components/skeleton"
 import { cn } from "@workspace/ui/lib/utils"
 import { parseAsString, parseAsStringLiteral, useQueryState } from "nuqs"
 
+import { DateInput } from "@/components/form/date-input"
 import { PageHeader } from "@/components/page-header"
 import { docsUrl } from "@/lib/docs"
 import { useWorkspaceProfile } from "@/features/workspace"
@@ -159,19 +159,19 @@ export function ProfitLossReport() {
         </Select>
         {preset === "custom" ? (
           <>
-            <Input
-              type="date"
+            <DateInput
               aria-label="From"
               className="w-40"
               value={fromQ ?? r.from}
-              onChange={(e) => void setFrom(e.target.value)}
+              onChange={(v) => void setFrom(v)}
+              required
             />
-            <Input
-              type="date"
+            <DateInput
               aria-label="To"
               className="w-40"
               value={toQ ?? r.to}
-              onChange={(e) => void setTo(e.target.value)}
+              onChange={(v) => void setTo(v)}
+              required
             />
           </>
         ) : (

@@ -26,6 +26,7 @@ import {
 import * as React from "react"
 import { toast } from "sonner"
 
+import { DateInput } from "@/components/form/date-input"
 import { Field } from "@/components/form/field"
 import { errorMessage } from "@/lib/api"
 import { money } from "@/lib/format"
@@ -111,11 +112,11 @@ export function RecordPaymentDialog({
             />
           </Field>
           <Field label="Paid on" htmlFor="pay-date" hint="Blank = today">
-            <Input
+            <DateInput
               id="pay-date"
-              type="date"
               value={paidOn}
-              onChange={(e) => setPaidOn(e.target.value)}
+              onChange={(v) => setPaidOn(v)}
+              required
             />
           </Field>
           <Field label="Method" htmlFor="pay-method">

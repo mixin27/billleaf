@@ -27,6 +27,7 @@ import { Textarea } from "@workspace/ui/components/textarea"
 import * as React from "react"
 import { toast } from "sonner"
 
+import { DateInput } from "@/components/form/date-input"
 import { Field } from "@/components/form/field"
 import { errorMessage } from "@/lib/api"
 import { formatDate, money } from "@/lib/format"
@@ -252,13 +253,12 @@ export function PaymentProofForm({
               />
             </Field>
             <Field label="Date paid" htmlFor="pp-date">
-              <Input
+              <DateInput
                 id="pp-date"
-                type="date"
                 required
                 max={today}
                 value={paidOn}
-                onChange={(e) => setPaidOn(e.target.value)}
+                onChange={(v) => setPaidOn(v)}
               />
             </Field>
             {invoice.paymentAccounts.length ? (

@@ -39,6 +39,7 @@ import Link from "next/link"
 import * as React from "react"
 import { toast } from "sonner"
 
+import { DateInput } from "@/components/form/date-input"
 import { Field } from "@/components/form/field"
 import { usePermissions } from "@/components/permissions/can"
 import { useWorkspaceStore } from "@/features/workspace"
@@ -298,11 +299,11 @@ function ConfirmDialog({
               />
             </Field>
             <Field label="Paid on" htmlFor="cp-date">
-              <Input
+              <DateInput
                 id="cp-date"
-                type="date"
                 value={paidOn}
-                onChange={(e) => setPaidOn(e.target.value)}
+                onChange={(v) => setPaidOn(v)}
+                required
               />
             </Field>
             <Field label="Method" htmlFor="cp-method">

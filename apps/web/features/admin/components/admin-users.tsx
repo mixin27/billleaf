@@ -17,7 +17,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@workspace/ui/components/dialog"
-import { Input } from "@workspace/ui/components/input"
 import { Skeleton } from "@workspace/ui/components/skeleton"
 import { Tabs, TabsList, TabsTrigger } from "@workspace/ui/components/tabs"
 import { Textarea } from "@workspace/ui/components/textarea"
@@ -34,6 +33,7 @@ import {
   DataTableToolbar,
   useDataTableState,
 } from "@/components/data-table"
+import { DateInput } from "@/components/form/date-input"
 import { Field } from "@/components/form/field"
 import { PageHeader } from "@/components/page-header"
 import { errorMessage } from "@/lib/api"
@@ -519,11 +519,10 @@ function BanDialog({
             htmlFor="ban-until"
             hint="Empty = until you unban them."
           >
-            <Input
+            <DateInput
               id="ban-until"
-              type="date"
               value={until}
-              onChange={(e) => setUntil(e.target.value)}
+              onChange={(v) => setUntil(v)}
             />
           </Field>
         </form>

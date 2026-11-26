@@ -17,6 +17,7 @@ import * as React from "react"
 import { Controller, useForm, useWatch } from "react-hook-form"
 import { toast } from "sonner"
 
+import { DateInput } from "@/components/form/date-input"
 import { Field } from "@/components/form/field"
 import { useClients } from "@/features/clients"
 import { useProjects } from "@/features/projects"
@@ -307,14 +308,33 @@ export function ContractEditor({
           />
         </Field>
         <Field label="Starts" htmlFor="effectiveDate">
-          <Input
-            id="effectiveDate"
-            type="date"
-            {...register("effectiveDate")}
+          <Controller
+            control={control}
+            name="effectiveDate"
+            render={({ field }) => (
+              <DateInput
+                id="effectiveDate"
+                value={field.value}
+                onChange={field.onChange}
+                onBlur={field.onBlur}
+              />
+            )}
           />
         </Field>
         <Field label="Ends" htmlFor="endDate" hint="Optional">
-          <Input id="endDate" type="date" {...register("endDate")} />
+          <Controller
+            control={control}
+            name="endDate"
+            render={({ field }) => (
+              <DateInput
+                id="endDate"
+                value={field.value}
+                onChange={field.onChange}
+                onBlur={field.onBlur}
+                placeholder="No end date"
+              />
+            )}
+          />
         </Field>
       </div>
 

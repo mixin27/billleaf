@@ -16,6 +16,7 @@ import { Label } from "@workspace/ui/components/label"
 import * as React from "react"
 import { toast } from "sonner"
 
+import { DateInput } from "@/components/form/date-input"
 import { Field } from "@/components/form/field"
 import { errorMessage } from "@/lib/api"
 
@@ -191,12 +192,11 @@ export function CalendarEntryDialog({
               onChange={setTarget}
             />
             <Field label="Date" htmlFor="cal-date">
-              <Input
+              <DateInput
                 id="cal-date"
-                type="date"
                 required
                 value={date}
-                onChange={(e) => setDate(e.target.value)}
+                onChange={(v) => setDate(v)}
               />
             </Field>
             <Field

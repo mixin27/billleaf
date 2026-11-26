@@ -34,6 +34,7 @@ import {
   LineItemsEditor,
   useLinesValid,
 } from "@/components/documents/line-items-editor"
+import { DateInput } from "@/components/form/date-input"
 import { CurrencySelect } from "@/components/form/currency-select"
 import { Field } from "@/components/form/field"
 import { useClients } from "@/features/clients"
@@ -235,14 +236,38 @@ export function InvoiceEditor({
           htmlFor="issueDate"
           hint={invoice ? undefined : "Blank = today"}
         >
-          <Input id="issueDate" type="date" {...register("issueDate")} />
+          <Controller
+            control={control}
+            name="issueDate"
+            render={({ field }) => (
+              <DateInput
+                id="issueDate"
+                value={field.value}
+                onChange={field.onChange}
+                onBlur={field.onBlur}
+                placeholder="Today"
+              />
+            )}
+          />
         </Field>
         <Field
           label="Due date"
           htmlFor="dueDate"
           hint={invoice ? undefined : "Blank = client/workspace payment terms"}
         >
-          <Input id="dueDate" type="date" {...register("dueDate")} />
+          <Controller
+            control={control}
+            name="dueDate"
+            render={({ field }) => (
+              <DateInput
+                id="dueDate"
+                value={field.value}
+                onChange={field.onChange}
+                onBlur={field.onBlur}
+                placeholder="From payment terms"
+              />
+            )}
+          />
         </Field>
       </div>
 
