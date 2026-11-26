@@ -48,6 +48,10 @@ export const quotes = pgTable(
     notes: text(),
     terms: text(),
     subtotal: integer().notNull().default(0),
+    /** Document discount (taken off before tax): percent in bps, or minor units. */
+    discountType: text({ enum: ["percent", "amount"] }),
+    discountValue: integer(),
+    discountTotal: integer().notNull().default(0),
     taxTotal: integer().notNull().default(0),
     total: integer().notNull().default(0),
     clientSnapshot: jsonb().$type<PartySnapshot>(),

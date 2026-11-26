@@ -1,6 +1,11 @@
 "use client"
 
-import type { LineItem, PartySnapshot } from "@workspace/contracts"
+import {
+  type Discount,
+  discountLabel,
+  type LineItem,
+  type PartySnapshot,
+} from "@workspace/contracts"
 import { Card, CardContent } from "@workspace/ui/components/card"
 import { Skeleton } from "@workspace/ui/components/skeleton"
 import {
@@ -65,6 +70,8 @@ export function DocumentSheet({
   currency,
   locale,
   subtotal,
+  discount = null,
+  discountTotal = 0,
   taxTotal,
   total,
   extraTotals = [],
@@ -81,6 +88,8 @@ export function DocumentSheet({
   currency: string
   locale?: string
   subtotal: number
+  discount?: Discount | null
+  discountTotal?: number
   taxTotal: number
   total: number
   extraTotals?: { label: string; amount: number; strong?: boolean }[]
@@ -169,6 +178,18 @@ export function DocumentSheet({
           <dd className="text-right tabular-nums">
             {money(subtotal, currency, locale)}
           </dd>
+          {discountTotal ? (
+            <>
+              <dt className="text-muted-foreground">
+                {discount?.type === "percent"
+                  ? `Discount (${discountLabel(discount)})`
+                  : "Discount"}
+              </dt>
+              <dd className="text-right tabular-nums">
+                −{money(discountTotal, currency, locale)}
+              </dd>
+            </>
+          ) : null}
           <dt className="text-muted-foreground">Tax</dt>
           <dd className="text-right tabular-nums">
             {money(taxTotal, currency, locale)}

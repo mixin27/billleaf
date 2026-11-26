@@ -1,4 +1,9 @@
-import { formatMoney, type Permission, type Quote } from "@workspace/contracts"
+import {
+  discountLabel,
+  formatMoney,
+  type Permission,
+  type Quote,
+} from "@workspace/contracts"
 import { router, Stack, useLocalSearchParams } from "expo-router"
 import * as React from "react"
 import {
@@ -233,6 +238,16 @@ export default function QuoteScreen() {
             <Section title="Items">
               <LineItems lines={q.lines} money={money}>
                 <Total label="Subtotal" value={money(q.subtotal)} />
+                {q.discountTotal ? (
+                  <Total
+                    label={
+                      q.discount?.type === "percent"
+                        ? `Discount (${discountLabel(q.discount)})`
+                        : "Discount"
+                    }
+                    value={`−${money(q.discountTotal)}`}
+                  />
+                ) : null}
                 {q.taxTotal ? (
                   <Total label="Tax" value={money(q.taxTotal)} />
                 ) : null}

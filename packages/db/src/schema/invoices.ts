@@ -57,6 +57,10 @@ export const invoices = pgTable(
     notes: text(),
     terms: text(),
     subtotal: integer().notNull().default(0),
+    /** Document discount (taken off before tax): percent in bps, or minor units. */
+    discountType: text({ enum: ["percent", "amount"] }),
+    discountValue: integer(),
+    discountTotal: integer().notNull().default(0),
     taxTotal: integer().notNull().default(0),
     total: integer().notNull().default(0),
     /** Maintained by the Payments module; 0 until payments are recorded. */
@@ -158,6 +162,10 @@ export const creditNotes = pgTable(
     reason: text().notNull(),
     currency: text().notNull(),
     subtotal: integer().notNull(),
+    /** Document discount (taken off before tax): percent in bps, or minor units. */
+    discountType: text({ enum: ["percent", "amount"] }),
+    discountValue: integer(),
+    discountTotal: integer().notNull().default(0),
     taxTotal: integer().notNull(),
     total: integer().notNull(),
     appliedAmount: integer().notNull(),

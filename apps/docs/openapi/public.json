@@ -5865,6 +5865,48 @@
                   "minimum": -9007199254740991,
                   "maximum": 9007199254740991
                 },
+                "discount": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": ["percent"]
+                        },
+                        "value": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 10000
+                        }
+                      },
+                      "required": ["type", "value"],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": ["amount"]
+                        },
+                        "value": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 100000000000
+                        }
+                      },
+                      "required": ["type", "value"],
+                      "additionalProperties": false
+                    }
+                  ],
+                  "nullable": true
+                },
+                "discountTotal": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
                 "taxTotal": {
                   "type": "integer",
                   "minimum": -9007199254740991,
@@ -5916,6 +5958,8 @@
                 "issueDate",
                 "dueDate",
                 "subtotal",
+                "discount",
+                "discountTotal",
                 "taxTotal",
                 "total",
                 "amountPaid",
@@ -6007,6 +6051,48 @@
             "nullable": true
           },
           "subtotal": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "discount": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": ["percent"]
+                  },
+                  "value": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 10000
+                  }
+                },
+                "required": ["type", "value"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": ["amount"]
+                  },
+                  "value": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100000000000
+                  }
+                },
+                "required": ["type", "value"],
+                "additionalProperties": false
+              }
+            ],
+            "nullable": true
+          },
+          "discountTotal": {
             "type": "integer",
             "minimum": -9007199254740991,
             "maximum": 9007199254740991
@@ -6301,6 +6387,8 @@
           "issueDate",
           "dueDate",
           "subtotal",
+          "discount",
+          "discountTotal",
           "taxTotal",
           "total",
           "amountPaid",
@@ -6399,6 +6487,41 @@
               },
               "required": ["description", "quantity", "unitPrice"]
             }
+          },
+          "discount": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": ["percent"]
+                  },
+                  "value": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 10000
+                  }
+                },
+                "required": ["type", "value"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": ["amount"]
+                  },
+                  "value": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100000000000
+                  }
+                },
+                "required": ["type", "value"]
+              }
+            ],
+            "nullable": true
           }
         },
         "required": ["clientId"]
@@ -6474,6 +6597,41 @@
               },
               "required": ["description", "quantity", "unitPrice"]
             }
+          },
+          "discount": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": ["percent"]
+                  },
+                  "value": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 10000
+                  }
+                },
+                "required": ["type", "value"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": ["amount"]
+                  },
+                  "value": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100000000000
+                  }
+                },
+                "required": ["type", "value"]
+              }
+            ],
+            "nullable": true
           }
         }
       },
@@ -7328,6 +7486,48 @@
                   "minimum": -9007199254740991,
                   "maximum": 9007199254740991
                 },
+                "discount": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": ["percent"]
+                        },
+                        "value": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 10000
+                        }
+                      },
+                      "required": ["type", "value"],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": ["amount"]
+                        },
+                        "value": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 100000000000
+                        }
+                      },
+                      "required": ["type", "value"],
+                      "additionalProperties": false
+                    }
+                  ],
+                  "nullable": true
+                },
+                "discountTotal": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
                 "taxTotal": {
                   "type": "integer",
                   "minimum": -9007199254740991,
@@ -7361,6 +7561,8 @@
                 "issueDate",
                 "validUntil",
                 "subtotal",
+                "discount",
+                "discountTotal",
                 "taxTotal",
                 "total",
                 "createdAt",
@@ -7430,6 +7632,48 @@
             "nullable": true
           },
           "subtotal": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "discount": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": ["percent"]
+                  },
+                  "value": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 10000
+                  }
+                },
+                "required": ["type", "value"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": ["amount"]
+                  },
+                  "value": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100000000000
+                  }
+                },
+                "required": ["type", "value"],
+                "additionalProperties": false
+              }
+            ],
+            "nullable": true
+          },
+          "discountTotal": {
             "type": "integer",
             "minimum": -9007199254740991,
             "maximum": 9007199254740991
@@ -7641,6 +7885,8 @@
           "issueDate",
           "validUntil",
           "subtotal",
+          "discount",
+          "discountTotal",
           "taxTotal",
           "total",
           "createdAt",
@@ -7735,6 +7981,41 @@
               },
               "required": ["description", "quantity", "unitPrice"]
             }
+          },
+          "discount": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": ["percent"]
+                  },
+                  "value": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 10000
+                  }
+                },
+                "required": ["type", "value"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": ["amount"]
+                  },
+                  "value": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100000000000
+                  }
+                },
+                "required": ["type", "value"]
+              }
+            ],
+            "nullable": true
           }
         },
         "required": ["clientId"]
@@ -7810,6 +8091,41 @@
               },
               "required": ["description", "quantity", "unitPrice"]
             }
+          },
+          "discount": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": ["percent"]
+                  },
+                  "value": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 10000
+                  }
+                },
+                "required": ["type", "value"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": ["amount"]
+                  },
+                  "value": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100000000000
+                  }
+                },
+                "required": ["type", "value"]
+              }
+            ],
+            "nullable": true
           }
         }
       },
@@ -8950,6 +9266,48 @@
                   "minimum": -9007199254740991,
                   "maximum": 9007199254740991
                 },
+                "discount": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": ["percent"]
+                        },
+                        "value": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 10000
+                        }
+                      },
+                      "required": ["type", "value"],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": ["amount"]
+                        },
+                        "value": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 100000000000
+                        }
+                      },
+                      "required": ["type", "value"],
+                      "additionalProperties": false
+                    }
+                  ],
+                  "nullable": true
+                },
+                "discountTotal": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
                 "taxTotal": {
                   "type": "integer",
                   "minimum": -9007199254740991,
@@ -8988,6 +9346,8 @@
                 "reason",
                 "currency",
                 "subtotal",
+                "discount",
+                "discountTotal",
                 "taxTotal",
                 "total",
                 "appliedAmount",
@@ -9054,6 +9414,48 @@
             "type": "string"
           },
           "subtotal": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "discount": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": ["percent"]
+                  },
+                  "value": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 10000
+                  }
+                },
+                "required": ["type", "value"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": ["amount"]
+                  },
+                  "value": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100000000000
+                  }
+                },
+                "required": ["type", "value"],
+                "additionalProperties": false
+              }
+            ],
+            "nullable": true
+          },
+          "discountTotal": {
             "type": "integer",
             "minimum": -9007199254740991,
             "maximum": 9007199254740991
@@ -9235,6 +9637,8 @@
           "reason",
           "currency",
           "subtotal",
+          "discount",
+          "discountTotal",
           "taxTotal",
           "total",
           "appliedAmount",
@@ -9389,6 +9793,43 @@
                     "additionalProperties": false
                   }
                 },
+                "discount": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": ["percent"]
+                        },
+                        "value": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 10000
+                        }
+                      },
+                      "required": ["type", "value"],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": ["amount"]
+                        },
+                        "value": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 100000000000
+                        }
+                      },
+                      "required": ["type", "value"],
+                      "additionalProperties": false
+                    }
+                  ],
+                  "nullable": true
+                },
                 "total": {
                   "type": "integer",
                   "minimum": -9007199254740991,
@@ -9476,6 +9917,7 @@
                 "title",
                 "currency",
                 "lines",
+                "discount",
                 "total",
                 "every",
                 "unit",
@@ -9570,6 +10012,43 @@
               "additionalProperties": false
             }
           },
+          "discount": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": ["percent"]
+                  },
+                  "value": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 10000
+                  }
+                },
+                "required": ["type", "value"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": ["amount"]
+                  },
+                  "value": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100000000000
+                  }
+                },
+                "required": ["type", "value"],
+                "additionalProperties": false
+              }
+            ],
+            "nullable": true
+          },
           "total": {
             "type": "integer",
             "minimum": -9007199254740991,
@@ -9657,6 +10136,7 @@
           "title",
           "currency",
           "lines",
+          "discount",
           "total",
           "every",
           "unit",
@@ -9818,6 +10298,41 @@
             "maximum": 365,
             "nullable": true
           },
+          "discount": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": ["percent"]
+                  },
+                  "value": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 10000
+                  }
+                },
+                "required": ["type", "value"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": ["amount"]
+                  },
+                  "value": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100000000000
+                  }
+                },
+                "required": ["type", "value"]
+              }
+            ],
+            "nullable": true
+          },
           "mode": {
             "default": "draft",
             "type": "string",
@@ -9882,6 +10397,41 @@
               },
               "required": ["description", "quantity", "unitPrice"]
             }
+          },
+          "discount": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": ["percent"]
+                  },
+                  "value": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 10000
+                  }
+                },
+                "required": ["type", "value"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": ["amount"]
+                  },
+                  "value": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100000000000
+                  }
+                },
+                "required": ["type", "value"]
+              }
+            ],
+            "nullable": true
           },
           "every": {
             "type": "integer",
@@ -9988,6 +10538,43 @@
                   "additionalProperties": false
                 }
               },
+              "discount": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "enum": ["percent"]
+                      },
+                      "value": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 10000
+                      }
+                    },
+                    "required": ["type", "value"],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "enum": ["amount"]
+                      },
+                      "value": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 100000000000
+                      }
+                    },
+                    "required": ["type", "value"],
+                    "additionalProperties": false
+                  }
+                ],
+                "nullable": true
+              },
               "total": {
                 "type": "integer",
                 "minimum": -9007199254740991,
@@ -10075,6 +10662,7 @@
               "title",
               "currency",
               "lines",
+              "discount",
               "total",
               "every",
               "unit",
@@ -10692,6 +11280,48 @@
             "minimum": -9007199254740991,
             "maximum": 9007199254740991
           },
+          "discount": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": ["percent"]
+                  },
+                  "value": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 10000
+                  }
+                },
+                "required": ["type", "value"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": ["amount"]
+                  },
+                  "value": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100000000000
+                  }
+                },
+                "required": ["type", "value"],
+                "additionalProperties": false
+              }
+            ],
+            "nullable": true
+          },
+          "discountTotal": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
           "taxTotal": {
             "type": "integer",
             "minimum": -9007199254740991,
@@ -10982,6 +11612,8 @@
           "issueDate",
           "dueDate",
           "subtotal",
+          "discount",
+          "discountTotal",
           "taxTotal",
           "total",
           "amountPaid",

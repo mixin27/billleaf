@@ -1,4 +1,5 @@
 import {
+  type Discount,
   fromMinorUnits,
   type LineItem,
   toMinorUnits,
@@ -70,4 +71,45 @@ export function toApiLines(lines: LineFormValues[], currency: string) {
     unitPrice: l.unitPrice!,
     taxRateBps: l.taxRateBps!,
   }))
+}
+
+/** The document discount as edited in forms. */
+export type DiscountFormValues = {
+  discountType: "none" | "percent" | "amount"
+  discountValue: string
+}
+
+export function toDiscountFormValues(
+  d: Discount | null | undefined,
+  currency: string
+): DiscountFormValues {
+  if (!d) return { discountType: "none", discountValue: "" }
+  return d.type === "percent"
+    ? { discountType: "percent", discountValue: String(d.value / 100) }
+    : {
+        discountType: "amount",
+        discountValue: fromMinorUnits(d.value, currency),
+      }
+}
+
+/**
+ * The form's discount for the API: null for none (or an empty value),
+ * undefined when the value can't be read (shown as invalid).
+ */
+export function parseDiscount(
+  v: Partial<DiscountFormValues>,
+  currency: string
+): Discount | null | undefined {
+  const raw = (v.discountValue ?? "").trim()
+  if (!v.discountType || v.discountType === "none" || !raw) return null
+  if (v.discountType === "percent") {
+    const bps = Math.round(Number.parseFloat(raw) * 100)
+    return Number.isFinite(bps) && bps >= 1 && bps <= 10_000
+      ? { type: "percent", value: bps }
+      : undefined
+  }
+  const minor = toMinorUnits(raw, currency)
+  return minor !== null && minor >= 1
+    ? { type: "amount", value: minor }
+    : undefined
 }

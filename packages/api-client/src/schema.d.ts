@@ -3770,6 +3770,21 @@ export interface components {
         /** Format: date */
         dueDate: string | null
         subtotal: number
+        discount:
+          | (
+              | {
+                  /** @enum {string} */
+                  type: "percent"
+                  value: number
+                }
+              | {
+                  /** @enum {string} */
+                  type: "amount"
+                  value: number
+                }
+            )
+          | null
+        discountTotal: number
         taxTotal: number
         total: number
         amountPaid: number
@@ -3805,6 +3820,21 @@ export interface components {
       /** Format: date */
       dueDate: string | null
       subtotal: number
+      discount:
+        | (
+            | {
+                /** @enum {string} */
+                type: "percent"
+                value: number
+              }
+            | {
+                /** @enum {string} */
+                type: "amount"
+                value: number
+              }
+          )
+        | null
+      discountTotal: number
       taxTotal: number
       total: number
       amountPaid: number
@@ -3891,6 +3921,20 @@ export interface components {
         /** @default 0 */
         taxRateBps: number
       }[]
+      discount?:
+        | (
+            | {
+                /** @enum {string} */
+                type: "percent"
+                value: number
+              }
+            | {
+                /** @enum {string} */
+                type: "amount"
+                value: number
+              }
+          )
+        | null
     }
     UpdateInvoiceDto: {
       /** Format: uuid */
@@ -3910,6 +3954,20 @@ export interface components {
         /** @default 0 */
         taxRateBps: number
       }[]
+      discount?:
+        | (
+            | {
+                /** @enum {string} */
+                type: "percent"
+                value: number
+              }
+            | {
+                /** @enum {string} */
+                type: "amount"
+                value: number
+              }
+          )
+        | null
     }
     SendDocumentDto: {
       /** Format: email */
@@ -4298,6 +4356,21 @@ export interface components {
         /** Format: date */
         validUntil: string | null
         subtotal: number
+        discount:
+          | (
+              | {
+                  /** @enum {string} */
+                  type: "percent"
+                  value: number
+                }
+              | {
+                  /** @enum {string} */
+                  type: "amount"
+                  value: number
+                }
+            )
+          | null
+        discountTotal: number
         taxTotal: number
         total: number
         /** Format: date-time */
@@ -4324,6 +4397,21 @@ export interface components {
       /** Format: date */
       validUntil: string | null
       subtotal: number
+      discount:
+        | (
+            | {
+                /** @enum {string} */
+                type: "percent"
+                value: number
+              }
+            | {
+                /** @enum {string} */
+                type: "amount"
+                value: number
+              }
+          )
+        | null
+      discountTotal: number
       taxTotal: number
       total: number
       /** Format: date-time */
@@ -4392,6 +4480,20 @@ export interface components {
         /** @default 0 */
         taxRateBps: number
       }[]
+      discount?:
+        | (
+            | {
+                /** @enum {string} */
+                type: "percent"
+                value: number
+              }
+            | {
+                /** @enum {string} */
+                type: "amount"
+                value: number
+              }
+          )
+        | null
     }
     UpdateQuoteDto: {
       /** Format: uuid */
@@ -4411,6 +4513,20 @@ export interface components {
         /** @default 0 */
         taxRateBps: number
       }[]
+      discount?:
+        | (
+            | {
+                /** @enum {string} */
+                type: "percent"
+                value: number
+              }
+            | {
+                /** @enum {string} */
+                type: "amount"
+                value: number
+              }
+          )
+        | null
     }
     RegisterPushDeviceDto: {
       token: string
@@ -4769,6 +4885,21 @@ export interface components {
         reason: string
         currency: string
         subtotal: number
+        discount:
+          | (
+              | {
+                  /** @enum {string} */
+                  type: "percent"
+                  value: number
+                }
+              | {
+                  /** @enum {string} */
+                  type: "amount"
+                  value: number
+                }
+            )
+          | null
+        discountTotal: number
         taxTotal: number
         total: number
         appliedAmount: number
@@ -4794,6 +4925,21 @@ export interface components {
       reason: string
       currency: string
       subtotal: number
+      discount:
+        | (
+            | {
+                /** @enum {string} */
+                type: "percent"
+                value: number
+              }
+            | {
+                /** @enum {string} */
+                type: "amount"
+                value: number
+              }
+          )
+        | null
+      discountTotal: number
       taxTotal: number
       total: number
       appliedAmount: number
@@ -4869,6 +5015,20 @@ export interface components {
           unitPrice: number
           taxRateBps: number
         }[]
+        discount:
+          | (
+              | {
+                  /** @enum {string} */
+                  type: "percent"
+                  value: number
+                }
+              | {
+                  /** @enum {string} */
+                  type: "amount"
+                  value: number
+                }
+            )
+          | null
         total: number
         every: number
         /** @enum {string} */
@@ -4910,6 +5070,20 @@ export interface components {
         unitPrice: number
         taxRateBps: number
       }[]
+      discount:
+        | (
+            | {
+                /** @enum {string} */
+                type: "percent"
+                value: number
+              }
+            | {
+                /** @enum {string} */
+                type: "amount"
+                value: number
+              }
+          )
+        | null
       total: number
       every: number
       /** @enum {string} */
@@ -4971,6 +5145,20 @@ export interface components {
       endDate?: string | null
       maxOccurrences?: number | null
       dueDays?: number | null
+      discount?:
+        | (
+            | {
+                /** @enum {string} */
+                type: "percent"
+                value: number
+              }
+            | {
+                /** @enum {string} */
+                type: "amount"
+                value: number
+              }
+          )
+        | null
       /**
        * @default draft
        * @enum {string}
@@ -4989,6 +5177,20 @@ export interface components {
         /** @default 0 */
         taxRateBps: number
       }[]
+      discount?:
+        | (
+            | {
+                /** @enum {string} */
+                type: "percent"
+                value: number
+              }
+            | {
+                /** @enum {string} */
+                type: "amount"
+                value: number
+              }
+          )
+        | null
       every?: number
       /** @enum {string} */
       unit?: "week" | "month" | "year"
@@ -5016,6 +5218,20 @@ export interface components {
           unitPrice: number
           taxRateBps: number
         }[]
+        discount:
+          | (
+              | {
+                  /** @enum {string} */
+                  type: "percent"
+                  value: number
+                }
+              | {
+                  /** @enum {string} */
+                  type: "amount"
+                  value: number
+                }
+            )
+          | null
         total: number
         every: number
         /** @enum {string} */
@@ -5205,6 +5421,21 @@ export interface components {
       /** Format: date */
       dueDate: string | null
       subtotal: number
+      discount:
+        | (
+            | {
+                /** @enum {string} */
+                type: "percent"
+                value: number
+              }
+            | {
+                /** @enum {string} */
+                type: "amount"
+                value: number
+              }
+          )
+        | null
+      discountTotal: number
       taxTotal: number
       total: number
       amountPaid: number
@@ -6205,6 +6436,21 @@ export interface components {
         taxAmount: number
       }[]
       subtotal: number
+      discount:
+        | (
+            | {
+                /** @enum {string} */
+                type: "percent"
+                value: number
+              }
+            | {
+                /** @enum {string} */
+                type: "amount"
+                value: number
+              }
+          )
+        | null
+      discountTotal: number
       taxTotal: number
       issuer: {
         name: string
@@ -6281,6 +6527,21 @@ export interface components {
         taxAmount: number
       }[]
       subtotal: number
+      discount:
+        | (
+            | {
+                /** @enum {string} */
+                type: "percent"
+                value: number
+              }
+            | {
+                /** @enum {string} */
+                type: "amount"
+                value: number
+              }
+          )
+        | null
+      discountTotal: number
       taxTotal: number
       issuer: {
         name: string

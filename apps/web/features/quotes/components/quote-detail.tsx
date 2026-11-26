@@ -276,6 +276,8 @@ function QuoteDetailView({ quote }: { quote: Quote }) {
         currency={quote.currency}
         locale={locale}
         subtotal={quote.subtotal}
+        discount={quote.discount}
+        discountTotal={quote.discountTotal}
         taxTotal={quote.taxTotal}
         total={quote.total}
         notes={quote.notes}

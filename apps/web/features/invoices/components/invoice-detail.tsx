@@ -279,6 +279,8 @@ function InvoiceDetailView({ invoice }: { invoice: Invoice }) {
         currency={invoice.currency}
         locale={locale}
         subtotal={invoice.subtotal}
+        discount={invoice.discount}
+        discountTotal={invoice.discountTotal}
         taxTotal={invoice.taxTotal}
         total={invoice.total}
         extraTotals={

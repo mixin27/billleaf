@@ -282,6 +282,8 @@ export class PortalService {
       currency: q.currency,
       total: q.total,
       subtotal: q.subtotal,
+      discount: q.discount,
+      discountTotal: q.discountTotal,
       taxTotal: q.taxTotal,
       notes: q.notes,
       terms: q.terms,
@@ -318,6 +320,8 @@ export class PortalService {
       amountCredited: i.amountCredited,
       amountDue: i.status === "void" ? 0 : i.amountDue,
       subtotal: i.subtotal,
+      discount: i.discount,
+      discountTotal: i.discountTotal,
       taxTotal: i.taxTotal,
       notes: i.notes,
       terms: i.terms,
@@ -396,6 +400,10 @@ export class PortalService {
         ]),
         notes: q.notes,
         terms: q.terms,
+        // Only when there is one, so earlier quotes hash as they did.
+        ...(q.discountTotal
+          ? { discount: q.discount, discountTotal: q.discountTotal }
+          : {}),
       })
     )
   }

@@ -2,6 +2,7 @@ import { z } from "zod"
 
 import { paged, pageQuerySchema, sortQuery } from "../common/pagination.js"
 import {
+  discountSchema,
   lineItemInputSchema,
   lineItemSchema,
   MAX_LINES,
@@ -32,6 +33,9 @@ export const creditNoteSummarySchema = z.object({
   reason: z.string(),
   currency: z.string(),
   subtotal: z.number().int(),
+  /** Document discount, taken off before tax. */
+  discount: discountSchema.nullable(),
+  discountTotal: z.number().int(),
   taxTotal: z.number().int(),
   total: z.number().int(),
   appliedAmount: z.number().int(),

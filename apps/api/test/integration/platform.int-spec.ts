@@ -349,6 +349,95 @@ describe("invoices", () => {
   })
 })
 
+describe("discounts", () => {
+  it("takes a discount off before tax, carries it from quote to invoice to credit note", async () => {
+    const owner = new Client(t)
+    await owner.signUp("Discounter")
+    await owner.createWorkspace("Discounts")
+    const client = (
+      await owner.post("/v1/clients", {
+        name: "Bargain",
+        email: "ap@bargain.test",
+      })
+    ).body
+    const lines = [
+      {
+        description: "Build",
+        quantity: 1,
+        unitPrice: 10_000,
+        taxRateBps: 1_000,
+      },
+      { description: "Hosting", quantity: 1, unitPrice: 5_000 },
+    ]
+
+    // 10% off 150.00 = 15.00; tax 10% of the discounted 90.00 = 9.00.
+    const quote = (
+      await owner.post("/v1/quotes", {
+        clientId: client.id,
+        lines,
+        discount: { type: "percent", value: 1_000 },
+      })
+    ).body
+    expect(quote).toMatchObject({
+      subtotal: 15_000,
+      discount: { type: "percent", value: 1_000 },
+      discountTotal: 1_500,
+      taxTotal: 900,
+      total: 14_400,
+    })
+
+    // Changing only the discount recomputes the totals from the stored lines.
+    const fixed = (
+      await owner.patch(`/v1/quotes/${quote.id}`, {
+        discount: { type: "amount", value: 3_000 },
+      })
+    ).body
+    expect(fixed).toMatchObject({
+      discountTotal: 3_000,
+      taxTotal: 800,
+      total: 12_800,
+    })
+    expect(
+      (await owner.patch(`/v1/quotes/${quote.id}`, { discount: null })).body
+    ).toMatchObject({ discount: null, discountTotal: 0, total: 16_000 })
+    await owner.patch(`/v1/quotes/${quote.id}`, {
+      discount: { type: "percent", value: 1_000 },
+    })
+
+    await owner.post(`/v1/quotes/${quote.id}/send`)
+    await owner.post(`/v1/quotes/${quote.id}/accept`)
+    const invoice = (await owner.post(`/v1/invoices/from-quote/${quote.id}`))
+      .body
+    expect(invoice).toMatchObject({
+      discount: { type: "percent", value: 1_000 },
+      discountTotal: 1_500,
+      total: 14_400,
+    })
+    await owner.post(`/v1/invoices/${invoice.id}/issue`)
+
+    const pdf = await t.app.inject({
+      method: "GET",
+      url: `/v1/invoices/${invoice.id}/pdf`,
+      headers: owner.headers(),
+    })
+    expect(pdf.statusCode).toBe(200)
+
+    // A full credit note credits exactly the discounted total.
+    const note = await owner.post(`/v1/invoices/${invoice.id}/credit-notes`, {
+      full: true,
+      reason: "Cancelled",
+    })
+    expect(note.status).toBe(201)
+    expect(note.body).toMatchObject({
+      discountTotal: 1_500,
+      total: 14_400,
+    })
+    expect((await owner.get(`/v1/invoices/${invoice.id}`)).body).toMatchObject({
+      amountDue: 0,
+    })
+  })
+})
+
 describe("payments & receipts", () => {
   it("prevents overpayment under concurrency, issues receipts, refunds, and blocks void while paid", async () => {
     const owner = new Client(t)

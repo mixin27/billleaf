@@ -3,9 +3,17 @@
 import { documentTotals, lineAmounts } from "@workspace/contracts"
 import { Button } from "@workspace/ui/components/button"
 import { Input } from "@workspace/ui/components/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@workspace/ui/components/select"
 import { Textarea } from "@workspace/ui/components/textarea"
 import {
   type Control,
+  Controller,
   useFieldArray,
   type UseFormRegister,
   useWatch,
@@ -13,13 +21,26 @@ import {
 
 import { money } from "@/lib/format"
 
-import { emptyLine, type LineFormValues, parseLine } from "./line-items"
+import {
+  type DiscountFormValues,
+  emptyLine,
+  type LineFormValues,
+  parseDiscount,
+  parseLine,
+} from "./line-items"
 
-type WithLines = { lines: LineFormValues[] }
+type WithLines = { lines: LineFormValues[] } & DiscountFormValues
+
+const DISCOUNT_TYPES = {
+  none: "No discount",
+  percent: "Discount %",
+  amount: "Discount amount",
+}
 
 /**
- * Line items + live totals for any form with a `lines` field array.
- * Totals use the same shared math as the API, so the preview is exact.
+ * Line items, an optional discount and live totals for any form with a
+ * `lines` field array and the discount fields. Totals use the same shared
+ * math as the API, so the preview is exact.
  */
 export function LineItemsEditor<T extends WithLines>({
   control: formControl,
@@ -43,12 +64,18 @@ export function LineItemsEditor<T extends WithLines>({
   const watched =
     (useWatch({ control, name: "lines" }) as LineFormValues[] | undefined) ?? []
   const parsed = watched.map((l) => parseLine(l, currency))
+  const [discountType, discountValue] = useWatch({
+    control,
+    name: ["discountType", "discountValue"],
+  })
+  const discount = parseDiscount({ discountType, discountValue }, currency)
   const totals = documentTotals(
     parsed.map((l) => ({
       quantity: l.quantity ?? 0,
       unitPrice: l.unitPrice ?? 0,
       taxRateBps: l.taxRateBps ?? 0,
-    }))
+    })),
+    discount
   )
 
   return (
@@ -131,10 +158,60 @@ export function LineItemsEditor<T extends WithLines>({
         Add line
       </Button>
 
-      <dl className="ml-auto grid w-full max-w-xs grid-cols-2 gap-1 text-sm">
+      <dl className="ml-auto grid w-full max-w-sm grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1 text-sm">
         <dt className="text-muted-foreground">Subtotal</dt>
         <dd className="text-right tabular-nums">
           {money(totals.subtotal, currency, locale)}
+        </dd>
+        <dt className="flex items-center gap-2">
+          <Controller
+            control={control}
+            name="discountType"
+            render={({ field }) => (
+              <Select
+                items={DISCOUNT_TYPES}
+                value={field.value ?? "none"}
+                onValueChange={(v) => field.onChange(v ?? "none")}
+              >
+                <SelectTrigger
+                  size="sm"
+                  aria-label="Discount"
+                  className="w-auto min-w-0 text-muted-foreground"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(DISCOUNT_TYPES).map(([k, label]) => (
+                    <SelectItem key={k} value={k}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          />
+          {discountType && discountType !== "none" ? (
+            <Input
+              aria-label={
+                discountType === "percent"
+                  ? "Discount percent"
+                  : `Discount amount in ${currency}`
+              }
+              inputMode="decimal"
+              placeholder={discountType === "percent" ? "10" : "0.00"}
+              className="h-7 w-24"
+              aria-invalid={discount === undefined}
+              {...register("discountValue")}
+            />
+          ) : null}
+          {discountType === "percent" ? (
+            <span className="text-muted-foreground">%</span>
+          ) : null}
+        </dt>
+        <dd className="text-right tabular-nums">
+          {totals.discountTotal
+            ? `−${money(totals.discountTotal, currency, locale)}`
+            : "—"}
         </dd>
         <dt className="text-muted-foreground">Tax</dt>
         <dd className="text-right tabular-nums">

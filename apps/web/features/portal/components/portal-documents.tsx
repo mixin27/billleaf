@@ -114,6 +114,8 @@ export function PortalQuoteView({ slug, id }: { slug: string; id: string }) {
         lines={d.lines}
         currency={d.currency}
         subtotal={d.subtotal}
+        discount={d.discount}
+        discountTotal={d.discountTotal}
         taxTotal={d.taxTotal}
         total={d.total}
         notes={d.notes}
@@ -153,6 +155,8 @@ export function PortalInvoiceView({ slug, id }: { slug: string; id: string }) {
           lines={d.lines}
           currency={d.currency}
           subtotal={d.subtotal}
+          discount={d.discount}
+          discountTotal={d.discountTotal}
           taxTotal={d.taxTotal}
           total={d.total}
           extraTotals={

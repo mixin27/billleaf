@@ -9,6 +9,7 @@ import {
   type CreditNote,
   type CreditNoteList,
   type CreditNoteSummary,
+  discountLabel,
   documentTotals,
   formatMoney,
   type ListCreditNotesQuery,
@@ -34,7 +35,10 @@ import { ClientsRepository } from "../clients/clients.repository.js"
 import { DocumentNumberingService } from "../documents/document-numbering.service.js"
 import { renderDocumentPdf } from "../documents/document-pdf.js"
 import {
+  discountColumns,
+  discountOf,
   type ParsedLine,
+  toLineInput,
   toLineItem,
   toLineValues,
 } from "../documents/line-values.js"
@@ -118,6 +122,8 @@ export class CreditNotesService {
       reason: n.reason,
       currency: n.currency,
       subtotal: n.subtotal,
+      discount: discountOf(n),
+      discountTotal: n.discountTotal,
       taxTotal: n.taxTotal,
       total: n.total,
       appliedAmount: n.appliedAmount,
@@ -234,15 +240,13 @@ export class CreditNotesService {
           "The credit note can't be dated before the invoice"
         )
 
+      // A full credit copies the invoice's lines and its discount; credited
+      // lines are entered as they should be credited.
       const lines: ParsedLine[] = input.full
-        ? (await this.invoicesRepo.lines(invoiceId, tx)).map((l) => ({
-            description: l.description,
-            quantity: Number(l.quantity),
-            unitPrice: l.unitPrice,
-            taxRateBps: l.taxRateBps,
-          }))
+        ? (await this.invoicesRepo.lines(invoiceId, tx)).map(toLineInput)
         : (input.lines as ParsedLine[])
-      const totals = documentTotals(lines)
+      const discount = input.full ? discountOf(invoice) : null
+      const totals = documentTotals(lines, discount)
       if (totals.total <= 0)
         throw new BadRequestException("The credit must be more than zero")
       // Already credited = applied to the balance + refunds of issued notes.
@@ -291,6 +295,7 @@ export class CreditNotesService {
           issueDate,
           reason: input.reason,
           currency: invoice.currency,
+          ...discountColumns(discount),
           ...totals,
           appliedAmount: applied,
           refundAmount: refund,
@@ -299,7 +304,7 @@ export class CreditNotesService {
         })
         .returning({ id: creditNotes.id })
       await tx.insert(creditNoteLines).values(
-        toLineValues(lines).map((l) => ({
+        toLineValues(lines, discount).map((l) => ({
           ...l,
           workspaceId: this.ctx.workspaceId,
           creditNoteId: note!.id,
@@ -379,6 +384,17 @@ export class CreditNotesService {
       total: n.total,
       totals: [
         { label: "Subtotal", ...money(n.subtotal) },
+        ...(n.discountTotal > 0
+          ? [
+              {
+                label:
+                  n.discount?.type === "percent"
+                    ? `Discount (${discountLabel(n.discount)})`
+                    : "Discount",
+                ...money(-n.discountTotal),
+              },
+            ]
+          : []),
         { label: "Tax", ...money(n.taxTotal) },
         { label: "Total credit", ...money(n.total), bold: true },
         ...(n.appliedAmount > 0
