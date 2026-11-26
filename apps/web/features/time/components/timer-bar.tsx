@@ -24,6 +24,7 @@ import { cn } from "@workspace/ui/lib/utils"
 import * as React from "react"
 import { toast } from "sonner"
 
+import { DateInput } from "@/components/form/date-input"
 import { errorMessage } from "@/lib/api"
 
 import { useCreateFavorite } from "../api/favorites"
@@ -593,12 +594,12 @@ function ManualFields({ today }: { today: string }) {
             onChange={(e) => setTo(e.target.value)}
             className="h-8 w-[5.5rem] px-1.5 tabular-nums"
           />
-          <Input
-            type="date"
+          <DateInput
             aria-label="Date"
+            className="w-[9.5rem]"
             value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="h-8 w-[8.5rem] px-1.5"
+            onChange={(v) => setDate(v)}
+            required
           />
         </div>
         <Input

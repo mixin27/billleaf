@@ -32,6 +32,7 @@ import {
   LineItemsEditor,
   useLinesValid,
 } from "@/components/documents/line-items-editor"
+import { DateInput } from "@/components/form/date-input"
 import { CurrencySelect } from "@/components/form/currency-select"
 import { Field } from "@/components/form/field"
 import { useClients } from "@/features/clients"
@@ -289,11 +290,19 @@ export function RecurringEditor({ schedule }: { schedule?: RecurringInvoice }) {
               : "Later invoices keep this day of the month"
           }
         >
-          <Input
-            id="startDate"
-            type="date"
-            disabled={Boolean(schedule)}
-            {...register("startDate", { required: true })}
+          <Controller
+            control={control}
+            name="startDate"
+            render={({ field }) => (
+              <DateInput
+                id="startDate"
+                value={field.value}
+                onChange={field.onChange}
+                onBlur={field.onBlur}
+                required
+                disabled={Boolean(schedule)}
+              />
+            )}
           />
         </Field>
         <Field
@@ -347,10 +356,18 @@ export function RecurringEditor({ schedule }: { schedule?: RecurringInvoice }) {
           </Field>
         ) : end === "date" ? (
           <Field label="Last invoice on or before" htmlFor="endDate">
-            <Input
-              id="endDate"
-              type="date"
-              {...register("endDate", { required: true })}
+            <Controller
+              control={control}
+              name="endDate"
+              render={({ field }) => (
+                <DateInput
+                  id="endDate"
+                  value={field.value}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                  required
+                />
+              )}
             />
           </Field>
         ) : null}

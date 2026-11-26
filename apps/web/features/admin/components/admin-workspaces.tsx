@@ -21,7 +21,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@workspace/ui/components/dialog"
-import { Input } from "@workspace/ui/components/input"
 import {
   Select,
   SelectContent,
@@ -45,6 +44,7 @@ import {
   DataTableToolbar,
   useDataTableState,
 } from "@/components/data-table"
+import { DateInput } from "@/components/form/date-input"
 import { Field } from "@/components/form/field"
 import { PageHeader } from "@/components/page-header"
 import { errorMessage } from "@/lib/api"
@@ -455,11 +455,11 @@ function SetPlanDialog({
               hint="Empty = no end date. After it, the workspace returns to Free."
               className="sm:col-span-2"
             >
-              <Input
+              <DateInput
                 id="sp-end"
-                type="date"
                 value={periodEnd}
-                onChange={(e) => setPeriodEnd(e.target.value)}
+                onChange={(v) => setPeriodEnd(v)}
+                placeholder="No end date"
               />
             </Field>
           ) : null}

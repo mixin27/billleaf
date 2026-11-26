@@ -34,6 +34,7 @@ import { useRouter } from "next/navigation"
 import * as React from "react"
 import { toast } from "sonner"
 
+import { DateInput } from "@/components/form/date-input"
 import { SendDialog } from "@/components/documents/send-dialog"
 import { Field } from "@/components/form/field"
 import { usePermissions } from "@/components/permissions/can"
@@ -350,12 +351,11 @@ function ContractDetailView({ contract: c }: { contract: Contract }) {
               />
             </Field>
             <Field label="Date signed" htmlFor="signedAt">
-              <Input
+              <DateInput
                 id="signedAt"
-                type="date"
                 max={today()}
                 value={signer.date}
-                onChange={(e) => setSigner({ ...signer, date: e.target.value })}
+                onChange={(v) => setSigner({ ...signer, date: v })}
               />
             </Field>
           </form>

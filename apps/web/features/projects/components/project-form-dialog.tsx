@@ -27,6 +27,7 @@ import { Textarea } from "@workspace/ui/components/textarea"
 import * as React from "react"
 import { toast } from "sonner"
 
+import { DateInput } from "@/components/form/date-input"
 import { CurrencySelect } from "@/components/form/currency-select"
 import { Field } from "@/components/form/field"
 import { useClients } from "@/features/clients"
@@ -277,11 +278,10 @@ export function ProjectFormDialog({
             <div className="hidden sm:block" />
           )}
           <Field label="Start date" htmlFor="project-start">
-            <Input
+            <DateInput
               id="project-start"
-              type="date"
               value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
+              onChange={(v) => setStartDate(v)}
             />
           </Field>
           <Field
@@ -293,11 +293,10 @@ export function ProjectFormDialog({
                 : undefined
             }
           >
-            <Input
+            <DateInput
               id="project-due"
-              type="date"
               value={dueDate}
-              onChange={(e) => setDueDate(e.target.value)}
+              onChange={(v) => setDueDate(v)}
             />
           </Field>
           <Field

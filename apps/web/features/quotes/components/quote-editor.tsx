@@ -34,6 +34,7 @@ import {
   LineItemsEditor,
   useLinesValid,
 } from "@/components/documents/line-items-editor"
+import { DateInput } from "@/components/form/date-input"
 import { CurrencySelect } from "@/components/form/currency-select"
 import { Field } from "@/components/form/field"
 import { useClients } from "@/features/clients"
@@ -235,14 +236,38 @@ export function QuoteEditor({
           htmlFor="issueDate"
           hint={quote ? undefined : "Blank = today"}
         >
-          <Input id="issueDate" type="date" {...register("issueDate")} />
+          <Controller
+            control={control}
+            name="issueDate"
+            render={({ field }) => (
+              <DateInput
+                id="issueDate"
+                value={field.value}
+                onChange={field.onChange}
+                onBlur={field.onBlur}
+                placeholder="Today"
+              />
+            )}
+          />
         </Field>
         <Field
           label="Valid until"
           htmlFor="validUntil"
           hint={quote ? undefined : "Blank = 30 days after issue"}
         >
-          <Input id="validUntil" type="date" {...register("validUntil")} />
+          <Controller
+            control={control}
+            name="validUntil"
+            render={({ field }) => (
+              <DateInput
+                id="validUntil"
+                value={field.value}
+                onChange={field.onChange}
+                onBlur={field.onBlur}
+                placeholder="30 days after issue"
+              />
+            )}
+          />
         </Field>
       </div>
 

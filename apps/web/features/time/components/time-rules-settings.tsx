@@ -8,7 +8,6 @@ import {
 } from "@workspace/contracts"
 import { Button } from "@workspace/ui/components/button"
 import { Card, CardContent } from "@workspace/ui/components/card"
-import { Input } from "@workspace/ui/components/input"
 import {
   Select,
   SelectContent,
@@ -19,6 +18,7 @@ import {
 import * as React from "react"
 import { toast } from "sonner"
 
+import { DateInput } from "@/components/form/date-input"
 import { Field } from "@/components/form/field"
 import { usePermissions } from "@/components/permissions/can"
 import {
@@ -136,13 +136,12 @@ export function TimeRulesSettings() {
             }
           >
             <div className="flex gap-1.5">
-              <Input
+              <DateInput
                 id="time-lock"
-                type="date"
                 max={today}
                 value={lock}
                 disabled={!editable}
-                onChange={(e) => setLock(e.target.value)}
+                onChange={(v) => setLock(v)}
               />
               {lock && editable ? (
                 <Button

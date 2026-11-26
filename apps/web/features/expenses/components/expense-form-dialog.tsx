@@ -31,6 +31,7 @@ import { Textarea } from "@workspace/ui/components/textarea"
 import * as React from "react"
 import { toast } from "sonner"
 
+import { DateInput } from "@/components/form/date-input"
 import { CurrencySelect } from "@/components/form/currency-select"
 import { Field } from "@/components/form/field"
 import { useClients } from "@/features/clients"
@@ -181,12 +182,11 @@ export function ExpenseFormDialog({
           }}
         >
           <Field label="Date" htmlFor="ex-date">
-            <Input
+            <DateInput
               id="ex-date"
-              type="date"
               required
               value={spentOn}
-              onChange={(e) => setSpentOn(e.target.value)}
+              onChange={(v) => setSpentOn(v)}
             />
           </Field>
           <Field label="Vendor" htmlFor="ex-vendor" hint="Who you paid.">

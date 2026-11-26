@@ -34,6 +34,7 @@ import {
   DataTableEmpty,
   useDataTableState,
 } from "@/components/data-table"
+import { DateInput } from "@/components/form/date-input"
 import { usePermissions } from "@/components/permissions/can"
 import { ColumnChart, type BarDatum } from "@/features/dashboard"
 import { useProjects } from "@/features/projects"
@@ -246,25 +247,21 @@ export function TimeReports({ today }: { today: string }) {
         </Select>
         {s.range === "custom" ? (
           <>
-            <Input
-              type="date"
+            <DateInput
               aria-label="From"
               value={from}
               max={to}
-              onChange={(e) =>
-                e.target.value && void set({ from: e.target.value })
-              }
+              onChange={(v) => v && void set({ from: v })}
               className="w-40"
+              required
             />
-            <Input
-              type="date"
+            <DateInput
               aria-label="To"
               value={to}
               min={from}
-              onChange={(e) =>
-                e.target.value && void set({ to: e.target.value })
-              }
+              onChange={(v) => v && void set({ to: v })}
               className="w-40"
+              required
             />
           </>
         ) : (
