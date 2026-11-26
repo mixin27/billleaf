@@ -22,6 +22,8 @@ type Plan = {
     clients: number | null
     invoicesPerMonth: number | null
     storageMb: number | null
+    /** Active (not archived) cashbooks. */
+    cashbooks: number | null
   }
   features: {
     customBranding: boolean
@@ -38,7 +40,13 @@ export const PLANS = {
     name: "Free",
     description: "For trying Billleaf with your first clients.",
     prices: null,
-    limits: { members: 1, clients: 5, invoicesPerMonth: 10, storageMb: 100 },
+    limits: {
+      members: 1,
+      clients: 5,
+      invoicesPerMonth: 10,
+      storageMb: 100,
+      cashbooks: 2,
+    },
     features: {
       customBranding: false,
       recurringInvoices: false,
@@ -57,6 +65,7 @@ export const PLANS = {
       clients: null,
       invoicesPerMonth: null,
       storageMb: 5_000,
+      cashbooks: null,
     },
     features: {
       customBranding: true,
@@ -76,6 +85,7 @@ export const PLANS = {
       clients: null,
       invoicesPerMonth: null,
       storageMb: 50_000,
+      cashbooks: null,
     },
     features: {
       customBranding: true,
@@ -96,6 +106,7 @@ export const LIMIT_LABELS: Record<LimitKey, string> = {
   clients: "active clients",
   invoicesPerMonth: "issued invoices per month",
   storageMb: "MB of file storage",
+  cashbooks: "cashbooks",
 }
 export const FEATURE_LABELS: Record<FeatureKey, string> = {
   customBranding: "Your logo and colours on documents",
@@ -181,6 +192,7 @@ const usage = z.object({
   clients: z.number().int(),
   invoicesPerMonth: z.number().int(),
   storageMb: z.number(),
+  cashbooks: z.number().int(),
 })
 
 export const billingOverviewSchema = z.object({

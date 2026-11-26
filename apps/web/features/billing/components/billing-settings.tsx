@@ -34,12 +34,14 @@ const METER_LABELS: Record<LimitKey, string> = {
   clients: "Active clients",
   invoicesPerMonth: "Invoices issued this month",
   storageMb: "File storage (MB)",
+  cashbooks: "Cashbooks",
 }
 const LIMITS: LimitKey[] = [
   "members",
   "clients",
   "invoicesPerMonth",
   "storageMb",
+  "cashbooks",
 ]
 
 /** "1 member", "5 active clients", "5 GB of file storage", "Unlimited …". */

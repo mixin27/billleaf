@@ -91,6 +91,10 @@ export const PERMISSION_CATALOG = {
     update: "Edit expenses and categories",
     delete: "Delete expenses",
   },
+  cashbook: {
+    create: "Create cashbooks (and use the ones you're added to)",
+    manage: "See and manage every cashbook in the workspace",
+  },
   payment: {
     read: "View payments and receipts",
     record: "Record payments and issue receipts",
@@ -174,6 +178,7 @@ export const SYSTEM_ROLES = {
       "time.track",
       "expense.create",
       "expense.update",
+      "cashbook.create",
     ] satisfies Permission[],
     locked: false,
   },
@@ -191,6 +196,7 @@ export const SYSTEM_ROLES = {
       "expense.create",
       "expense.update",
       "expense.delete",
+      "cashbook.create",
     ] satisfies Permission[],
     locked: false,
   },

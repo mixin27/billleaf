@@ -31,6 +31,7 @@ const LIMITS: LimitKey[] = [
   "clients",
   "invoicesPerMonth",
   "storageMb",
+  "cashbooks",
 ]
 
 const FAQ: { q: string; a: string }[] = [

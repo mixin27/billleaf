@@ -1,0 +1,55 @@
+---
+title: Cashbook
+description: Record money in and out every day, book by book, with a running balance.
+---
+
+A cashbook is a simple running record of cash: **Cash in** when money comes in, **Cash out** when it goes out, and the balance after every entry. It's kept apart from [expenses](/docs/books/expenses), invoices and payments: nothing is added to a book unless you add it.
+
+Keep as many books as you need, each in its own currency, for example **Shop**, **Home** or **Project X**.
+
+## Books
+
+**Cashbook → Add new book**: give it a name and a currency (your workspace currency by default). Each book shows its net balance, total in and total out.
+
+- **Archive** a book you no longer use. Its entries stay; unarchive it to add more.
+- The **Free** plan has 2 active books; Pro and Team have no limit.
+
+## Adding entries
+
+Open a book and tap **+ Cash in** or **− Cash out**:
+
+- **Amount**. MMK is entered in whole kyat.
+- **Date and time**: now by default; change them for an earlier entry. The running balance follows the date and time, so back-dated entries land in the right place.
+- **Remark**, and optionally a **contact**, a **category** (e.g. Sales, Stock) and a **payment mode** (Cash and Online are ready; add your own, such as KBZPay).
+- **Attachments**: up to 5 photos or PDFs (5 MB each), such as a receipt or a transfer screenshot.
+
+**Save and add new** keeps the screen open for the next entry.
+
+Under a book's **Settings → Entry fields**, you can hide the contact, category or payment mode fields if a book doesn't need them.
+
+## Balance, filters and reports
+
+The top of a book shows the **net balance**, **total in** and **total out**. Filter by date (today, yesterday, this month, last month or your own range), by type, category, payment mode or who added the entry, or search a remark, contact or amount. The totals follow the filters.
+
+**View reports** for a date range shows the opening balance, totals and closing balance, day by day, by category and by payment mode. Download the entries as **CSV** (opens in Excel) or a **PDF statement**.
+
+## Editing and history
+
+Tap an entry to see it in full. Edit or delete it if your role allows. Edited entries are marked **Edited**, and **Activity** shows who changed what, with the old and new values. Deleted entries leave the balance but stay in the [audit log](/docs/account-and-data).
+
+Admins can select several entries to **move** or **copy** them to another book in the same currency.
+
+## Sharing a book
+
+Each book has its own members. Whoever creates a book is its **owner**. Under **Members**, add people from your workspace with a role:
+
+| Role         | Can                                                                      |
+| ------------ | ------------------------------------------------------------------------ |
+| **Owner**    | Everything, including members, currency, archiving and deleting the book |
+| **Admin**    | Add, edit and delete any entry; manage categories and payment modes      |
+| **Operator** | Add entries, and edit or delete their own for 24 hours                   |
+| **Viewer**   | See entries and reports, and download them                               |
+
+People only see the books they've been added to, so a shop book can be shared with staff while a home book stays private. Workspace Owners and Admins (the **See and manage every cashbook** permission) can open every book.
+
+Creating books needs the **Create cashbooks** permission, which the Admin, Member and Accountant roles have.
