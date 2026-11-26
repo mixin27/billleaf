@@ -100,6 +100,43 @@ export default function AppLayout() {
             name="payment-void"
             options={{ presentation: "modal" }}
           />
+          <Stack.Screen name="book-new" options={{ presentation: "modal" }} />
+          <Stack.Screen
+            name="book-filters"
+            options={{ presentation: "modal" }}
+          />
+          <Stack.Screen
+            name="cashbook-entry-edit"
+            options={{ presentation: "modal" }}
+          />
+          <Stack.Screen
+            name="cashbook-transfer"
+            options={{ presentation: "modal" }}
+          />
+          <Stack.Screen
+            name="book/[id]"
+            options={{ ...pushed, title: "Cashbook", headerBackTitle: "Back" }}
+          />
+          <Stack.Screen
+            name="cashbook-entry"
+            options={{ ...pushed, title: "Entry", headerBackTitle: "Back" }}
+          />
+          <Stack.Screen
+            name="book-settings"
+            options={{
+              ...pushed,
+              title: "Book settings",
+              headerBackTitle: "Back",
+            }}
+          />
+          <Stack.Screen
+            name="book-members"
+            options={{ ...pushed, title: "Members", headerBackTitle: "Back" }}
+          />
+          <Stack.Screen
+            name="book-report"
+            options={{ ...pushed, title: "Reports", headerBackTitle: "Back" }}
+          />
           <Stack.Screen
             name="invoice/[id]"
             options={{ ...pushed, title: "Invoice", headerBackTitle: "Back" }}

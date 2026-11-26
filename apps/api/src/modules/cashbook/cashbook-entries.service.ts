@@ -592,6 +592,7 @@ export class CashbookEntriesService {
         ? {
             memberId: x.createdByMemberId,
             name: r.creatorName ?? "Former member",
+            you: x.createdByMemberId === this.ctx.memberId,
           }
         : null,
       editable: this.access.canEditEntry(role, x, now),
