@@ -311,21 +311,24 @@ export async function renderDocumentPdf(d: DocumentPdfData): Promise<Buffer> {
   y += 40
 
   // Lines table
+  // Column widths as a share of the line. The money columns fit a
+  // 10-digit amount ("MMK 1,250,000,000", "$1,250,000.00") on one line.
+  const w = { desc: 0.44, qty: 0.07, price: 0.18, tax: 0.07, amt: 0.19 }
   const cols = {
     desc: left,
-    qty: left + width * 0.55,
-    price: left + width * 0.65,
-    tax: left + width * 0.8,
-    amt: left + width * 0.87,
+    qty: left + width * 0.46,
+    price: left + width * 0.54,
+    tax: left + width * 0.73,
+    amt: left + width * 0.81,
   }
   const right = (w: number): TextOpts => ({ width: width * w, align: "right" })
   const header = (yy: number) => {
     const s = { bold: true, size: 8, color: MUTED }
     write("DESCRIPTION", cols.desc, yy, {}, s)
-    write("QTY", cols.qty, yy, right(0.09), s)
-    write("UNIT PRICE", cols.price, yy, right(0.14), s)
-    if (!d.totals) write("TAX", cols.tax, yy, right(0.06), s)
-    write("AMOUNT", cols.amt, yy, right(0.13), s)
+    write("QTY", cols.qty, yy, right(w.qty), s)
+    write("UNIT PRICE", cols.price, yy, right(w.price), s)
+    if (!d.totals) write("TAX", cols.tax, yy, right(w.tax), s)
+    write("AMOUNT", cols.amt, yy, right(w.amt), s)
     doc
       .moveTo(left, yy + 13)
       .lineTo(left + width, yy + 13)
@@ -337,23 +340,23 @@ export async function renderDocumentPdf(d: DocumentPdfData): Promise<Buffer> {
   const cell = { size: 9, color: INK }
   for (const l of d.lines) {
     doc.fontSize(9)
-    const h = heightOf(l.description, width * 0.53)
+    const h = heightOf(l.description, width * w.desc)
     if (y + h > doc.page.height - 140) {
       doc.addPage()
       y = header(50)
     }
-    write(l.description, cols.desc, y, { width: width * 0.53 }, cell)
-    write(String(l.quantity), cols.qty, y, right(0.09), cell)
-    write(money(l.unitPrice), cols.price, y, right(0.14), cell)
+    write(l.description, cols.desc, y, { width: width * w.desc }, cell)
+    write(String(l.quantity), cols.qty, y, right(w.qty), cell)
+    write(money(l.unitPrice), cols.price, y, right(w.price), cell)
     if (!d.totals)
       write(
         l.taxRateBps ? `${l.taxRateBps / 100}%` : "—",
         cols.tax,
         y,
-        right(0.06),
+        right(w.tax),
         cell
       )
-    write(money(l.amount), cols.amt, y, right(0.13), cell)
+    write(money(l.amount), cols.amt, y, right(w.amt), cell)
     y += Math.max(h, 12) + 8
   }
   doc
