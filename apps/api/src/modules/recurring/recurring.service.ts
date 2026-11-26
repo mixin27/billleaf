@@ -20,6 +20,7 @@ import { type PageArgs } from "../../common/pagination.js"
 import { EntitlementsService } from "../../billing/entitlements.service.js"
 import { AuditService } from "../../iam/audit/audit.service.js"
 import { ClientsRepository } from "../clients/clients.repository.js"
+import { discountColumns, discountOf } from "../documents/line-values.js"
 import { addDays, todayIn } from "../documents/party-snapshot.js"
 import { InvoicesRepository } from "../invoices/invoices.repository.js"
 import { InvoicesService } from "../invoices/invoices.service.js"
@@ -44,7 +45,8 @@ export function toRecurringDto(r: RecurringRow): RecurringInvoice {
     title: r.title,
     currency: r.currency,
     lines: r.lines,
-    total: documentTotals(r.lines).total,
+    discount: discountOf(r),
+    total: documentTotals(r.lines, discountOf(r)).total,
     every: r.every,
     unit: r.unit,
     startDate: r.startDate,
@@ -139,6 +141,7 @@ export class RecurringService {
       mode: input.mode ?? "draft",
       notes: input.notes ?? null,
       terms: input.terms ?? null,
+      ...discountColumns(input.discount),
     })
     await this.audit.record("recurring.created", {
       resourceType: "recurring_invoice",
@@ -155,7 +158,9 @@ export class RecurringService {
     if (r.status === "ended" && input.status)
       throw new ConflictException("This schedule has ended")
     if (input.status === "active") await this.assertPlan()
-    const values: Record<string, unknown> = { ...input }
+    const { discount, ...rest } = input
+    const values: Record<string, unknown> = { ...rest }
+    if (discount !== undefined) Object.assign(values, discountColumns(discount))
     if (input.lines)
       values.lines = input.lines.map((l) => ({
         ...l,
@@ -223,6 +228,7 @@ export class RecurringService {
           notes: r.notes,
           terms: r.terms,
           lines: r.lines,
+          discount: discountOf(r),
         },
         { recurringId: r.id, recurringPeriod: period }
       )

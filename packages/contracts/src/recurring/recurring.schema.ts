@@ -3,7 +3,11 @@ import { z } from "zod"
 import { optionalText } from "../common/locale.js"
 import { currencyCodeSchema } from "../common/money.js"
 import { paged, pageQuerySchema, sortQuery } from "../common/pagination.js"
-import { lineItemInputSchema, MAX_LINES } from "../documents/line-items.js"
+import {
+  discountSchema,
+  lineItemInputSchema,
+  MAX_LINES,
+} from "../documents/line-items.js"
 
 /**
  * Recurring invoice schedules. Each run creates one invoice for its period
@@ -28,6 +32,8 @@ export const recurringInvoiceSchema = z.object({
   title: z.string().nullable(),
   currency: z.string(),
   lines: z.array(storedLine),
+  /** Applied to every generated invoice. */
+  discount: discountSchema.nullable(),
   /** Total per generated invoice (minor units), from the shared line math. */
   total: z.number().int(),
   every: z.number().int(),
@@ -75,6 +81,7 @@ const scheduleFields = {
     .max(365)
     .nullish()
     .transform((v) => v ?? null),
+  discount: discountSchema.nullish().transform((v) => v ?? null),
   mode: recurringModeSchema.default("draft"),
   notes: optionalText(5000),
   terms: optionalText(5000),
@@ -95,6 +102,7 @@ export const updateRecurringInvoiceSchema = z
     title: scheduleFields.title,
     currency: currencyCodeSchema,
     lines: scheduleFields.lines,
+    discount: discountSchema.nullable(),
     every: z.number().int().min(1).max(12),
     unit: recurrenceUnitSchema,
     endDate: z.iso.date().nullable(),

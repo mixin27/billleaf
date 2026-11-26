@@ -1,7 +1,11 @@
 import { z } from "zod"
 
 import { contractStatusSchema } from "../contracts/contracts.schema.js"
-import { lineItemSchema, partySnapshotSchema } from "../documents/line-items.js"
+import {
+  discountSchema,
+  lineItemSchema,
+  partySnapshotSchema,
+} from "../documents/line-items.js"
 import { invoiceDisplayStatusSchema } from "../invoices/invoices.schema.js"
 import {
   paymentAccountKindSchema,
@@ -141,6 +145,8 @@ const documentBody = {
   terms: z.string().nullable(),
   lines: z.array(lineItemSchema),
   subtotal: z.number().int(),
+  discount: discountSchema.nullable(),
+  discountTotal: z.number().int(),
   taxTotal: z.number().int(),
   issuer: partySnapshotSchema.nullable(),
   client: partySnapshotSchema.nullable(),

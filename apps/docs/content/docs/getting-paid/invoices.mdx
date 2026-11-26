@@ -7,7 +7,7 @@ description: Create, issue and send invoices, and follow what's owed.
 
 <Steps>
 <Step>
-**Invoices → New invoice** (or convert an accepted quote, or invoice a project's time or a client's expenses). Add lines with quantity, price and tax rate. The issue date defaults to today; the due date comes from your payment terms.
+**Invoices → New invoice** (or convert an accepted quote, or invoice a project's time or a client's expenses). Add lines with quantity, price and tax rate, and optionally a [discount](#discounts). The issue date defaults to today; the due date comes from your payment terms.
 </Step>
 <Step>
 **Issue** it. Billleaf gives it the next number with no gaps (for example `INV-0042`) and freezes your details and the client's on it.
@@ -16,22 +16,31 @@ description: Create, issue and send invoices, and follow what's owed.
 PDFs print names, addresses and line items in any language Billleaf supports, including Thai, Burmese, Chinese, Japanese and Korean. Chinese characters on their own use the style that matches your workspace locale (Traditional for zh-TW and zh-HK, otherwise Simplified).
 
 **Send** it by email. The client gets the PDF, your payment instructions and a link to view it in the [client portal](/docs/client-portal).
+
 </Step>
 </Steps>
 
 <Callout title="Issued invoices can't be edited" type="warn">
-That keeps your records trustworthy. To correct an issued invoice, issue a [credit note](/docs/getting-paid/credit-notes), or — if nothing has been paid — **void** it and issue a new one.
+  That keeps your records trustworthy. To correct an issued invoice, issue a
+  [credit note](/docs/getting-paid/credit-notes), or — if nothing has been paid
+  — **void** it and issue a new one.
 </Callout>
+
+## Discounts
+
+Under the line items, pick **Discount %** or **Discount amount** and enter it, for example `10` for 10% or a fixed amount in the invoice's currency. The discount comes off the subtotal **before tax**: it's shared across the lines in proportion to their amounts, and each line's tax is worked out on what's left, so mixed tax rates stay right. The invoice, PDF and client portal show it as its own line (**Discount (10%)**) between the subtotal and the tax. A fixed amount can't be more than the subtotal.
+
+A discount on a quote carries over when you convert it to an invoice, and a recurring schedule's discount applies to every invoice it creates. A full [credit note](/docs/getting-paid/credit-notes) credits the discounted total. To give a discount after an invoice is issued, use a credit note.
 
 ## Statuses
 
-| Status | Meaning |
-| --- | --- |
-| **Draft** | Not issued yet; editable, no number. |
-| **Open** | Issued, nothing paid yet, not past due. |
-| **Partially paid** | Some of it is paid or credited. |
-| **Overdue** | Past its due date and not fully settled. |
-| **Paid** | Paid (and/or credited) in full. |
-| **Void** | Cancelled. Kept for your records; its number isn't reused. |
+| Status             | Meaning                                                    |
+| ------------------ | ---------------------------------------------------------- |
+| **Draft**          | Not issued yet; editable, no number.                       |
+| **Open**           | Issued, nothing paid yet, not past due.                    |
+| **Partially paid** | Some of it is paid or credited.                            |
+| **Overdue**        | Past its due date and not fully settled.                   |
+| **Paid**           | Paid (and/or credited) in full.                            |
+| **Void**           | Cancelled. Kept for your records; its number isn't reused. |
 
 Amounts are kept per currency. **Home** shows what you're owed, how overdue it is, and payments received this month.

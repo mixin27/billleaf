@@ -11,6 +11,8 @@ const schedule = (over: Partial<RecurringRow> = {}): RecurringRow => ({
   clientName: "Acme",
   title: null,
   currency: "USD",
+  discountType: null,
+  discountValue: null,
   lines: [
     { description: "Retainer", quantity: 1, unitPrice: 1000, taxRateBps: 0 },
   ],

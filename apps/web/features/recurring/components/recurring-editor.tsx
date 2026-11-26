@@ -23,9 +23,12 @@ import { Controller, useForm, useWatch } from "react-hook-form"
 import { toast } from "sonner"
 
 import {
+  type DiscountFormValues,
   emptyLine,
   type LineFormValues,
+  parseDiscount,
   toApiLines,
+  toDiscountFormValues,
   toLineFormValues,
 } from "@/components/documents/line-items"
 import {
@@ -75,7 +78,7 @@ type Values = {
   notes: string
   terms: string
   lines: LineFormValues[]
-}
+} & DiscountFormValues
 
 function toValues(r: RecurringInvoice): Values {
   const frequency = `${r.every}:${r.unit}`
@@ -93,6 +96,7 @@ function toValues(r: RecurringInvoice): Values {
     notes: r.notes ?? "",
     terms: r.terms ?? "",
     lines: toLineFormValues(r.lines, r.currency),
+    ...toDiscountFormValues(r.discount, r.currency),
   }
 }
 
@@ -125,6 +129,8 @@ export function RecurringEditor({ schedule }: { schedule?: RecurringInvoice }) {
           notes: "",
           terms: "",
           lines: [emptyLine()],
+          discountType: "none",
+          discountValue: "",
         },
   })
   const { register, control, handleSubmit, formState, setValue } = form
@@ -157,11 +163,17 @@ export function RecurringEditor({ schedule }: { schedule?: RecurringInvoice }) {
       toast.error("Fix the highlighted line items")
       return
     }
+    const discount = parseDiscount(v, currency)
+    if (discount === undefined) {
+      toast.error("Fix the discount")
+      return
+    }
     const [every, unit] = v.frequency.split(":") as [string, RecurrenceUnit]
     const common = {
       title: v.title,
       currency,
       lines,
+      discount,
       every: Number(every),
       unit,
       endDate: v.end === "date" && v.endDate ? v.endDate : null,

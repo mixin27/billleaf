@@ -1,4 +1,5 @@
 import {
+  discountLabel,
   formatMoney,
   type Invoice,
   type Permission,
@@ -182,6 +183,16 @@ export default function InvoiceScreen() {
             <Section title="Items">
               <LineItems lines={inv.lines} money={money}>
                 <Total label="Subtotal" value={money(inv.subtotal)} />
+                {inv.discountTotal ? (
+                  <Total
+                    label={
+                      inv.discount?.type === "percent"
+                        ? `Discount (${discountLabel(inv.discount)})`
+                        : "Discount"
+                    }
+                    value={`−${money(inv.discountTotal)}`}
+                  />
+                ) : null}
                 {inv.taxTotal ? (
                   <Total label="Tax" value={money(inv.taxTotal)} />
                 ) : null}

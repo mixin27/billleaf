@@ -4,6 +4,7 @@ import { optionalText } from "../common/locale.js"
 import { currencyCodeSchema } from "../common/money.js"
 import { paged, pageQuerySchema, sortQuery } from "../common/pagination.js"
 import {
+  discountSchema,
   lineItemInputSchema,
   lineItemSchema,
   MAX_LINES,
@@ -56,6 +57,9 @@ export const invoiceSummarySchema = z.object({
   issueDate: isoDate,
   dueDate: isoDate.nullable(),
   subtotal: z.number().int(),
+  /** Document discount, taken off before tax. */
+  discount: discountSchema.nullable(),
+  discountTotal: z.number().int(),
   taxTotal: z.number().int(),
   total: z.number().int(),
   amountPaid: z.number().int(),
@@ -120,6 +124,7 @@ export const createInvoiceSchema = z.object({
   notes: optionalText(5000),
   terms: optionalText(5000),
   lines: lines.default([]),
+  discount: discountSchema.nullish(),
 })
 export type CreateInvoiceInput = z.input<typeof createInvoiceSchema>
 
@@ -134,6 +139,8 @@ export const updateInvoiceSchema = z
     terms: optionalText(5000),
     /** When present, replaces all lines. */
     lines,
+    /** null removes the discount. */
+    discount: discountSchema.nullable(),
   })
   .partial()
 export type UpdateInvoiceInput = z.input<typeof updateInvoiceSchema>

@@ -24,7 +24,10 @@ import { ClientsRepository } from "../clients/clients.repository.js"
 import { DocumentNumberingService } from "../documents/document-numbering.service.js"
 import { renderDocumentPdf } from "../documents/document-pdf.js"
 import {
+  discountColumns,
+  discountOf,
   type ParsedLine,
+  toLineInput,
   toLineItem,
   toLineValues,
 } from "../documents/line-values.js"
@@ -61,6 +64,8 @@ export function toQuoteSummary(
     issueDate: q.issueDate,
     validUntil: q.validUntil,
     subtotal: q.subtotal,
+    discount: discountOf(q),
+    discountTotal: q.discountTotal,
     taxTotal: q.taxTotal,
     total: q.total,
     createdAt: q.createdAt.toISOString(),
@@ -147,7 +152,8 @@ export class QuotesService {
     const client = await this.activeClient(input.clientId)
     const profile = await this.profile.get()
     const issueDate = input.issueDate ?? todayIn(profile.timezone)
-    const lines = toLineValues((input.lines ?? []) as ParsedLine[])
+    const discount = input.discount ?? null
+    const lines = toLineValues((input.lines ?? []) as ParsedLine[], discount)
     const id = await this.repo.create(
       {
         clientId: client.id,
@@ -160,7 +166,8 @@ export class QuotesService {
             : input.validUntil,
         notes: input.notes ?? null,
         terms: input.terms ?? null,
-        ...documentTotals(lines),
+        ...discountColumns(discount),
+        ...documentTotals(lines, discount),
       },
       lines
     )
@@ -183,14 +190,30 @@ export class QuotesService {
       if (input.clientId && input.clientId !== quote.clientId) {
         await this.activeClient(input.clientId)
       }
-      const { lines: inputLines, ...fields } = input
-      const lines = inputLines
-        ? toLineValues(inputLines as ParsedLine[])
+      const { lines: inputLines, discount: inputDiscount, ...fields } = input
+      // New lines or a new discount: recompute every line's tax and the totals.
+      const recompute = inputLines !== undefined || inputDiscount !== undefined
+      const discount =
+        inputDiscount !== undefined ? inputDiscount : discountOf(quote)
+      const lines = recompute
+        ? toLineValues(
+            (inputLines as ParsedLine[] | undefined) ??
+              (await this.repo.lines(id, tx)).map(toLineInput),
+            discount
+          )
         : undefined
       await this.repo.update(
         tx,
         id,
-        { ...(fields as object), ...(lines ? documentTotals(lines) : {}) },
+        {
+          ...(fields as object),
+          ...(lines
+            ? {
+                ...discountColumns(discount),
+                ...documentTotals(lines, discount),
+              }
+            : {}),
+        },
         lines
       )
     })
@@ -293,6 +316,7 @@ export class QuotesService {
       validUntil: addDays(issueDate, validityDays),
       notes: source.notes,
       terms: source.terms,
+      discount: source.discount,
       lines: source.lines.map(
         ({ description, quantity, unitPrice, taxRateBps }) => ({
           description,
@@ -356,6 +380,8 @@ export class QuotesService {
       locale: profile.locale,
       lines: quote.lines,
       subtotal: quote.subtotal,
+      discount: quote.discount,
+      discountTotal: quote.discountTotal,
       taxTotal: quote.taxTotal,
       total: quote.total,
       notes: quote.notes,

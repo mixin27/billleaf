@@ -34,6 +34,9 @@ export const recurringInvoices = pgTable(
     currency: text().notNull(),
     /** Template lines copied into each generated invoice. */
     lines: jsonb().$type<StoredLine[]>().notNull(),
+    /** Applied to each generated invoice: percent in bps, or minor units. */
+    discountType: text({ enum: ["percent", "amount"] }),
+    discountValue: integer(),
     every: integer().notNull().default(1),
     unit: text({ enum: ["week", "month", "year"] })
       .notNull()

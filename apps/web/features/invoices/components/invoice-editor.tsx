@@ -25,9 +25,12 @@ import { Controller, useForm, useWatch } from "react-hook-form"
 import { toast } from "sonner"
 
 import {
+  type DiscountFormValues,
   emptyLine,
   type LineFormValues,
+  parseDiscount,
   toApiLines,
+  toDiscountFormValues,
   toLineFormValues,
 } from "@/components/documents/line-items"
 import {
@@ -53,7 +56,7 @@ type Values = {
   notes: string
   terms: string
   lines: LineFormValues[]
-}
+} & DiscountFormValues
 
 function toValues(q: Invoice): Values {
   return {
@@ -65,6 +68,7 @@ function toValues(q: Invoice): Values {
     notes: q.notes ?? "",
     terms: q.terms ?? "",
     lines: toLineFormValues(q.lines, q.currency),
+    ...toDiscountFormValues(q.discount, q.currency),
   }
 }
 
@@ -96,6 +100,8 @@ export function InvoiceEditor({
           notes: "",
           terms: "",
           lines: [emptyLine()],
+          discountType: "none",
+          discountValue: "",
         },
   })
   const { register, control, handleSubmit, formState, setValue } = form
@@ -140,6 +146,11 @@ export function InvoiceEditor({
       toast.error("Fix the highlighted line items")
       return
     }
+    const discount = parseDiscount(v, currency)
+    if (discount === undefined) {
+      toast.error("Fix the discount")
+      return
+    }
     const body = {
       clientId: v.clientId,
       title: v.title,
@@ -150,6 +161,7 @@ export function InvoiceEditor({
       notes: v.notes,
       terms: v.terms,
       lines: apiLines,
+      discount,
     }
     try {
       const saved = invoice

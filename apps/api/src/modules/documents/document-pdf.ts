@@ -1,7 +1,12 @@
 import { readFileSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 
-import { formatMoney, type PartySnapshot } from "@workspace/contracts"
+import {
+  type Discount,
+  discountLabel,
+  formatMoney,
+  type PartySnapshot,
+} from "@workspace/contracts"
 import PDFDocument from "pdfkit"
 
 import { CJK, cjkFonts, cjkLangFor } from "./cjk-fonts.js"
@@ -27,6 +32,9 @@ export interface DocumentPdfData {
     amount: number
   }[]
   subtotal: number
+  /** Shown between Subtotal and Tax when there is one. */
+  discount?: Discount | null
+  discountTotal?: number
   taxTotal: number
   total: number
   /** Invoices: amount already paid and balance due. */
@@ -390,6 +398,13 @@ export async function renderDocumentPdf(d: DocumentPdfData): Promise<Buffer> {
     for (const t of d.totals) totalRow(t.label, money(t.amount), t.bold)
   } else {
     totalRow("Subtotal", money(d.subtotal))
+    if (d.discountTotal) {
+      const pct = d.discount ? discountLabel(d.discount) : null
+      totalRow(
+        pct ? `Discount (${pct})` : "Discount",
+        `−${money(d.discountTotal)}`
+      )
+    }
     totalRow("Tax", money(d.taxTotal))
     totalRow(`Total (${d.currency})`, money(d.total), true)
     if (d.amountPaid !== undefined && d.amountPaid > 0)

@@ -4,6 +4,7 @@ import { currencyCodeSchema } from "../common/money.js"
 import { paged, pageQuerySchema, sortQuery } from "../common/pagination.js"
 import { optionalText } from "../common/locale.js"
 import {
+  discountSchema,
   lineItemInputSchema,
   lineItemSchema,
   MAX_LINES,
@@ -38,6 +39,9 @@ export const quoteSummarySchema = z.object({
   issueDate: isoDate,
   validUntil: isoDate.nullable(),
   subtotal: z.number().int(),
+  /** Document discount, taken off before tax. */
+  discount: discountSchema.nullable(),
+  discountTotal: z.number().int(),
   taxTotal: z.number().int(),
   total: z.number().int(),
   createdAt: z.iso.datetime(),
@@ -80,6 +84,7 @@ export const createQuoteSchema = z.object({
   notes: optionalText(5000),
   terms: optionalText(5000),
   lines: lines.default([]),
+  discount: discountSchema.nullish(),
 })
 export type CreateQuoteInput = z.input<typeof createQuoteSchema>
 
@@ -94,6 +99,8 @@ export const updateQuoteSchema = z
     terms: optionalText(5000),
     /** When present, replaces all lines. */
     lines,
+    /** null removes the discount. */
+    discount: discountSchema.nullable(),
   })
   .partial()
 export type UpdateQuoteInput = z.input<typeof updateQuoteSchema>
