@@ -17,6 +17,19 @@ The first `ios` run generates `ios/` (gitignored), installs CocoaPods and builds
 - These are debug builds (Metro serves the JS). Expo Go isn't used: the app's scheme is `billleaf://`, which the API trusts; Expo Go would need `exp://**` in the API's `TRUSTED_ORIGINS`.
 - `expo-dev-client` isn't installed: its 58.0.x launcher doesn't compile with Xcode 27.0 (`axisBehavior` is missing from the iOS 27.0 SDK). Add it back once a fixed release is out.
 
+## Android release signing
+
+Local release builds (`cd android && ./gradlew assembleRelease`, or `bundleRelease` for Play) are signed with the Billleaf **upload key** when Gradle can see these properties, normally in `~/.gradle/gradle.properties` (never in the repo):
+
+```properties
+BILLLEAF_UPLOAD_STORE_FILE=/absolute/path/to/billleaf-upload.jks
+BILLLEAF_UPLOAD_KEY_ALIAS=billleaf-upload
+BILLLEAF_UPLOAD_STORE_PASSWORD=…
+BILLLEAF_UPLOAD_KEY_PASSWORD=…
+```
+
+`plugins/with-release-signing.js` writes the `release` signing config into `android/app/build.gradle` on every `expo prebuild`; without the properties, release builds fall back to the debug key. Check a build with `$ANDROID_HOME/build-tools/<version>/apksigner verify --print-certs app-release.apk`. Keep the `.jks` and its password backed up (a password manager): an installed app only updates from an APK signed with the same key, and on Google Play (with Play App Signing on) a lost upload key has to be reset through Play Console support. EAS Build ignores all this and signs with the credentials EAS holds; to use the same key there, upload the `.jks` with `eas credentials`.
+
 ## Push notifications setup
 
 Push delivery needs an Expo project and Apple and Google credentials. The app builds and runs without them; it just can't get a push token. One-time setup:
