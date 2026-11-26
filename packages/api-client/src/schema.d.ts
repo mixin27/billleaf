@@ -5952,6 +5952,7 @@ export interface components {
         createdBy: {
           memberId: string
           name: string
+          you: boolean
         } | null
         editable: boolean
         edited: boolean
@@ -6009,6 +6010,7 @@ export interface components {
       createdBy: {
         memberId: string
         name: string
+        you: boolean
       } | null
       editable: boolean
       edited: boolean

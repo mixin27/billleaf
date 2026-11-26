@@ -12,20 +12,46 @@ import {
   View,
 } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
+import { create } from "zustand"
 
-import { Body, Button, Screen, Title } from "@/components/ui"
+import { CashbookBooks } from "@/components/cashbook-books"
+import { Body, Button, Chip, Screen, Title } from "@/components/ui"
 import { Radius, Spacing, Type } from "@/constants/theme"
+import { cashbookKeys, type MoneyPane, moneyPanes } from "@/features/cashbook"
 import { useRecentExpenses } from "@/features/expenses"
 import { useMe } from "@/features/me"
 import { useWorkspaceProfile } from "@/features/workspaces"
 import { useTheme } from "@/hooks/use-theme"
 import { errorMessage } from "@/lib/api"
+import { queryClient } from "@/lib/query-client"
+import { useWorkspaceStore } from "@/stores/workspace-store"
 
-/** Recent expenses and the way in to recording one (with its receipt). */
-export default function ExpensesScreen() {
+type Pane = MoneyPane
+const PANE_LABELS: Record<Pane, string> = {
+  cashbook: "Cashbook",
+  expenses: "Expenses",
+}
+
+/** Kept outside the screen, so the tab reopens on the last pane. */
+const usePane = create<{ pane: Pane; setPane: (p: Pane) => void }>((set) => ({
+  pane: "cashbook",
+  setPane: (pane) => set({ pane }),
+}))
+
+/**
+ * Money: your cashbooks (daily cash in and out) and recent expenses, as
+ * two panes of one tab (a sixth tab would go under "More" on iPhone).
+ */
+export default function MoneyScreen() {
   const t = useTheme()
   const me = useMe()
-  const list = useRecentExpenses()
+  const ws = useWorkspaceStore((s) => s.workspace?.id)
+  const panes = moneyPanes(me.data?.permissions)
+  const { pane: picked, setPane } = usePane()
+  const pane: Pane = panes.includes(picked as never)
+    ? picked
+    : (panes[0] ?? "cashbook")
+  const list = useRecentExpenses(pane === "expenses")
   const locale =
     useWorkspaceProfile().data?.locale ??
     Intl.DateTimeFormat().resolvedOptions().locale
@@ -42,53 +68,92 @@ export default function ExpensesScreen() {
               refreshing={refreshing}
               onRefresh={async () => {
                 setRefreshing(true)
-                await list.refetch()
+                await (pane === "expenses"
+                  ? list.refetch()
+                  : queryClient.invalidateQueries({
+                      queryKey: cashbookKeys.all(ws),
+                    }))
                 setRefreshing(false)
               }}
             />
           }
         >
-          <Title>Expenses</Title>
-          {canCreate ? (
-            <Button
-              title="Add expense"
-              onPress={() => router.push("/expense-new")}
-            />
-          ) : null}
-          <Text
-            style={[Type.small, styles.heading, { color: t.textSecondary }]}
-          >
-            RECENT
-          </Text>
-          {list.error ? (
-            <Body>{errorMessage(list.error)}</Body>
-          ) : !list.data ? (
-            <Body muted>Loading…</Body>
-          ) : list.data.items.length === 0 ? (
-            <Body muted>
-              No expenses yet. Snap a receipt the next time you pay for
-              something.
-            </Body>
-          ) : (
-            <View
-              style={[
-                styles.card,
-                { backgroundColor: t.backgroundElement, borderColor: t.border },
-              ]}
-            >
-              {list.data.items.map((e, i) => (
-                <ExpenseRow
-                  key={e.id}
-                  expense={e}
-                  locale={locale}
-                  first={i === 0}
+          <Title>{PANE_LABELS[pane]}</Title>
+          {panes.length > 1 ? (
+            <View style={styles.panes}>
+              {panes.map((p) => (
+                <Chip
+                  key={p}
+                  label={PANE_LABELS[p]}
+                  selected={pane === p}
+                  onPress={() => setPane(p)}
                 />
               ))}
             </View>
+          ) : null}
+          {pane === "cashbook" ? (
+            <CashbookBooks
+              locale={locale}
+              canCreate={
+                me.data?.permissions.includes("cashbook.create") ?? false
+              }
+            />
+          ) : (
+            <ExpensesPane canCreate={canCreate} list={list} locale={locale} />
           )}
         </ScrollView>
       </SafeAreaView>
     </Screen>
+  )
+}
+
+function ExpensesPane({
+  canCreate,
+  list,
+  locale,
+}: {
+  canCreate: boolean
+  list: ReturnType<typeof useRecentExpenses>
+  locale: string
+}) {
+  const t = useTheme()
+  return (
+    <>
+      {canCreate ? (
+        <Button
+          title="Add expense"
+          onPress={() => router.push("/expense-new")}
+        />
+      ) : null}
+      <Text style={[Type.small, styles.heading, { color: t.textSecondary }]}>
+        RECENT
+      </Text>
+      {list.error ? (
+        <Body>{errorMessage(list.error)}</Body>
+      ) : !list.data ? (
+        <Body muted>Loading…</Body>
+      ) : list.data.items.length === 0 ? (
+        <Body muted>
+          No expenses yet. Snap a receipt the next time you pay for something.
+        </Body>
+      ) : (
+        <View
+          style={[
+            styles.card,
+            { backgroundColor: t.backgroundElement, borderColor: t.border },
+          ]}
+        >
+          {list.data.items.map((e, i) => (
+            <ExpenseRow
+              key={e.id}
+              expense={e}
+              locale={locale}
+              first={i === 0}
+            />
+          ))}
+        </View>
+      )}
+    </>
   )
 }
 
@@ -156,6 +221,7 @@ function ExpenseRow({
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   content: { padding: Spacing.four, gap: Spacing.three },
+  panes: { flexDirection: "row", gap: Spacing.two },
   heading: { fontWeight: "600", marginTop: Spacing.two },
   card: {
     borderWidth: 1,

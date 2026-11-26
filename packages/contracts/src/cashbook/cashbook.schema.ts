@@ -211,7 +211,14 @@ export const cashbookEntrySchema = z.object({
   modeName: z.string().nullable(),
   /** Balance of the book right after this entry. */
   balance: z.number().int(),
-  createdBy: z.object({ memberId: z.string(), name: z.string() }).nullable(),
+  createdBy: z
+    .object({
+      memberId: z.string(),
+      name: z.string(),
+      /** You added it. */
+      you: z.boolean(),
+    })
+    .nullable(),
   /** True when you can edit or delete it. */
   editable: z.boolean(),
   edited: z.boolean(),
