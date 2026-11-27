@@ -8,20 +8,12 @@ import { API_URL, APP_SCHEME } from "./config"
 /**
  * Better Auth for the app: the session cookie lives in the device keychain
  * (SecureStore) and goes out as a `Cookie` header with
- * `expo-origin: billleaf://` (ADR-0017).
- *
- * `credentials: "omit"` keeps Android's native cookie jar out of it. With
- * credentials on, React Native routes the request through OkHttp's jar,
- * which replaces our `Cookie` header with whatever the system cookie store
- * holds for the domain: a stale or not-yet-saved session from a
- * `Domain=`-scoped production cookie, so `get-session` came back empty and
- * sign-in looped. The keychain copy is the only one that's sent, as with
- * the API client (`lib/api.ts`).
+ * `expo-origin: billleaf://` (ADR-0017). The Expo plugin sends every
+ * request with `credentials: "omit"`, so no native cookie jar is involved.
  */
 export const authClient = createAuthClient({
   baseURL: API_URL,
   basePath: "/api/auth",
-  fetchOptions: { credentials: "omit" },
   plugins: [
     expoClient({
       scheme: APP_SCHEME,

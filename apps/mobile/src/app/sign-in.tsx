@@ -27,6 +27,8 @@ export default function SignInScreen() {
   const [email, setEmail] = React.useState("")
   const [password, setPassword] = React.useState("")
   const [code, setCode] = React.useState("")
+  // A backup code instead of the authenticator app (as on the web).
+  const [backup, setBackup] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
   const [pending, setPending] = React.useState(false)
 
@@ -53,10 +55,10 @@ export default function SignInScreen() {
   const verify = async () => {
     setPending(true)
     setError(null)
-    const { error } = await authClient.twoFactor.verifyTotp({
-      code: code.replace(/\s/g, ""),
-      trustDevice: true,
-    })
+    const input = { code: code.replace(/\s/g, ""), trustDevice: true }
+    const { error } = backup
+      ? await authClient.twoFactor.verifyBackupCode(input)
+      : await authClient.twoFactor.verifyTotp(input)
     setPending(false)
     if (error) setError(error.message ?? "That code didn't work")
   }
@@ -84,7 +86,9 @@ export default function SignInScreen() {
               </Title>
               {step === "code" ? (
                 <Body muted>
-                  Enter the 6-digit code from your authenticator app.
+                  {backup
+                    ? "Enter one of the backup codes you saved when you turned on two-factor. Each works once."
+                    : "Enter the 6-digit code from your authenticator app."}
                 </Body>
               ) : null}
             </View>
@@ -139,12 +143,15 @@ export default function SignInScreen() {
             ) : (
               <View style={{ gap: Spacing.three }}>
                 <Field
-                  label="Code"
+                  key={backup ? "backup" : "totp"}
+                  label={backup ? "Backup code" : "Code"}
                   value={code}
                   onChangeText={setCode}
-                  keyboardType="number-pad"
-                  autoComplete="one-time-code"
-                  textContentType="oneTimeCode"
+                  keyboardType={backup ? "default" : "number-pad"}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  autoComplete={backup ? "off" : "one-time-code"}
+                  textContentType={backup ? "none" : "oneTimeCode"}
                   autoFocus
                   onSubmitEditing={verify}
                 />
@@ -154,14 +161,30 @@ export default function SignInScreen() {
                 <Button
                   title="Verify"
                   loading={pending}
-                  disabled={code.replace(/\s/g, "").length < 6}
+                  disabled={
+                    backup ? !code.trim() : code.replace(/\s/g, "").length < 6
+                  }
                   onPress={verify}
+                />
+                <Button
+                  title={
+                    backup
+                      ? "Use your authenticator app"
+                      : "Use a backup code instead"
+                  }
+                  variant="link"
+                  onPress={() => {
+                    setBackup(!backup)
+                    setCode("")
+                    setError(null)
+                  }}
                 />
                 <Button
                   title="Back"
                   variant="link"
                   onPress={() => {
                     setStep("password")
+                    setBackup(false)
                     setCode("")
                     setError(null)
                   }}
