@@ -1,4 +1,5 @@
 import { NativeTabs } from "expo-router/native-tabs"
+import { Platform } from "react-native"
 
 import { moneyPanes } from "@/features/cashbook"
 import { useMe } from "@/features/me"
@@ -35,7 +36,26 @@ export default function TabsLayout() {
   const canProjects = me.data?.permissions.includes("project.read") ?? false
   const money = moneyPanes(me.data?.permissions)
   return (
-    <NativeTabs tintColor={t.primary} labelVisibilityMode="labeled">
+    <NativeTabs
+      tintColor={t.primary}
+      labelVisibilityMode="labeled"
+      // Android: brand colours instead of Material's lavender defaults. iOS
+      // keeps its native (glass) bar and only takes the tint.
+      {...(Platform.OS === "android"
+        ? {
+            backgroundColor: t.tabBar,
+            indicatorColor: t.tabIndicator,
+            rippleColor: t.backgroundSelected,
+            iconColor: { default: t.textSecondary, selected: t.primary },
+            labelStyle: {
+              default: { color: t.textSecondary, fontSize: 12 },
+              selected: { color: t.primary, fontSize: 12, fontWeight: "600" },
+            },
+            badgeBackgroundColor: t.primary,
+            badgeTextColor: t.onPrimary,
+          }
+        : {})}
+    >
       <NativeTabs.Trigger name="index">
         <NativeTabs.Trigger.Label>Home</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon

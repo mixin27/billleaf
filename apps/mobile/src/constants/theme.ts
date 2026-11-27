@@ -25,6 +25,9 @@ export const Colors = {
     /** Unresolved contract fields (the web's amber chips). */
     warning: "#92400E",
     warningBackground: "#FEF3C7",
+    /** Android tab bar: the soft surface, and the pill behind the selected tab. */
+    tabBar: "#F3F6F4",
+    tabIndicator: "#D3EBDB",
   },
   dark: {
     text: "#ECF3EF",
@@ -39,6 +42,8 @@ export const Colors = {
     danger: "#F97066",
     warning: "#FDE68A",
     warningBackground: "#4A3510",
+    tabBar: "#132121",
+    tabIndicator: "#1E3F2D",
   },
 } as const
 
