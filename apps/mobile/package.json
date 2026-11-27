@@ -9,7 +9,8 @@
     "android": "expo run:android",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "tab-icons": "node scripts/tab-icons.mjs"
   },
   "dependencies": {
     "@better-auth/expo": "1.7.25",
@@ -46,9 +47,11 @@
     "zustand": "^5.1.0"
   },
   "devDependencies": {
+    "@hugeicons/core-free-icons": "^4.4.0",
     "@types/react": "~19.3.0",
     "@workspace/eslint-config": "workspace:*",
     "eslint": "^10.14.0",
+    "sharp": "^0.35.5",
     "typescript": "~6.0.3",
     "vitest": "^5.1.0"
   }

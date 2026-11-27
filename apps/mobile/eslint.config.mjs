@@ -20,6 +20,7 @@ export default [
       "metro.config.js",
       "app.config.js",
       "plugins/**",
+      "scripts/**",
       "expo-env.d.ts",
     ],
   },
