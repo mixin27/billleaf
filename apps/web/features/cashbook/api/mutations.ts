@@ -3,6 +3,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import type {
   CashbookEntry,
+  CashbookImportResult,
   CashbookRole,
   CreateCashbookEntryInput,
   CreateCashbookInput,
@@ -254,4 +255,40 @@ export function useBookMembers(bookId: string) {
     onSuccess: invalidate,
   })
   return { add, setRole, remove }
+}
+
+/**
+ * Import the CashBook app's CSV export into a book. `dryRun` previews
+ * without writing (multipart, so a raw call).
+ */
+export function useImportCashbookCsv(bookId: string) {
+  const invalidate = useInvalidate()
+  const ws = useWorkspaceStore((s) => s.workspace?.id)
+  return useMutation({
+    mutationFn: async ({
+      file,
+      dryRun,
+    }: {
+      file: File
+      dryRun: boolean
+    }): Promise<CashbookImportResult> => {
+      const form = new FormData()
+      form.append("file", file)
+      const res = await fetch(
+        `${env.NEXT_PUBLIC_API_URL}/v1/cashbooks/${bookId}/import?dryRun=${dryRun}`,
+        {
+          method: "POST",
+          body: form,
+          credentials: "include",
+          headers: ws ? { "x-workspace-id": ws } : {},
+        }
+      )
+      const body: unknown = await res.json().catch(() => undefined)
+      if (!res.ok) throw new ApiError(res.status, body as never)
+      return body as CashbookImportResult
+    },
+    onSuccess: (r) => {
+      if (!r.dryRun) void invalidate()
+    },
+  })
 }
