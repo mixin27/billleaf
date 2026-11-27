@@ -1,15 +1,27 @@
 import { QueryClientProvider } from "@tanstack/react-query"
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from "expo-router"
+import * as ScreenOrientation from "expo-screen-orientation"
 import * as SplashScreen from "expo-splash-screen"
 import { StatusBar } from "expo-status-bar"
 import * as React from "react"
+import { Dimensions } from "react-native"
 
+import { FeedbackHost } from "@/components/ui"
 import { Colors } from "@/constants/theme"
 import { useColorScheme } from "@/hooks/use-color-scheme"
 import { authClient } from "@/lib/auth-client"
 import { queryClient } from "@/lib/query-client"
 
 SplashScreen.preventAutoHideAsync()
+
+// Phones stay portrait; tablets (shortest side 600+) rotate.
+{
+  const { width, height } = Dimensions.get("screen")
+  if (Math.min(width, height) < 600)
+    void ScreenOrientation.lockAsync(
+      ScreenOrientation.OrientationLock.PORTRAIT_UP
+    ).catch(() => {})
+}
 
 /** Signed out → sign-in; signed in → the app. Splash stays until we know. */
 export default function RootLayout() {
@@ -39,14 +51,14 @@ export default function RootLayout() {
           colors: {
             ...base.colors,
             primary: c.primary,
-            background: c.background,
-            card: c.background,
+            background: c.canvas,
+            card: c.surface,
             text: c.text,
             border: c.border,
           },
         }}
       >
-        <StatusBar style="auto" />
+        <StatusBar style={scheme === "dark" ? "light" : "dark"} />
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Protected guard={!signedIn}>
             <Stack.Screen name="sign-in" />
@@ -55,6 +67,7 @@ export default function RootLayout() {
             <Stack.Screen name="(app)" />
           </Stack.Protected>
         </Stack>
+        <FeedbackHost />
       </ThemeProvider>
     </QueryClientProvider>
   )

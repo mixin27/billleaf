@@ -12,7 +12,16 @@ import {
 } from "react-native"
 
 import { NotificationSettings } from "@/components/notification-settings"
-import { Body, Button, Chip, Screen, Section } from "@/components/ui"
+import {
+  Body,
+  Button,
+  Chip,
+  Screen,
+  Section,
+  SegmentedControl,
+  Text as UIText,
+  toast,
+} from "@/components/ui"
 import { Radius, Spacing, Type } from "@/constants/theme"
 import { useMe } from "@/features/me"
 import { canTrackTime } from "@/features/time"
@@ -22,6 +31,7 @@ import { WEB_URL } from "@/lib/config"
 import { initials } from "@/lib/format"
 import { REMINDER_HOURS } from "@/lib/reminder-schedule"
 import { signOut } from "@/lib/session"
+import { type Appearance, useAppearanceStore } from "@/stores/appearance-store"
 import { useReminderSettings } from "@/stores/reminder-settings"
 import { useWorkspaceStore } from "@/stores/workspace-store"
 
@@ -113,6 +123,8 @@ export default function AccountScreen() {
             <Text style={[Type.body, { color: t.primary }]}>Switch</Text>
           </Pressable>
         </Section>
+
+        <AppearanceSetting />
 
         <NotificationSettings />
 
@@ -208,3 +220,32 @@ const styles = StyleSheet.create({
   heading: { fontWeight: "600" },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: Spacing.two },
 })
+
+/** Light, dark or follow the phone. */
+function AppearanceSetting() {
+  const appearance = useAppearanceStore((s) => s.appearance)
+  const setAppearance = useAppearanceStore((s) => s.setAppearance)
+  return (
+    <View style={{ gap: Spacing.two }}>
+      <UIText variant="overline" tone="muted" accessibilityRole="header">
+        Appearance
+      </UIText>
+      <SegmentedControl<Appearance>
+        options={[
+          { value: "system", label: "System" },
+          { value: "light", label: "Light" },
+          { value: "dark", label: "Dark" },
+        ]}
+        value={appearance}
+        onChange={(a) => {
+          setAppearance(a)
+          toast.success(
+            a === "system"
+              ? "Following your phone's theme"
+              : `${a === "light" ? "Light" : "Dark"} theme on`
+          )
+        }}
+      />
+    </View>
+  )
+}
