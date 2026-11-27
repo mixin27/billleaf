@@ -8,11 +8,11 @@ import {
   View,
 } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
-import { create } from "zustand"
 
 import { ContractRow } from "@/components/contract-row"
 import { InvoiceRow, totalsByCurrency } from "@/components/invoice-row"
 import { QuoteRow } from "@/components/quote-row"
+import { useMiniPlayerInset } from "@/components/nav/mini-player"
 import { Body, Chip, Screen, Title } from "@/components/ui"
 import { Radius, Spacing, Type } from "@/constants/theme"
 import {
@@ -31,6 +31,7 @@ import { QUOTE_FILTERS, type QuoteFilter, useQuotes } from "@/features/quotes"
 import { useWorkspaceProfile } from "@/features/workspaces"
 import { useTheme } from "@/hooks/use-theme"
 import { errorMessage } from "@/lib/api"
+import { type SalesPane, useSalesPane as usePane } from "@/stores/panes"
 
 const EMPTY: Record<string, string> = {
   unpaid: "Nothing owed right now. Every issued invoice is paid.",
@@ -55,7 +56,7 @@ const CONTRACTS_EMPTY: Record<ContractFilter, string> = {
   all: "No contracts yet. Write one on the web.",
 }
 
-type Pane = "invoices" | "quotes" | "contracts"
+type Pane = SalesPane
 
 const PANE_LABELS: Record<Pane, string> = {
   invoices: "Invoices",
@@ -63,29 +64,13 @@ const PANE_LABELS: Record<Pane, string> = {
   contracts: "Contracts",
 }
 
-/** Kept outside the screen, so the tab reopens on the last pane. */
-const usePane = create<{
-  pane: Pane
-  quoteFilter: QuoteFilter
-  contractFilter: ContractFilter
-  setPane: (p: Pane) => void
-  setQuoteFilter: (f: QuoteFilter) => void
-  setContractFilter: (f: ContractFilter) => void
-}>((set) => ({
-  pane: "invoices",
-  quoteFilter: "sent",
-  contractFilter: "sent",
-  setPane: (pane) => set({ pane }),
-  setQuoteFilter: (quoteFilter) => set({ quoteFilter }),
-  setContractFilter: (contractFilter) => set({ contractFilter }),
-}))
-
 /**
  * Who owes you what: unpaid invoices first, then the rest by filter. The
  * tab holds quotes and contracts too (a sixth tab would go under "More"
  * on iPhone).
  */
 export default function InvoicesScreen() {
+  const playerInset = useMiniPlayerInset()
   const t = useTheme()
   const me = useMe()
   const has = (p: Permission) => me.data?.permissions.includes(p) ?? false
@@ -134,7 +119,10 @@ export default function InvoicesScreen() {
     <Screen>
       <SafeAreaView style={styles.flex} edges={["top"]}>
         <ScrollView
-          contentContainerStyle={styles.content}
+          contentContainerStyle={[
+            styles.content,
+            { paddingBottom: Spacing.four + playerInset },
+          ]}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}

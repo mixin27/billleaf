@@ -15,6 +15,7 @@ import { SafeAreaView } from "react-native-safe-area-context"
 import { create } from "zustand"
 
 import { CashbookBooks } from "@/components/cashbook-books"
+import { useMiniPlayerInset } from "@/components/nav/mini-player"
 import { Body, Button, Chip, Screen, Title } from "@/components/ui"
 import { Radius, Spacing, Type } from "@/constants/theme"
 import { cashbookKeys, type MoneyPane, moneyPanes } from "@/features/cashbook"
@@ -43,6 +44,7 @@ const usePane = create<{ pane: Pane; setPane: (p: Pane) => void }>((set) => ({
  * two panes of one tab (a sixth tab would go under "More" on iPhone).
  */
 export default function MoneyScreen() {
+  const playerInset = useMiniPlayerInset()
   const t = useTheme()
   const me = useMe()
   const ws = useWorkspaceStore((s) => s.workspace?.id)
@@ -62,7 +64,10 @@ export default function MoneyScreen() {
     <Screen>
       <SafeAreaView style={styles.flex} edges={["top"]}>
         <ScrollView
-          contentContainerStyle={styles.content}
+          contentContainerStyle={[
+            styles.content,
+            { paddingBottom: Spacing.four + playerInset },
+          ]}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}

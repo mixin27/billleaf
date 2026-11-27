@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, View } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { Radius, Space } from "@/constants/theme"
+import { useRegisterBottomBar } from "@/hooks/use-register-bottom-bar"
 import { useTheme } from "@/hooks/use-theme"
 import { haptic } from "@/lib/haptics"
 
@@ -12,7 +13,8 @@ import { Icon, type IconName, Text } from "./text"
 /**
  * The screen's main action(s), pinned to the bottom above the home
  * indicator: Cash in / Cash out, Submit week, Approve. Put it after the
- * scroll view; give the scroll content `paddingBottom` of its height.
+ * scroll view; give the scroll content `paddingBottom` of its height
+ * (plus `useMiniPlayerInset()`: the timer's mini-player floats above it).
  */
 export function BottomActionBar({
   children,
@@ -24,8 +26,11 @@ export function BottomActionBar({
 }) {
   const t = useTheme()
   const insets = useSafeAreaInsets()
+  // The mini-player floats above this bar while the screen is on top.
+  const onLayout = useRegisterBottomBar()
   return (
     <View
+      onLayout={onLayout}
       style={[
         styles.bar,
         {

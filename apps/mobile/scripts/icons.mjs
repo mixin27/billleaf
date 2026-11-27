@@ -66,6 +66,9 @@ const ICONS = {
   task: "Task01Icon",
   location: "Location01Icon",
   receipt: "Invoice01Icon",
+  timer: "Timer02Icon",
+  briefcase: "Briefcase01Icon",
+  tag: "SaleTag02Icon",
 }
 
 const out = path.join(

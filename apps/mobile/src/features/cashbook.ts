@@ -48,19 +48,7 @@ export const cashbookKeys = {
 
 export type OptionKind = "categories" | "modes"
 
-export type MoneyPane = "cashbook" | "expenses"
-
-/** The Money tab's panes you can see. */
-export function moneyPanes(
-  permissions: readonly string[] | undefined
-): MoneyPane[] {
-  const has = (p: string) => permissions?.includes(p) ?? false
-  return (["cashbook", "expenses"] as const).filter((p) =>
-    p === "cashbook"
-      ? has("cashbook.create") || has("cashbook.manage")
-      : has("expense.read")
-  )
-}
+export { type MoneyPane, moneyPanes } from "@/lib/nav"
 
 /** Your role lets you do this in a book. */
 export const can = {

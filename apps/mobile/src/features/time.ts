@@ -177,17 +177,38 @@ export function useStartFavorite() {
   })
 }
 
-/** Who may track time here: the plan has it and the role allows it. */
-export function canTrackTime(
-  me:
-    | { permissions: string[]; plan: { features: { timeTracking: boolean } } }
-    | undefined
-) {
-  return Boolean(
-    me?.plan.features.timeTracking &&
-    (me.permissions.includes("time.track") ||
-      me.permissions.includes("time.manage"))
-  )
+export { canTrackTime } from "@/lib/nav"
+
+/**
+ * Undo a stop: start the same timer again from the original start, then
+ * delete the stopped entry (in that order, so a failure never loses time).
+ */
+export function useUndoStop() {
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: async (e: TimeEntry) => {
+      await unwrap(
+        api.POST("/v1/time-entries/start", {
+          body: {
+            description: e.description ?? undefined,
+            projectId: e.projectId,
+            taskId: e.taskId,
+            billable: e.billable,
+            tagIds: e.tags.map((t) => t.id),
+          } as never,
+        })
+      )
+      await unwrap(
+        api.PATCH("/v1/time-entries/running", {
+          body: { startedAt: e.startedAt } as never,
+        })
+      )
+      await unwrap(
+        api.DELETE("/v1/time-entries/{id}", { params: { path: { id: e.id } } })
+      )
+    },
+    onSettled: invalidate,
+  })
 }
 
 /**

@@ -1,5 +1,8 @@
-import { Stack } from "expo-router"
+import { type NativeStackNavigationOptions, Stack } from "expo-router"
 import * as React from "react"
+import { Platform, View } from "react-native"
+
+import { MiniPlayer } from "@/components/nav/mini-player"
 
 import {
   useForegroundPushRefresh,
@@ -41,6 +44,17 @@ function PushNotifications() {
   return null
 }
 
+function sheetOptions(): NativeStackNavigationOptions {
+  return Platform.OS === "ios"
+    ? { presentation: "modal" }
+    : {
+        presentation: "formSheet",
+        sheetAllowedDetents: [1],
+        sheetCornerRadius: 16,
+        sheetGrabberVisible: true,
+      }
+}
+
 export default function AppLayout() {
   const t = useTheme()
   const hydrated = useHydrated()
@@ -59,6 +73,10 @@ export default function AppLayout() {
     else if (workspace) setWorkspace(null)
   }, [hydrated, list, workspace, setWorkspace])
 
+  // Forms and pickers open as sheets: iOS's page sheet (swipe down to
+  // close) and a full-height bottom sheet on Android. Back closes them.
+  const sheet = sheetOptions()
+
   // Pushed screens (an invoice, a client) get a native header.
   const pushed = {
     headerShown: true,
@@ -72,47 +90,33 @@ export default function AppLayout() {
   if (!hydrated || (!workspace && workspaces.isPending)) return null
 
   return (
-    <>
+    <View style={{ flex: 1, backgroundColor: t.canvas }}>
       <PushNotifications />
       {workspace ? <TimerReminder /> : null}
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Protected guard={Boolean(workspace)}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen
-            name="project-picker"
-            options={{ presentation: "modal" }}
+            name="timer"
+            options={{
+              // Slides up like a music app's player; swipe down (iOS) or
+              // Back collapses it into the mini-player.
+              presentation: Platform.OS === "ios" ? "modal" : "card",
+              animation: "slide_from_bottom",
+              gestureEnabled: true,
+            }}
           />
-          <Stack.Screen
-            name="expense-new"
-            options={{ presentation: "modal" }}
-          />
-          <Stack.Screen name="entry-edit" options={{ presentation: "modal" }} />
-          <Stack.Screen
-            name="payment-new"
-            options={{ presentation: "modal" }}
-          />
-          <Stack.Screen name="send" options={{ presentation: "modal" }} />
-          <Stack.Screen
-            name="contract-step"
-            options={{ presentation: "modal" }}
-          />
-          <Stack.Screen
-            name="payment-void"
-            options={{ presentation: "modal" }}
-          />
-          <Stack.Screen name="book-new" options={{ presentation: "modal" }} />
-          <Stack.Screen
-            name="book-filters"
-            options={{ presentation: "modal" }}
-          />
-          <Stack.Screen
-            name="cashbook-entry-edit"
-            options={{ presentation: "modal" }}
-          />
-          <Stack.Screen
-            name="cashbook-transfer"
-            options={{ presentation: "modal" }}
-          />
+          <Stack.Screen name="project-picker" options={sheet} />
+          <Stack.Screen name="expense-new" options={sheet} />
+          <Stack.Screen name="entry-edit" options={sheet} />
+          <Stack.Screen name="payment-new" options={sheet} />
+          <Stack.Screen name="send" options={sheet} />
+          <Stack.Screen name="contract-step" options={sheet} />
+          <Stack.Screen name="payment-void" options={sheet} />
+          <Stack.Screen name="book-new" options={sheet} />
+          <Stack.Screen name="book-filters" options={sheet} />
+          <Stack.Screen name="cashbook-entry-edit" options={sheet} />
+          <Stack.Screen name="cashbook-transfer" options={sheet} />
           <Stack.Screen
             name="book/[id]"
             options={{ ...pushed, title: "Cashbook", headerBackTitle: "Back" }}
@@ -175,6 +179,7 @@ export default function AppLayout() {
           options={{ presentation: workspace ? "modal" : "card" }}
         />
       </Stack>
-    </>
+      {workspace ? <MiniPlayer /> : null}
+    </View>
   )
 }

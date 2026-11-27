@@ -2,6 +2,7 @@
  * The design system's components (proposal: the "Billleaf Mobile Redesign"
  * artifact; tokens: constants/theme.ts). Import from "@/components/ui".
  */
+export { AppBar } from "./app-bar"
 export { Badge, type BadgeTone, Amount, Avatar, initialsOf } from "./display"
 export {
   Button,

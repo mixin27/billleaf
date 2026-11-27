@@ -101,7 +101,7 @@ export function useForegroundPushRefresh() {
 
 /**
  * A tap on a notification: a push opens what it's about, the timer
- * reminder opens the Time tab (or stops the timer with "Stop timer").
+ * reminder opens the timer (or stops it with "Stop timer").
  * Both switch to the workspace they belong to first. Mounted with or
  * without an active workspace: the screen opens once the switch is in.
  */
@@ -151,7 +151,7 @@ export function useNotificationResponse() {
 
     const { entryId } = data
     if (!entryId) return
-    if (response.actionIdentifier !== STOP_ACTION) return open("/time")
+    if (response.actionIdentifier !== STOP_ACTION) return open("/timer")
 
     void (async () => {
       try {

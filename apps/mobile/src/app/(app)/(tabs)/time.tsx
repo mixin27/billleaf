@@ -15,6 +15,7 @@ import {
 } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 
+import { useMiniPlayerInset } from "@/components/nav/mini-player"
 import {
   Body,
   Button,
@@ -72,6 +73,7 @@ function projectLabel(e: {
 
 /** Timer, favourites and today's entries. */
 export default function TimeScreen() {
+  const playerInset = useMiniPlayerInset()
   const dashboard = useDashboard()
   const today = dashboard.data?.today
   const running = useRunningTimer()
@@ -108,7 +110,10 @@ export default function TimeScreen() {
       <SafeAreaView style={styles.flex} edges={["top"]}>
         <KeyboardAvoid>
           <ScrollView
-            contentContainerStyle={styles.content}
+            contentContainerStyle={[
+              styles.content,
+              { paddingBottom: Spacing.four + playerInset },
+            ]}
             keyboardShouldPersistTaps="handled"
             automaticallyAdjustKeyboardInsets
             refreshControl={

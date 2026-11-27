@@ -4,7 +4,8 @@ import * as ScreenOrientation from "expo-screen-orientation"
 import * as SplashScreen from "expo-splash-screen"
 import { StatusBar } from "expo-status-bar"
 import * as React from "react"
-import { Dimensions } from "react-native"
+import { Dimensions, StyleSheet } from "react-native"
+import { GestureHandlerRootView } from "react-native-gesture-handler"
 
 import { FeedbackHost } from "@/components/ui"
 import { Colors } from "@/constants/theme"
@@ -44,31 +45,33 @@ export default function RootLayout() {
   const base = scheme === "dark" ? DarkTheme : DefaultTheme
   const c = Colors[scheme === "dark" ? "dark" : "light"]
   return (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider
-        value={{
-          ...base,
-          colors: {
-            ...base.colors,
-            primary: c.primary,
-            background: c.canvas,
-            card: c.surface,
-            text: c.text,
-            border: c.border,
-          },
-        }}
-      >
-        <StatusBar style={scheme === "dark" ? "light" : "dark"} />
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Protected guard={!signedIn}>
-            <Stack.Screen name="sign-in" />
-          </Stack.Protected>
-          <Stack.Protected guard={signedIn}>
-            <Stack.Screen name="(app)" />
-          </Stack.Protected>
-        </Stack>
-        <FeedbackHost />
-      </ThemeProvider>
-    </QueryClientProvider>
+    <GestureHandlerRootView style={StyleSheet.absoluteFill}>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider
+          value={{
+            ...base,
+            colors: {
+              ...base.colors,
+              primary: c.primary,
+              background: c.canvas,
+              card: c.surface,
+              text: c.text,
+              border: c.border,
+            },
+          }}
+        >
+          <StatusBar style={scheme === "dark" ? "light" : "dark"} />
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Protected guard={!signedIn}>
+              <Stack.Screen name="sign-in" />
+            </Stack.Protected>
+            <Stack.Protected guard={signedIn}>
+              <Stack.Screen name="(app)" />
+            </Stack.Protected>
+          </Stack>
+          <FeedbackHost />
+        </ThemeProvider>
+      </QueryClientProvider>
+    </GestureHandlerRootView>
   )
 }

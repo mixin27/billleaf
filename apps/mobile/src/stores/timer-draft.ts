@@ -24,15 +24,20 @@ export const NO_PROJECT: DraftProject = {
 export const useTimerDraft = create<{
   description: string
   project: DraftProject
+  /** Null follows the project's billing. */
+  billable: boolean | null
   setDescription: (d: string) => void
   setProject: (p: DraftProject) => void
+  setBillable: (b: boolean | null) => void
   reset: () => void
 }>((set) => ({
   description: "",
   project: NO_PROJECT,
+  billable: null,
   setDescription: (description) => set({ description }),
   setProject: (project) => set({ project }),
-  reset: () => set({ description: "", project: NO_PROJECT }),
+  setBillable: (billable) => set({ billable }),
+  reset: () => set({ description: "", project: NO_PROJECT, billable: null }),
 }))
 
 /**
