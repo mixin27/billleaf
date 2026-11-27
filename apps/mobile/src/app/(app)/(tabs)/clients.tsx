@@ -10,9 +10,9 @@ import {
   View,
 } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
-import { create } from "zustand"
 
 import { ProjectRow } from "@/components/project-row"
+import { useMiniPlayerInset } from "@/components/nav/mini-player"
 import { Body, Chip, Field, Screen, Title } from "@/components/ui"
 import { Radius, Spacing, Type } from "@/constants/theme"
 import { useClients } from "@/features/clients"
@@ -22,6 +22,7 @@ import { useProjects } from "@/features/projects"
 import { useWorkspaceProfile } from "@/features/workspaces"
 import { useTheme } from "@/hooks/use-theme"
 import { errorMessage } from "@/lib/api"
+import { useWorkPane as usePane, type WorkPane } from "@/stores/panes"
 
 /** Waits until typing pauses, so a search isn't a request per key. */
 function useDebounced<T>(value: T, ms = 300) {
@@ -33,13 +34,7 @@ function useDebounced<T>(value: T, ms = 300) {
   return v
 }
 
-type Pane = "clients" | "projects"
-
-/** Kept outside the screen, so the tab reopens on the last half. */
-const usePane = create<{ pane: Pane; setPane: (p: Pane) => void }>((set) => ({
-  pane: "clients",
-  setPane: (pane) => set({ pane }),
-}))
+type Pane = WorkPane
 
 const PROJECT_FILTERS: { value: ProjectStatus; label: string }[] = [
   { value: "active", label: "Active" },
@@ -53,6 +48,7 @@ const PROJECT_FILTERS: { value: ProjectStatus; label: string }[] = [
  * shows with its permission. Add and edit them on the web.
  */
 export default function ClientsScreen() {
+  const playerInset = useMiniPlayerInset()
   const t = useTheme()
   const me = useMe()
   const canClients = me.data?.permissions.includes("client.read") ?? false
@@ -83,7 +79,10 @@ export default function ClientsScreen() {
     <Screen>
       <SafeAreaView style={styles.flex} edges={["top"]}>
         <ScrollView
-          contentContainerStyle={styles.content}
+          contentContainerStyle={[
+            styles.content,
+            { paddingBottom: Spacing.four + playerInset },
+          ]}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
           refreshControl={

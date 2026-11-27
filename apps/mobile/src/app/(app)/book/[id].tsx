@@ -11,9 +11,10 @@ import {
   Text,
   View,
 } from "react-native"
-import { SafeAreaView } from "react-native-safe-area-context"
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { CashbookEntryRow } from "@/components/cashbook-entry-row"
+import { useMiniPlayerInset } from "@/components/nav/mini-player"
 import { Body, Chip, ClearableInput, Screen } from "@/components/ui"
 import { Radius, Spacing, Type } from "@/constants/theme"
 import {
@@ -27,6 +28,7 @@ import {
   useFiltersFor,
 } from "@/features/cashbook"
 import { useWorkspaceProfile } from "@/features/workspaces"
+import { useRegisterBottomBar } from "@/hooks/use-register-bottom-bar"
 import { useTheme } from "@/hooks/use-theme"
 import { errorMessage } from "@/lib/api"
 import { dayHeading, DURATIONS, groupByDay, nowIn } from "@/lib/cashbook"
@@ -39,6 +41,9 @@ import { dayHeading, DURATIONS, groupByDay, nowIn } from "@/lib/cashbook"
 export default function BookScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
   const t = useTheme()
+  const insets = useSafeAreaInsets()
+  const barLayout = useRegisterBottomBar(insets.bottom)
+  const playerInset = useMiniPlayerInset()
   const profile = useWorkspaceProfile()
   const locale =
     profile.data?.locale ?? Intl.DateTimeFormat().resolvedOptions().locale
@@ -144,7 +149,10 @@ export default function BookScreen() {
             sections={sections}
             keyExtractor={(e) => e.id}
             contentInsetAdjustmentBehavior="automatic"
-            contentContainerStyle={styles.list}
+            contentContainerStyle={[
+              styles.list,
+              { paddingBottom: Spacing.four + playerInset },
+            ]}
             stickySectionHeadersEnabled={false}
             refreshControl={
               <RefreshControl
@@ -364,6 +372,7 @@ export default function BookScreen() {
           </View>
         ) : can.addEntries(b) ? (
           <View
+            onLayout={barLayout}
             style={[
               styles.bar,
               { borderTopColor: t.border, backgroundColor: t.background },

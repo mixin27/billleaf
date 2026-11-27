@@ -111,6 +111,12 @@ The redesign proposal (CashBook-style, on the Billleaf brand) is the reference f
 - **Appearance**: System / Light / Dark on the Account screen (`stores/appearance-store.ts`); `useColorScheme()` and `useTheme()` follow it.
 - **Tablets**: `useBreakpoint()` is `compact` (< 600), `medium` (600–839) or `expanded` (≥ 840). Phones stay portrait; tablets rotate.
 
+### Navigation and the timer
+
+- **Tabs** (`app/(app)/(tabs)/_layout.tsx`): expo-router's JS `Tabs` drawn by our own `TabBar` (`components/nav/tab-bar.tsx`): a bottom bar on phones, a side rail on tablets. Which tabs show for a role and plan is `navSlotsFor` in `lib/nav.ts` (unit tested): Home · Money · [timer] · Time · More, with Sales and Clients taking free places. Routes not on the bar (Invoices, Clients on a phone) open from **More**, which then lights up.
+- **Timer**: the dock in the bar opens the full-screen `timer` route; long-press starts a blank timer. `useTimerControls()` (`features/timer-controls.ts`) has the shared start / stop-with-Undo logic.
+- **Mini-player** (`components/nav/mini-player.tsx`): mounted once in `app/(app)/_layout.tsx`; while a timer runs it floats above the tab bar, or above a screen's own bottom bar, and hides on the timer and sheets (`miniPlayerPlacement` in `lib/nav.ts`). Lists add `useMiniPlayerInset()` to their bottom padding; a screen with its own bottom bar registers it with `useRegisterBottomBar()` (`BottomActionBar` does this itself).
+
 ## Checks
 
 CI runs `lint` and `typecheck` (no `build` or `dev` script, so `turbo build` and `pnpm dev` skip the app). Run them with `pnpm --filter mobile lint` / `typecheck`.

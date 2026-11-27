@@ -11,6 +11,7 @@ import {
 } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 
+import { useMiniPlayerInset } from "@/components/nav/mini-player"
 import { Body, Screen, Title } from "@/components/ui"
 import { Radius, Spacing, Type } from "@/constants/theme"
 import { useDashboard, useWeekTime } from "@/features/dashboard"
@@ -25,6 +26,7 @@ import { useWorkspaceStore } from "@/stores/workspace-store"
 
 /** Home: this week's time and what you're owed, for the active workspace. */
 export default function DashboardScreen() {
+  const playerInset = useMiniPlayerInset()
   const t = useTheme()
   const session = authClient.useSession()
   const workspace = useWorkspaceStore((s) => s.workspace)
@@ -57,7 +59,10 @@ export default function DashboardScreen() {
     <Screen>
       <SafeAreaView style={styles.flex} edges={["top"]}>
         <ScrollView
-          contentContainerStyle={styles.content}
+          contentContainerStyle={[
+            styles.content,
+            { paddingBottom: Spacing.four + playerInset },
+          ]}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={refresh} />
           }
