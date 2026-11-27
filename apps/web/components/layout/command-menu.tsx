@@ -60,6 +60,11 @@ const CREATE: {
     permission: "project.create",
   },
   {
+    label: "New cashbook",
+    path: "/cashbook?new=true",
+    permission: "cashbook.create",
+  },
+  {
     label: "New recurring invoice",
     path: "/invoices/recurring/new",
     permission: "invoice.create",
