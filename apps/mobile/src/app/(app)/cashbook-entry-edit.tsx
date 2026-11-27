@@ -244,7 +244,7 @@ export default function CashbookEntryEditScreen() {
             <View style={styles.row}>
               {(["in", "out"] as const).map((k) => {
                 const on = type === k
-                const c = k === "in" ? t.primary : t.danger
+                const c = k === "in" ? t.inFill : t.outFill
                 return (
                   <Pressable
                     key={k}
@@ -263,7 +263,9 @@ export default function CashbookEntryEditScreen() {
                       style={[
                         Type.body,
                         styles.bold,
-                        { color: on ? "#FFFFFF" : t.text },
+                        {
+                          color: on ? (k === "in" ? t.onIn : t.onOut) : t.text,
+                        },
                       ]}
                     >
                       {k === "in" ? "Cash in" : "Cash out"}

@@ -356,9 +356,9 @@ export default function BookScreen() {
             ) : null}
             <BarButton
               label={`Delete (${selected.size})`}
-              color="#FFFFFF"
-              background={t.danger}
-              border={t.danger}
+              color={t.onOut}
+              background={t.outFill}
+              border={t.outFill}
               onPress={deleteSelected}
             />
           </View>
@@ -371,16 +371,16 @@ export default function BookScreen() {
           >
             <BarButton
               label="+ Cash in"
-              color="#FFFFFF"
-              background={t.primary}
-              border={t.primary}
+              color={t.onIn}
+              background={t.inFill}
+              border={t.inFill}
               onPress={() => add("in")}
             />
             <BarButton
               label="− Cash out"
-              color="#FFFFFF"
-              background={t.danger}
-              border={t.danger}
+              color={t.onOut}
+              background={t.outFill}
+              border={t.outFill}
               onPress={() => add("out")}
             />
           </View>

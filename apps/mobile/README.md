@@ -93,11 +93,23 @@ expo-notifications reads a remote notification's `data` from the payload's `body
 | Path                     | What                                                                                           |
 | ------------------------ | ---------------------------------------------------------------------------------------------- |
 | `src/app`                | Routes (expo-router). `sign-in` when signed out, `(app)/…` when signed in (`Stack.Protected`). |
-| `src/components/ui.tsx`  | Themed building blocks: `Screen`, `Title`, `Body`, `Field`, `Button`.                          |
-| `src/constants/theme.ts` | Brand colours (light/dark), spacing, radius, type. Plain `StyleSheet`, no styling library.     |
+| `src/components/ui/`     | The design system's components (`import … from "@/components/ui"`); see below.                 |
+| `src/constants/theme.ts` | Tokens: colours (light/dark), spacing, radius, the Inter type scale. Plain `StyleSheet`.       |
 | `src/lib`                | Config, auth, API and query clients.                                                           |
 
 Brand icon and splash come from `packages/brand/assets` (see `app.json`).
+
+### Design system
+
+The redesign proposal (CashBook-style, on the Billleaf brand) is the reference for screens: flat lists, green for cash in and red for cash out, one primary action per screen, toasts for results.
+
+- **Tokens** (`constants/theme.ts`): `canvas` is the page and `surface` the cards, rows, bars and sheets on it; `in*` / `out*` for money directions (and `out*` for errors and destructive actions); text on a fill uses its `on*` colour. Spacing is `Space[n]` (4-point), type is `Text variant=…` (Inter). The old names (`background`, `textSecondary`, `Spacing.three`, `Type.*`) still work until every screen has moved. `pnpm --filter mobile test` fails on a raw colour in `src/app` or `src/components` (`scripts/check-colours.mjs`).
+- **Fonts**: Inter is embedded at build time by the `expo-font` plugin in `app.json` (one `Inter` family on Android with four weights); `font(weight)` in `theme.ts` sets it.
+- **Icons**: Hugeicons, the set the web uses, through `<Icon name=…>`. Only the icons listed in `scripts/icons.mjs` are bundled: add one there and run `pnpm --filter mobile icons`.
+- **Components** (`components/ui/`): `Text`, `Icon`, `Button` (primary · secondary · tonal · danger · ghost · in · out), `IconButton`, `Chip`, `SegmentedControl`, `ListGroup` + `ListItem`, `SectionHeader`, `KeyValue`, `Card`, `Badge`, `Amount`, `Avatar`, `TextField`, `SearchField`, `MoneyInput`, `DateField` / `TimeField` (the phone's own pickers), `EmptyState`, `ErrorState`, `SkeletonRows`, `Fab`, `BottomActionBar`, `SheetHeader` / `SheetFooter`.
+- **Feedback**: `toast.success("Entry added", { label: "Undo", onPress })` for results; `await confirm({ title, message, confirmLabel, destructive })` before anything that can't be undone; `showActions([...])` for a menu of choices. `haptic.*` (`lib/haptics.ts`) for touch feedback.
+- **Appearance**: System / Light / Dark on the Account screen (`stores/appearance-store.ts`); `useColorScheme()` and `useTheme()` follow it.
+- **Tablets**: `useBreakpoint()` is `compact` (< 600), `medium` (600–839) or `expanded` (≥ 840). Phones stay portrait; tablets rotate.
 
 ## Checks
 
