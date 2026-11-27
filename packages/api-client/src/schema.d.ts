@@ -1828,6 +1828,22 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  "/v1/cashbooks/{bookId}/import": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["CashbookController_importCsv_v1"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   "/v1/cashbooks/{bookId}/entries/transfer": {
     parameters: {
       query?: never
@@ -6031,6 +6047,29 @@ export interface components {
     }
     DeletedDto_Output: {
       deleted: number
+    }
+    CashbookImportResultDto_Output: {
+      dryRun: boolean
+      rows: number
+      added: number
+      duplicates: number
+      invalid: {
+        line: number
+        message: string
+      }[]
+      /** Format: date */
+      from: string | null
+      /** Format: date */
+      to: string | null
+      totalIn: number
+      totalOut: number
+      balanceBefore: number
+      balanceAfter: number
+      fileOpeningBalance: number | null
+      fileClosingBalance: number | null
+      newModes: string[]
+      newCategories: string[]
+      unmatchedPeople: string[]
     }
     TransferCashbookEntriesDto: {
       entryIds: string[]
@@ -11455,6 +11494,29 @@ export interface operations {
         }
         content: {
           "application/json": components["schemas"]["DeletedDto_Output"]
+        }
+      }
+    }
+  }
+  CashbookController_importCsv_v1: {
+    parameters: {
+      query?: {
+        dryRun?: "true" | "false"
+      }
+      header?: never
+      path: {
+        bookId: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["CashbookImportResultDto_Output"]
         }
       }
     }

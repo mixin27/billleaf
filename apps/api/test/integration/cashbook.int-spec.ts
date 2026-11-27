@@ -277,4 +277,104 @@ describe("cashbook", () => {
     expect((await owner.del(`${book}/entries/${rice.id}`)).status).toBe(204)
     expect((await owner.get(book)).body.balance).toBe(140_000_00)
   })
+
+  it("imports a CashBook export once, with modes and the right balance", async () => {
+    const owner = new Client(t)
+    await owner.signUp("Ma Thida")
+    await owner.createWorkspace("Thida Home")
+    await owner.patch("/v1/workspace", { defaultCurrency: "MMK" })
+    const book = (await owner.post("/v1/cashbooks", { name: "Home" })).body
+    const url = `/v1/cashbooks/${book.id}/import`
+
+    const file = [
+      `"Date","Time","Remark","Entry by","Contact","Mode","Cash In","Cash Out","Balance"`,
+      `"04 May 2026","12:47 pm","","Ma Thida","Ko Ko","Online",5000000,,5000000`,
+      `"04 May 2026","7:19 pm","","Ma Thida","Mom","Cash",,2000000,3000000`,
+      `"10 May 2026","10:08 pm","Repair","Someone Else","","KBZPay",,500000,2500000`,
+      `"31 Feb 2026","1:00 pm","bad","","","",1,,1`,
+    ].join("\n")
+    const send = async (query: string, body = file) => {
+      const boundary = "----billleaf-test"
+      const payload = Buffer.concat([
+        Buffer.from(
+          `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="Home@CashBook.csv"\r\nContent-Type: text/csv\r\n\r\n`
+        ),
+        Buffer.from(body),
+        Buffer.from(`\r\n--${boundary}--\r\n`),
+      ])
+      const res = await t.app.inject({
+        method: "POST",
+        url: `${url}${query}`,
+        headers: {
+          ...owner.headers(),
+          "content-type": `multipart/form-data; boundary=${boundary}`,
+        },
+        payload,
+      })
+      return { status: res.statusCode, body: JSON.parse(res.body) }
+    }
+
+    // Dry run: nothing written, a full preview.
+    const preview = await send("?dryRun=true")
+    expect(preview.status).toBe(200)
+    expect(preview.body).toMatchObject({
+      dryRun: true,
+      rows: 3,
+      added: 3,
+      duplicates: 0,
+      invalid: [{ line: 5, message: `Unreadable date "31 Feb 2026"` }],
+      from: "2026-05-04",
+      to: "2026-05-10",
+      totalIn: 5_000_000_00,
+      totalOut: 2_500_000_00,
+      balanceBefore: 0,
+      balanceAfter: 2_500_000_00,
+      fileOpeningBalance: 0,
+      fileClosingBalance: 2_500_000_00,
+      newModes: ["KBZPay"],
+      newCategories: [],
+      unmatchedPeople: ["Someone Else"],
+    })
+    expect((await owner.get(`/v1/cashbooks/${book.id}`)).body.entryCount).toBe(
+      0
+    )
+
+    // Import: the book matches the file's last balance.
+    const done = await send("")
+    expect(done.body).toMatchObject({ dryRun: false, added: 3 })
+    const after = (await owner.get(`/v1/cashbooks/${book.id}`)).body
+    expect(after).toMatchObject({ balance: 2_500_000_00, entryCount: 3 })
+    const entries = (await owner.get(`/v1/cashbooks/${book.id}/entries`)).body
+      .items
+    expect(entries[0]).toMatchObject({
+      entryDate: "2026-05-10",
+      entryTime: "22:08",
+      remark: "Repair",
+      modeName: "KBZPay",
+      balance: 2_500_000_00,
+      createdBy: { you: true },
+    })
+    expect(entries[2]).toMatchObject({
+      contactName: "Ko Ko",
+      modeName: "Online",
+      createdBy: { name: "Ma Thida" },
+    })
+
+    // The same file again adds nothing; a longer export adds only the new row.
+    const again = await send("")
+    expect(again.body).toMatchObject({ added: 0, duplicates: 3 })
+    const longer = await send(
+      "",
+      `${file}\n"21 May 2026","1:59 pm","Tea","Ma Thida","","Cash",,1000,2499000`
+    )
+    expect(longer.body).toMatchObject({ added: 1, duplicates: 3 })
+    expect((await owner.get(`/v1/cashbooks/${book.id}`)).body.balance).toBe(
+      2_499_000_00
+    )
+
+    // Not a CashBook file.
+    const wrong = await send("", "Name,Email\nA,b@c.d")
+    expect(wrong.status).toBe(400)
+    expect(wrong.body.code).toBe("cashbook_import_format")
+  })
 })

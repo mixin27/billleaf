@@ -5,6 +5,7 @@ import { FilesModule } from "../files/files.module.js"
 import { WorkspaceProfileModule } from "../workspace/workspace-profile.module.js"
 import { CashbookAccess } from "./cashbook-access.service.js"
 import { CashbookEntriesService } from "./cashbook-entries.service.js"
+import { CashbookImportService } from "./cashbook-import.service.js"
 import { CashbookReportsService } from "./cashbook-reports.service.js"
 import { CashbookController } from "./cashbook.controller.js"
 import { CashbookService } from "./cashbook.service.js"
@@ -18,6 +19,7 @@ import { CashbookService } from "./cashbook.service.js"
     CashbookService,
     CashbookEntriesService,
     CashbookReportsService,
+    CashbookImportService,
   ],
 })
 export class CashbookModule {}

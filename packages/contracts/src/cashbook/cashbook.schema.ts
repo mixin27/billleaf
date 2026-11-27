@@ -346,3 +346,47 @@ export type CashbookReport = z.infer<typeof cashbookReportSchema>
 
 export const cashbookReportQuerySchema = cashbookFilterSchema
 export type CashbookReportQuery = z.input<typeof cashbookReportQuerySchema>
+
+// ── Import (from the CashBook app's CSV export) ──────────────────────────
+
+/** Largest CSV accepted for an import. */
+export const CASHBOOK_IMPORT_MAX_BYTES = 5 * 1024 * 1024
+
+export const cashbookImportQuerySchema = z.object({
+  /** "true" previews without writing anything. */
+  dryRun: z.enum(["true", "false"]).optional(),
+})
+export type CashbookImportQuery = z.input<typeof cashbookImportQuerySchema>
+
+export const cashbookImportResultSchema = z.object({
+  dryRun: z.boolean(),
+  /** Entry rows in the file. */
+  rows: z.number().int(),
+  /** New entries (added, or to add on a dry run). */
+  added: z.number().int(),
+  /** Rows already imported before (same row in a file imported earlier). */
+  duplicates: z.number().int(),
+  /** Rows that couldn't be read, with their line in the file. */
+  invalid: z.array(z.object({ line: z.number().int(), message: z.string() })),
+  /** Dates of the rows in the file. */
+  from: isoDate.nullable(),
+  to: isoDate.nullable(),
+  /** Totals of the new entries (minor units). */
+  totalIn: z.number().int(),
+  totalOut: z.number().int(),
+  /** The book's balance before and after the import. */
+  balanceBefore: z.number().int(),
+  balanceAfter: z.number().int(),
+  /**
+   * The file's own Balance column: the balance before its first row
+   * (non-zero when the export starts mid-book) and after its last row.
+   */
+  fileOpeningBalance: z.number().int().nullable(),
+  fileClosingBalance: z.number().int().nullable(),
+  /** Payment modes and categories that will be created (or were). */
+  newModes: z.array(z.string()),
+  newCategories: z.array(z.string()),
+  /** "Entry by" names with no book member of that name: added as you. */
+  unmatchedPeople: z.array(z.string()),
+})
+export type CashbookImportResult = z.infer<typeof cashbookImportResultSchema>

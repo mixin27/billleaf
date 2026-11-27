@@ -48,6 +48,7 @@ import {
 import { useCashbookMembers, useCashbookOptions } from "../api/queries"
 import type { OptionKind } from "../api/keys"
 import { can } from "../lib"
+import { ImportCashbook } from "./import-cashbook"
 
 const ROLES = Object.keys(CASHBOOK_ROLES) as CashbookRole[]
 const ROLE_ITEMS = Object.fromEntries(
@@ -68,6 +69,7 @@ export function BookSettings({ book }: { book: Cashbook }) {
           <Options book={book} kind="modes" />
         </div>
       ) : null}
+      {manage && !book.archivedAt ? <ImportCashbook book={book} /> : null}
       {can.own(book) ? <Danger book={book} /> : null}
     </div>
   )

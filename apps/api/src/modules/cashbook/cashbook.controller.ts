@@ -18,10 +18,13 @@ import { ApiConsumes, ApiTags } from "@nestjs/swagger"
 import {
   addCashbookMemberSchema,
   CASHBOOK_ATTACHMENT_MAX_BYTES,
+  CASHBOOK_IMPORT_MAX_BYTES,
   cashbookEntryActivitySchema,
   cashbookEntryListSchema,
   cashbookEntrySchema,
   cashbookFilterSchema,
+  cashbookImportQuerySchema,
+  cashbookImportResultSchema,
   cashbookListSchema,
   cashbookMemberListSchema,
   cashbookOptionListSchema,
@@ -49,6 +52,7 @@ import {
 } from "../../common/decorators/require-permission.decorator.js"
 import { readMultipart } from "../../common/http/multipart.js"
 import { CashbookEntriesService } from "./cashbook-entries.service.js"
+import { CashbookImportService } from "./cashbook-import.service.js"
 import { CashbookReportsService } from "./cashbook-reports.service.js"
 import { CashbookService } from "./cashbook.service.js"
 
@@ -90,6 +94,10 @@ class CashbookEntryActivityDto extends createZodDto(
 ) {}
 class CashbookFilterDto extends createZodDto(cashbookFilterSchema) {}
 class CashbookReportDto extends createZodDto(cashbookReportSchema) {}
+class CashbookImportQueryDto extends createZodDto(cashbookImportQuerySchema) {}
+class CashbookImportResultDto extends createZodDto(
+  cashbookImportResultSchema
+) {}
 
 const uuid = new ParseUUIDPipe()
 type OptionKind = "categories" | "modes"
@@ -110,7 +118,8 @@ export class CashbookController {
   constructor(
     private readonly books: CashbookService,
     private readonly entries: CashbookEntriesService,
-    private readonly reports: CashbookReportsService
+    private readonly reports: CashbookReportsService,
+    private readonly importer: CashbookImportService
   ) {}
 
   // ── Books ──────────────────────────────────────────────────────────────
@@ -261,6 +270,35 @@ export class CashbookController {
     @Body() body: DeleteCashbookEntriesDto
   ) {
     return this.entries.remove(bookId, body.entryIds)
+  }
+
+  /**
+   * Import the CashBook app's CSV export (multipart `file`, up to 5 MB).
+   * `?dryRun=true` previews without writing. Rows already imported are
+   * skipped. Admin in the book.
+   */
+  @Post(":bookId/import")
+  @HttpCode(200)
+  @ApiConsumes("multipart/form-data")
+  @ZodResponse({ status: 200, type: CashbookImportResultDto })
+  async importCsv(
+    @Param("bookId", uuid) bookId: string,
+    @Query() q: CashbookImportQueryDto,
+    @Req() req: FastifyRequest
+  ) {
+    const { file } = await readMultipart(req, {
+      maxBytes: CASHBOOK_IMPORT_MAX_BYTES,
+    })
+    if (!file)
+      throw new BadRequestException({
+        message: "Choose the CSV file exported from CashBook",
+        code: "file_required",
+      })
+    return this.importer.import(
+      bookId,
+      { filename: file.filename, text: file.body.toString("utf8") },
+      { dryRun: (q as { dryRun?: string }).dryRun === "true" }
+    )
   }
 
   /** Move or copy entries to another book (admin in both). */
