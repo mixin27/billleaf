@@ -19,6 +19,8 @@ export default [
       "android/**",
       "metro.config.js",
       "app.config.js",
+      "plugins/**",
+      "scripts/**",
       "expo-env.d.ts",
     ],
   },

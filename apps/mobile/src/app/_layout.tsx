@@ -16,11 +16,18 @@ export default function RootLayout() {
   const scheme = useColorScheme()
   const session = authClient.useSession()
   const signedIn = Boolean(session.data?.session)
+  // Only the first check holds the splash. Later re-checks (Better Auth
+  // refetches after every sign-in call) report `isPending` again while
+  // signed out; blanking the app then unmounted the sign-in screen and
+  // dropped its two-factor code step, so 2FA accounts looped back to the
+  // password form.
+  const [ready, setReady] = React.useState(false)
+  if (!ready && !session.isPending) setReady(true)
 
   React.useEffect(() => {
-    if (!session.isPending) SplashScreen.hideAsync()
-  }, [session.isPending])
-  if (session.isPending) return null
+    if (ready) SplashScreen.hideAsync()
+  }, [ready])
+  if (!ready) return null
 
   const base = scheme === "dark" ? DarkTheme : DefaultTheme
   const c = Colors[scheme === "dark" ? "dark" : "light"]
