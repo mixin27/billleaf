@@ -1,5 +1,6 @@
 import {
   Agreement01Icon,
+  Book02Icon,
   ChartLineData01Icon,
   Clock01Icon,
   DashboardSquare01Icon,
@@ -121,6 +122,14 @@ export const workspaceNav: NavGroup[] = [
   {
     label: "Books",
     items: [
+      {
+        // No permission: anyone added to a book needs to reach it, even
+        // without cashbook.create.
+        title: "Cashbook",
+        href: "/cashbook",
+        icon: Book02Icon,
+        keywords: ["cash in", "cash out", "balance", "daily", "ledger"],
+      },
       {
         title: "Expenses",
         href: "/expenses",
