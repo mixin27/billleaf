@@ -8,7 +8,8 @@ import { API_URL, APP_SCHEME } from "./config"
 /**
  * Better Auth for the app: the session cookie lives in the device keychain
  * (SecureStore) and goes out as a `Cookie` header with
- * `expo-origin: billleaf://` (ADR-0017).
+ * `expo-origin: billleaf://` (ADR-0017). The Expo plugin sends every
+ * request with `credentials: "omit"`, so no native cookie jar is involved.
  */
 export const authClient = createAuthClient({
   baseURL: API_URL,
