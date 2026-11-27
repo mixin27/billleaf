@@ -6,22 +6,17 @@ import {
   formatMoney,
   fromMinorUnits,
 } from "@workspace/contracts"
-import { cashbookEntries } from "@workspace/db"
+import { cashbookEntries, user } from "@workspace/db"
 import { and, eq, isNull, lt, sql } from "drizzle-orm"
 
 import { InjectDb, type Database } from "../../core/database/database.module.js"
-import {
-  createPdf,
-  cjkFontsFor,
-  INK,
-  MUTED,
-  RULE,
-} from "../documents/document-pdf.js"
-import { formatDocDate } from "../documents/party-snapshot.js"
+import { RequestContext } from "../../common/context/request-context.js"
+import { cjkFontsFor } from "../documents/document-pdf.js"
 import { csvCell } from "../time/time-reports.service.js"
 import { WorkspaceProfileService } from "../workspace/workspace-profile.service.js"
 import { CashbookEntriesService } from "./cashbook-entries.service.js"
 import { type CashbookRow } from "./cashbook-access.service.js"
+import { renderCashbookStatementPdf } from "./cashbook-statement-pdf.js"
 import { signed } from "./cashbook.service.js"
 
 type Totals = { totalIn: number; totalOut: number }
@@ -36,7 +31,8 @@ export class CashbookReportsService {
   constructor(
     @InjectDb() private readonly db: Database,
     private readonly entries: CashbookEntriesService,
-    private readonly profile: WorkspaceProfileService
+    private readonly profile: WorkspaceProfileService,
+    private readonly ctx: RequestContext
   ) {}
 
   async report(bookId: string, q: CashbookFilter): Promise<CashbookReport> {
@@ -83,7 +79,10 @@ export class CashbookReportsService {
     }
   }
 
-  /** A4 statement: opening balance, entries with running balance, closing. */
+  /**
+   * A4 statement (see `cashbook-statement-pdf.ts`): branded header, summary
+   * boxes, a ruled table of the filtered entries and a final balance row.
+   */
   async pdf(
     bookId: string,
     q: CashbookFilter
@@ -91,127 +90,35 @@ export class CashbookReportsService {
     const { book, entries } = await this.entries.all(bookId, q)
     const report = await this.summarize(book, q, entries)
     const profile = await this.profile.get()
-    const locale = profile.locale
-    const money = (n: number) =>
-      formatMoney({ amount: n, currency: book.currency }, locale)
+    const branding = await this.profile.documentBranding()
     const cjk = await cjkFontsFor(
       entries.map((x) => `${x.remark ?? ""} ${x.contactName ?? ""}`),
-      locale
+      profile.locale
     )
-    const { doc, done, write, heightOf, left, width } = createPdf(
-      `${book.name} statement`,
-      { cjk }
-    )
-
-    write(book.name, left, 50, {}, { bold: true, size: 20, color: INK })
-    const period =
-      q.from || q.to
-        ? `${q.from ? formatDocDate(q.from, locale) : "Start"} – ${q.to ? formatDocDate(q.to, locale) : "Today"}`
-        : "All entries"
-    write(
-      `Cashbook statement · ${period}`,
-      left,
-      76,
-      {},
-      {
-        size: 10,
-        color: MUTED,
-      }
-    )
-
-    let y = 110
-    const box = (label: string, value: string, x: number, w: number) => {
-      write(label.toUpperCase(), x, y, { width: w }, { size: 7, color: MUTED })
-      write(
-        value,
-        x,
-        y + 11,
-        { width: w },
-        { bold: true, size: 11, color: INK }
-      )
-    }
-    const quarter = width / 4
-    box("Opening balance", money(report.openingBalance), left, quarter)
-    box("Cash in", money(report.totalIn), left + quarter, quarter)
-    box("Cash out", money(report.totalOut), left + quarter * 2, quarter)
-    box(
-      "Closing balance",
-      money(report.closingBalance),
-      left + quarter * 3,
-      quarter
-    )
-    y += 44
-
-    // Date, Remark, Mode, In, Out, Balance
-    const cols = [
-      { key: "date", label: "DATE", x: 0, w: 0.15 },
-      { key: "remark", label: "REMARK", x: 0.15, w: 0.33 },
-      { key: "mode", label: "MODE", x: 0.49, w: 0.11 },
-      { key: "in", label: "CASH IN", x: 0.6, w: 0.13, right: true },
-      { key: "out", label: "CASH OUT", x: 0.73, w: 0.13, right: true },
-      { key: "bal", label: "BALANCE", x: 0.86, w: 0.14, right: true },
-    ] as const
-    const header = () => {
-      for (const c of cols)
-        write(
-          c.label,
-          left + width * c.x,
-          y,
-          { width: width * c.w, align: "right" in c ? "right" : "left" },
-          { bold: true, size: 7, color: MUTED }
-        )
-      y += 14
-      doc
-        .moveTo(left, y - 4)
-        .lineTo(left + width, y - 4)
-        .strokeColor(RULE)
-        .lineWidth(0.5)
-        .stroke()
-    }
-    header()
-    const bottom = doc.page.height - 60
-    for (const x of entries) {
-      const remark = [x.remark, x.contactName, x.categoryName]
-        .filter(Boolean)
-        .join(" · ")
-      const h = Math.max(heightOf(remark || "—", width * 0.33), 12) + 6
-      if (y + h > bottom) {
-        doc.addPage()
-        y = 50
-        header()
-      }
-      const cell = { size: 8, color: INK }
-      const values: Record<(typeof cols)[number]["key"], string> = {
-        date: `${formatDocDate(x.entryDate, locale)} ${x.entryTime}`,
-        remark: remark || "—",
-        mode: x.modeName ?? "",
-        in: x.type === "in" ? money(x.amount) : "",
-        out: x.type === "out" ? money(x.amount) : "",
-        bal: money(x.balance),
-      }
-      for (const c of cols)
-        write(
-          values[c.key],
-          left + width * c.x,
-          y,
-          { width: width * c.w, align: "right" in c ? "right" : "left" },
-          cell
-        )
-      y += h
-    }
-    if (entries.length === 0)
-      write(
-        "No entries in this period.",
-        left,
-        y,
-        {},
-        { size: 9, color: MUTED }
-      )
-
-    doc.end()
+    const userId = this.ctx.optionalUserId
+    const [me] = userId
+      ? await this.db
+          .select({ name: user.name })
+          .from(user)
+          .where(eq(user.id, userId))
+      : []
+    const content = await renderCashbookStatementPdf({
+      book,
+      entries,
+      report,
+      filterLabel: filterLabel(q, entries),
+      workspaceName: profile.name,
+      generatedBy: me?.name ?? null,
+      generatedAt: new Date(),
+      timezone: profile.timezone,
+      locale: profile.locale,
+      brandColor: branding.brandColor,
+      logo: branding.logo,
+      cjk,
+    })
     return {
       filename: `${fileStem(book.name)}${rangeSuffix(q)}.pdf`,
-      content: await done,
+      content,
     }
   }
 
@@ -308,4 +215,26 @@ function fileStem(name: string) {
 
 function rangeSuffix(q: CashbookFilter) {
   return q.from || q.to ? `-${q.from ?? "start"}-to-${q.to ?? "today"}` : ""
+}
+
+/**
+ * The non-date filters, in words ("Cash out only · Mode: Cash"), so a
+ * printed statement can't pass for the whole book. Names come from the
+ * matching entries.
+ */
+export function filterLabel(
+  q: CashbookFilter,
+  entries: CashbookEntry[]
+): string | null {
+  const parts: string[] = []
+  if (q.type) parts.push(q.type === "in" ? "Cash in only" : "Cash out only")
+  const name = (pick: (e: CashbookEntry) => string | null | undefined) =>
+    entries.map(pick).find(Boolean)
+  if (q.categoryId)
+    parts.push(`Category: ${name((e) => e.categoryName) ?? "one category"}`)
+  if (q.modeId) parts.push(`Mode: ${name((e) => e.modeName) ?? "one mode"}`)
+  if (q.memberId)
+    parts.push(`Entry by: ${name((e) => e.createdBy?.name) ?? "one member"}`)
+  if (q.q?.trim()) parts.push(`Search: "${q.q.trim()}"`)
+  return parts.length ? parts.join(" · ") : null
 }
