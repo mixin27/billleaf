@@ -1,38 +1,35 @@
 import { type Permission, sendDocumentSchema } from "@workspace/contracts"
 import { router, useLocalSearchParams } from "expo-router"
 import * as React from "react"
-import {
-  Alert,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native"
-import { SafeAreaView } from "react-native-safe-area-context"
+import { ScrollView, StyleSheet, View } from "react-native"
 
 import {
-  Body,
   Button,
-  Field,
+  confirm,
+  ErrorState,
   KeyboardAvoid,
-  Screen,
-  Title,
-  Toggle,
+  ListGroup,
+  SheetFooter,
+  SheetHeader,
+  SkeletonRows,
+  SwitchRow,
+  Text,
+  TextField,
+  toast,
 } from "@/components/ui"
-import { Spacing, Type } from "@/constants/theme"
+import { Space } from "@/constants/theme"
 import {
   defaultRecipient,
   useClient,
   useSetClientEmail,
 } from "@/features/clients"
+import { useContract, useEmailContract } from "@/features/contracts"
 import {
   useInvoice,
   useInvoicePayments,
   useSendInvoice,
   useSendReceipt,
 } from "@/features/invoices"
-import { useContract, useEmailContract } from "@/features/contracts"
 import { useMe } from "@/features/me"
 import { useEmailQuote, useQuote } from "@/features/quotes"
 import { useTheme } from "@/hooks/use-theme"
@@ -103,6 +100,8 @@ export default function SendScreen() {
   const number = receipt ? payment?.receiptNumber : inv?.number
   const lastSentTo = invoice.data && !receipt ? invoice.data.lastSentTo : null
   const loading = !inv || (receipt && !payment)
+  const loadError =
+    invoice.error ?? quote.error ?? contract.error ?? payments.error
 
   const submit = () => {
     setTouched(true)
@@ -117,154 +116,145 @@ export default function SendScreen() {
             "the client"
           if (canSave && save) await setEmail.mutateAsync(text).catch(() => {})
           router.back()
-          Alert.alert("Sent", `${number ?? "It"} was emailed to ${sentTo}.`)
+          toast.success(`${number ?? "It"} was emailed to ${sentTo}.`)
         },
         onError: (e) => {
           if (e instanceof ApiError && e.code === "no_recipient") {
             setNoRecipient(true)
             setTouched(true)
-          } else Alert.alert("Couldn't send it", errorMessage(e))
+          } else toast.error(`Couldn't send it: ${errorMessage(e)}`)
         },
       }
     )
   }
 
+  const close = async () => {
+    if (
+      (to !== null || message.trim()) &&
+      !(await confirm({
+        title: "Discard this email?",
+        message: "Nothing has been sent.",
+        confirmLabel: "Discard",
+        destructive: true,
+      }))
+    )
+      return
+    router.back()
+  }
+
+  const toHint =
+    needsAddress && !text
+      ? `${inv?.clientName ?? "This client"} has no email address yet. Enter one to send.`
+      : !needsAddress && !can("client.read")
+        ? "Leave blank to use the client's primary contact."
+        : undefined
+
   return (
-    <Screen>
-      {/* An iOS sheet leaves room at the top; Android shows it full screen. */}
-      <SafeAreaView
-        style={styles.flex}
-        edges={Platform.OS === "android" ? ["top", "bottom"] : ["bottom"]}
-      >
-        <KeyboardAvoid>
-          <View style={styles.header}>
-            <Title style={styles.flex} numberOfLines={1}>
-              {receipt
-                ? "Email receipt"
-                : isContract
-                  ? "Email contract"
-                  : isQuote
-                    ? "Email quote"
-                    : "Email invoice"}
-            </Title>
-            <Button
-              title="Cancel"
-              variant="link"
-              onPress={() => router.back()}
+    <View style={[styles.flex, { backgroundColor: t.surface }]}>
+      <SheetHeader
+        title={
+          receipt
+            ? "Email receipt"
+            : isContract
+              ? "Email contract"
+              : isQuote
+                ? "Email quote"
+                : "Email invoice"
+        }
+        onClose={close}
+      />
+      <KeyboardAvoid>
+        <ScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets
+        >
+          {loadError && loading ? (
+            <ErrorState
+              error={loadError}
+              onRetry={() => {
+                if (invoice.error) void invoice.refetch()
+                if (quote.error) void quote.refetch()
+                if (contract.error) void contract.refetch()
+                if (payments.error) void payments.refetch()
+              }}
             />
-          </View>
-          <ScrollView
-            contentContainerStyle={styles.content}
-            keyboardShouldPersistTaps="handled"
-            automaticallyAdjustKeyboardInsets
-          >
-            {invoice.error ||
-            quote.error ||
-            contract.error ||
-            payments.error ? (
-              <Body>
-                {errorMessage(
-                  invoice.error ??
-                    quote.error ??
-                    contract.error ??
-                    payments.error
-                )}
-              </Body>
-            ) : loading || !inv ? (
-              <Body muted>Loading…</Body>
-            ) : (
-              <>
-                <Body muted>
-                  {`${number} goes to ${inv.clientName} as a PDF, with a link to ${
-                    isContract
-                      ? "read and sign it"
-                      : isQuote
-                        ? "accept or decline it"
-                        : receipt
-                          ? "view it"
-                          : "view and pay it"
-                  }. Replies go to your workspace email.`}
-                  {lastSentTo ? ` Last sent to ${lastSentTo}.` : ""}
-                </Body>
+          ) : loading || !inv ? (
+            <SkeletonRows rows={2} />
+          ) : (
+            <>
+              <Text variant="callout" tone="muted">
+                {`${number} goes to ${inv.clientName} as a PDF, with a link to ${
+                  isContract
+                    ? "read and sign it"
+                    : isQuote
+                      ? "accept or decline it"
+                      : receipt
+                        ? "view it"
+                        : "view and pay it"
+                }. Replies go to your workspace email.`}
+                {lastSentTo ? ` Last sent to ${lastSentTo}.` : ""}
+              </Text>
 
-                <Field
-                  label="To"
-                  value={to ?? fallback ?? ""}
-                  onChangeText={(v) => {
-                    setTo(v)
-                    setNoRecipient(false)
-                  }}
-                  placeholder={
-                    needsAddress
-                      ? "client@example.com"
-                      : "Client's billing email"
-                  }
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  autoComplete="email"
-                  error={touched ? toError : undefined}
-                />
-                {needsAddress && !touched && !text ? (
-                  <Body muted style={Type.small}>
-                    {`${inv.clientName} has no email address yet. Enter one to send.`}
-                  </Body>
-                ) : null}
-                {!needsAddress && !can("client.read") ? (
-                  <Body muted style={Type.small}>
-                    Leave blank to use the client&apos;s primary contact.
-                  </Body>
-                ) : null}
+              <TextField
+                label="To"
+                icon="mail"
+                value={to ?? fallback ?? ""}
+                onChangeText={(v) => {
+                  setTo(v)
+                  setNoRecipient(false)
+                }}
+                placeholder={
+                  needsAddress ? "client@example.com" : "Client's billing email"
+                }
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoComplete="email"
+                error={touched ? toError : undefined}
+                hint={toHint}
+              />
 
-                {canSave ? (
-                  <View style={styles.switchRow}>
-                    <Text style={[Type.body, styles.flex, { color: t.text }]}>
-                      {`Save as ${inv.clientName}'s email`}
-                    </Text>
-                    <Toggle
-                      value={save}
-                      onValueChange={setSave}
-                      label={`Save as ${inv.clientName}'s email`}
-                    />
-                  </View>
-                ) : null}
+              {canSave ? (
+                <ListGroup>
+                  <SwitchRow
+                    title={`Save as ${inv.clientName}'s email`}
+                    value={save}
+                    onValueChange={setSave}
+                  />
+                </ListGroup>
+              ) : null}
 
-                <Field
-                  label="Message"
-                  value={message}
-                  onChangeText={setMessage}
-                  placeholder="Optional, added to the email"
-                  multiline
-                  maxLength={2000}
-                  textAlignVertical="top"
-                  style={styles.message}
-                />
-
-                <Button
-                  title={text && isEmail(text) ? `Send to ${text}` : "Send"}
-                  loading={send.isPending || setEmail.isPending}
-                  onPress={submit}
-                />
-              </>
-            )}
-          </ScrollView>
-        </KeyboardAvoid>
-      </SafeAreaView>
-    </Screen>
+              <TextField
+                label="Message"
+                value={message}
+                onChangeText={setMessage}
+                placeholder="Optional, added to the email"
+                multiline
+                maxLength={2000}
+                textAlignVertical="top"
+                style={styles.message}
+              />
+            </>
+          )}
+        </ScrollView>
+        {!loading && inv ? (
+          <SheetFooter>
+            <Button
+              title={text && isEmail(text) ? `Send to ${text}` : "Send"}
+              icon="mail"
+              loading={send.isPending || setEmail.isPending}
+              onPress={submit}
+            />
+          </SheetFooter>
+        ) : null}
+      </KeyboardAvoid>
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: Spacing.two,
-    paddingHorizontal: Spacing.four,
-    paddingTop: Spacing.four,
-  },
-  content: { padding: Spacing.four, gap: Spacing.four },
-  switchRow: { flexDirection: "row", alignItems: "center", gap: Spacing.three },
-  message: { minHeight: 110, paddingTop: Spacing.three },
+  content: { padding: Space[4], gap: Space[4], paddingBottom: Space[8] },
+  message: { minHeight: 110 },
 })

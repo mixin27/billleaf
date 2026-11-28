@@ -1,27 +1,33 @@
 import type { Client, ProjectStatus } from "@workspace/contracts"
 import { router, Stack } from "expo-router"
 import * as React from "react"
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native"
+import { ScrollView, StyleSheet, View } from "react-native"
 
-import { ProjectRow } from "@/components/project-row"
 import { useMiniPlayerInset } from "@/components/nav/mini-player"
+import { ProjectRow } from "@/components/project-row"
 import {
-  Body,
-  Chip,
-  Field,
-  ErrorState,
-  RefreshControl,
   AppBar,
+  Avatar,
+  Chip,
+  EmptyState,
+  ErrorState,
+  initialsOf,
+  ListGroup,
+  ListItem,
+  RefreshControl,
+  SearchField,
   SegmentedControl,
+  SkeletonRows,
+  Text,
 } from "@/components/ui"
-import { Radius, Spacing, Type } from "@/constants/theme"
+import { Space } from "@/constants/theme"
 import { useClients } from "@/features/clients"
 import { useDashboard } from "@/features/dashboard"
 import { useMe } from "@/features/me"
 import { useProjects } from "@/features/projects"
 import { useWorkspaceProfile } from "@/features/workspaces"
 import { useTheme } from "@/hooks/use-theme"
-import { errorMessage } from "@/lib/api"
+import { MAX_CONTENT_WIDTH } from "@/lib/breakpoint"
 import { useWorkPane as usePane, type WorkPane } from "@/stores/panes"
 
 /** Waits until typing pauses, so a search isn't a request per key. */
@@ -91,7 +97,7 @@ export function WorkView({ stacked }: { stacked?: boolean }) {
       <ScrollView
         contentContainerStyle={[
           styles.content,
-          { paddingBottom: Spacing.four + playerInset },
+          { paddingBottom: Space[8] + playerInset },
         ]}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
@@ -116,18 +122,19 @@ export function WorkView({ stacked }: { stacked?: boolean }) {
             onChange={setPicked}
           />
         ) : null}
-        <Field
-          label="Search"
+        <SearchField
           value={search}
           onChangeText={setSearch}
           placeholder={view === "clients" ? "Name or email" : "Project name"}
-          autoCapitalize="none"
-          autoCorrect={false}
-          returnKeyType="search"
-          clearButtonMode="while-editing"
         />
         {view === "projects" ? (
-          <View style={styles.chips}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            style={styles.bleed}
+            contentContainerStyle={styles.chips}
+          >
             {PROJECT_FILTERS.map((f) => (
               <Chip
                 key={f.value}
@@ -136,37 +143,46 @@ export function WorkView({ stacked }: { stacked?: boolean }) {
                 onPress={() => setStatus(f.value)}
               />
             ))}
-          </View>
+          </ScrollView>
         ) : null}
 
         {list.error && !list.data ? (
-          <ErrorState
-            compact
-            error={list.error}
-            onRetry={() => void list.refetch()}
-          />
+          <ErrorState error={list.error} onRetry={() => void list.refetch()} />
         ) : !list.data ? (
-          <Body muted>Loading…</Body>
+          <SkeletonRows rows={5} />
         ) : list.data.items.length === 0 ? (
-          <Body muted>
-            {q
-              ? `No ${noun} match “${q}”.`
-              : view === "clients"
-                ? "No clients yet. Add one on the web."
-                : status === "active"
+          q ? (
+            <EmptyState
+              icon="search"
+              title="No matches"
+              body={`No ${noun} match “${q}”.`}
+            />
+          ) : view === "clients" ? (
+            <EmptyState
+              icon="people"
+              title="No clients yet"
+              body="No clients yet. Add one on the web."
+            />
+          ) : (
+            <EmptyState
+              icon="folder"
+              title={
+                status === "active"
+                  ? "No active projects"
+                  : `No ${PROJECT_FILTERS.find((f) => f.value === status)!.label.toLowerCase()} projects`
+              }
+              body={
+                status === "active"
                   ? "No active projects. Add one on the web."
-                  : `No ${PROJECT_FILTERS.find((f) => f.value === status)!.label.toLowerCase()} projects.`}
-          </Body>
+                  : `No ${PROJECT_FILTERS.find((f) => f.value === status)!.label.toLowerCase()} projects.`
+              }
+            />
+          )
         ) : (
-          <View
-            style={[
-              styles.card,
-              { backgroundColor: t.backgroundElement, borderColor: t.border },
-            ]}
-          >
+          <ListGroup>
             {view === "clients"
-              ? clients.data?.items.map((c, i) => (
-                  <ClientRow key={c.id} client={c} first={i === 0} />
+              ? clients.data?.items.map((c) => (
+                  <ClientRow key={c.id} client={c} />
                 ))
               : projects.data?.items.map((p, i) => (
                   <ProjectRow
@@ -177,63 +193,46 @@ export function WorkView({ stacked }: { stacked?: boolean }) {
                     today={today}
                   />
                 ))}
-          </View>
+          </ListGroup>
         )}
         {list.data && list.data.total > list.data.items.length ? (
-          <Body muted style={Type.small}>
+          <Text variant="caption" tone="muted" style={styles.center}>
             {`Showing ${list.data.items.length} of ${list.data.total}. Search to find the rest.`}
-          </Body>
+          </Text>
         ) : null}
       </ScrollView>
     </View>
   )
 }
 
-function ClientRow({ client: c, first }: { client: Client; first: boolean }) {
-  const t = useTheme()
+function ClientRow({ client: c }: { client: Client }) {
   const place = [c.city, c.country].filter(Boolean).join(", ")
   const sub = c.email ?? (place || null)
   return (
-    <Pressable
-      accessibilityRole="button"
+    <ListItem
+      title={c.name}
+      subtitle={sub ?? undefined}
+      leading={<Avatar label={initialsOf(c.name)} size={40} round />}
+      chevron
       accessibilityLabel={[c.name, sub].filter(Boolean).join(", ")}
       onPress={() =>
         router.push({ pathname: "/client/[id]", params: { id: c.id } })
       }
-      style={({ pressed }) => [
-        styles.row,
-        !first && { borderTopWidth: 1, borderTopColor: t.border },
-        { opacity: pressed ? 0.6 : 1 },
-      ]}
-    >
-      <Text style={[Type.body, { color: t.text }]} numberOfLines={1}>
-        {c.name}
-      </Text>
-      {sub ? (
-        <Text
-          style={[Type.small, { color: t.textSecondary }]}
-          numberOfLines={1}
-        >
-          {sub}
-        </Text>
-      ) : null}
-    </Pressable>
+    />
   )
 }
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   content: {
-    paddingHorizontal: Spacing.four,
-    paddingTop: Spacing.two,
-    gap: Spacing.three,
+    paddingHorizontal: Space[4],
+    paddingTop: Space[2],
+    gap: Space[3],
+    width: "100%",
+    maxWidth: MAX_CONTENT_WIDTH,
+    alignSelf: "center",
   },
-  card: {
-    borderWidth: 1,
-    borderRadius: Radius.lg,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.one,
-  },
-  chips: { flexDirection: "row", flexWrap: "wrap", gap: Spacing.two },
-  row: { paddingVertical: Spacing.two + 2, gap: Spacing.half },
+  bleed: { marginHorizontal: -Space[4], flexGrow: 0 },
+  chips: { gap: Space[2], paddingHorizontal: Space[4] },
+  center: { textAlign: "center" },
 })

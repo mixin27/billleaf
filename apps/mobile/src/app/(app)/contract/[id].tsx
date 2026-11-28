@@ -1,28 +1,32 @@
 import type { Contract, Permission } from "@workspace/contracts"
 import { router, Stack, useLocalSearchParams } from "expo-router"
 import * as React from "react"
-import {
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native"
+import { ScrollView, StyleSheet, View } from "react-native"
 
 import { ContractText } from "@/components/contract-text"
+import { useMiniPlayerInset } from "@/components/nav/mini-player"
 import {
-  Body,
+  Badge,
+  type BadgeTone,
+  BottomActionBar,
   Button,
-  Screen,
-  Section,
+  Card,
+  confirm,
   ErrorState,
+  Icon,
+  IconTile,
+  ListGroup,
+  ListItem,
   RefreshControl,
+  SectionHeader,
+  Skeleton,
+  SkeletonRows,
+  Text,
+  toast,
 } from "@/components/ui"
-import { Spacing, Type } from "@/constants/theme"
+import { Radius, Space } from "@/constants/theme"
 import {
   CONTRACT_STATUS_LABELS,
-  contractTone,
   shareContractPdf,
   useContract,
   useContractStep,
@@ -32,7 +36,16 @@ import { useMe } from "@/features/me"
 import { useWorkspaceProfile } from "@/features/workspaces"
 import { useTheme } from "@/hooks/use-theme"
 import { errorMessage } from "@/lib/api"
+import { MAX_CONTENT_WIDTH } from "@/lib/breakpoint"
 import { shortDate } from "@/lib/format"
+
+const TONE: Record<Contract["status"], BadgeTone> = {
+  draft: "neutral",
+  sent: "info",
+  signed: "in",
+  declined: "out",
+  void: "out",
+}
 
 /**
  * One contract: who it's with, where it stands, and its text. A draft is
@@ -43,6 +56,7 @@ import { shortDate } from "@/lib/format"
 export default function ContractScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
   const t = useTheme()
+  const playerInset = useMiniPlayerInset()
   const me = useMe()
   const can = (p: Permission) => me.data?.permissions.includes(p) ?? false
   const contract = useContract(id)
@@ -57,42 +71,46 @@ export default function ContractScreen() {
 
   const date = (iso: string) => shortDate(iso.slice(0, 10), locale, today)
   const fail = (title: string) => (e: unknown) =>
-    Alert.alert(title, errorMessage(e))
+    toast.error(`${title}: ${errorMessage(e)}`)
 
-  const markSent = () =>
-    Alert.alert(
-      "Mark as sent?",
-      "The contract gets its number and its text can't be changed after this. Email it to the client next so they can sign it in the portal.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Mark as sent",
-          onPress: () =>
-            step.mutate(
-              { step: "send" },
-              { onError: fail("Couldn't mark it as sent") }
-            ),
-        },
-      ]
+  const markSent = async () => {
+    if (
+      !(await confirm({
+        title: "Mark as sent?",
+        message:
+          "The contract gets its number and its text can't be changed after this. Email it to the client next so they can sign it in the portal.",
+        confirmLabel: "Mark as sent",
+      }))
     )
+      return
+    step.mutate(
+      { step: "send" },
+      {
+        onSuccess: () => toast.success("Contract marked as sent"),
+        onError: fail("Couldn't mark it as sent"),
+      }
+    )
+  }
 
-  const declined = () =>
-    Alert.alert(
-      "Client declined?",
-      "Records that the client won't sign this contract, for an answer you got outside the client portal.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Declined",
-          style: "destructive",
-          onPress: () =>
-            step.mutate(
-              { step: "decline" },
-              { onError: fail("Couldn't record the answer") }
-            ),
-        },
-      ]
+  const declined = async () => {
+    if (
+      !(await confirm({
+        title: "Client declined?",
+        message:
+          "Records that the client won't sign this contract, for an answer you got outside the client portal.",
+        confirmLabel: "Declined",
+        destructive: true,
+      }))
     )
+      return
+    step.mutate(
+      { step: "decline" },
+      {
+        onSuccess: () => toast.success("Marked as declined"),
+        onError: fail("Couldn't record the answer"),
+      }
+    )
+  }
 
   const share = async () => {
     if (!c) return
@@ -106,6 +124,14 @@ export default function ContractScreen() {
     }
   }
 
+  const email = () => {
+    if (!c) return
+    router.push({
+      pathname: "/send",
+      params: { kind: "contract", contractId: c.id },
+    })
+  }
+
   const open = (stepName: "sign" | "void") =>
     router.push({
       pathname: "/contract-step",
@@ -113,12 +139,36 @@ export default function ContractScreen() {
     })
 
   const unresolved = c?.status === "draft" ? c.unresolvedFields : []
+  const canSend = can("contract.send")
+  const live = c?.status === "sent" || c?.status === "signed"
+  // The one main next step, pinned to the bottom.
+  const main: "send" | "sign" | "email" | null =
+    !c || !canSend
+      ? null
+      : c.status === "draft"
+        ? "send"
+        : c.status === "sent"
+          ? "sign"
+          : c.status === "signed"
+            ? "email"
+            : null
+
+  const linked =
+    c &&
+    (can("client.read") ||
+      (c.quoteId && can("quote.read")) ||
+      (c.projectId && can("project.read")))
 
   return (
-    <Screen>
-      <Stack.Screen options={{ title: c?.number ?? "Draft contract" }} />
+    <View style={[styles.flex, { backgroundColor: t.canvas }]}>
+      <Stack.Screen
+        options={{ title: c ? (c.number ?? "Draft contract") : "Contract" }}
+      />
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: Space[8] + (main ? 0 : playerInset) },
+        ]}
         contentInsetAdjustmentBehavior="automatic"
         refreshControl={
           <RefreshControl
@@ -133,116 +183,161 @@ export default function ContractScreen() {
       >
         {contract.error && !contract.data ? (
           <ErrorState
-            compact
             error={contract.error}
             onRetry={() => void contract.refetch()}
           />
         ) : !c ? (
-          <Body muted>Loading…</Body>
+          <Loading />
         ) : (
           <>
-            <Summary
-              contract={c}
-              date={date}
-              canOpenClient={can("client.read")}
-              canOpenQuote={can("quote.read")}
-              canOpenProject={can("project.read")}
-            />
+            <Summary contract={c} date={date} unresolved={unresolved} />
 
             <View style={styles.actions}>
-              {c.status === "draft" && can("contract.send") ? (
-                <>
-                  <Button
-                    title="Mark as sent"
-                    loading={step.isPending}
-                    disabled={unresolved.length > 0}
-                    onPress={markSent}
-                  />
-                  {unresolved.length > 0 ? (
-                    <Body style={[Type.small, { color: t.danger }]}>
-                      {`Fill in ${unresolved.map((f) => `{{${f}}}`).join(", ")} on the web before sending.`}
-                    </Body>
-                  ) : null}
-                </>
-              ) : null}
-              {c.status === "sent" && can("contract.send") ? (
-                <Button title="Record signature" onPress={() => open("sign")} />
-              ) : null}
               <View style={styles.row}>
                 <View style={styles.flex}>
                   <Button
                     title="Share PDF"
+                    icon="share"
                     variant="secondary"
+                    size="sm"
                     loading={sharing}
                     onPress={share}
                   />
                 </View>
-                {(c.status === "sent" || c.status === "signed") &&
-                can("contract.send") ? (
+                {live && canSend && main !== "email" ? (
                   <View style={styles.flex}>
                     <Button
                       title="Email client"
+                      icon="mail"
                       variant="secondary"
-                      onPress={() =>
-                        router.push({
-                          pathname: "/send",
-                          params: { kind: "contract", contractId: c.id },
-                        })
-                      }
+                      size="sm"
+                      onPress={email}
                     />
                   </View>
                 ) : null}
               </View>
-              {c.status === "sent" && can("contract.send") ? (
-                <Button
-                  title="Client declined"
-                  variant="link"
-                  disabled={step.isPending}
-                  onPress={declined}
-                />
-              ) : null}
-              {(c.status === "sent" || c.status === "signed") &&
-              can("contract.send") ? (
-                <Button
-                  title="Void contract"
-                  variant="link"
-                  onPress={() => open("void")}
-                />
-              ) : null}
-              {c.status === "draft" ? (
-                <Body muted style={Type.small}>
-                  Edit drafts on the web.
-                </Body>
+              {live && canSend ? (
+                <View style={styles.row}>
+                  {c.status === "sent" ? (
+                    <View style={styles.flex}>
+                      <Button
+                        title="Client declined"
+                        variant="ghost"
+                        size="sm"
+                        disabled={step.isPending}
+                        onPress={() => void declined()}
+                      />
+                    </View>
+                  ) : null}
+                  <View style={styles.flex}>
+                    <Button
+                      title="Void contract"
+                      variant="ghost"
+                      size="sm"
+                      onPress={() => open("void")}
+                    />
+                  </View>
+                </View>
               ) : null}
             </View>
 
-            <Section title="Contract">
-              <View style={styles.body}>
-                <ContractText text={c.renderedBody ?? c.body} />
+            {linked ? (
+              <View>
+                <SectionHeader title="Linked" />
+                <ListGroup>
+                  {can("client.read") ? (
+                    <ListItem
+                      title={c.clientName}
+                      subtitle="Client"
+                      leading={<IconTile icon="user" />}
+                      chevron
+                      accessibilityHint="Opens the client"
+                      onPress={() =>
+                        router.push({
+                          pathname: "/client/[id]",
+                          params: { id: c.clientId },
+                        })
+                      }
+                    />
+                  ) : null}
+                  {c.quoteId && can("quote.read") ? (
+                    <ListItem
+                      title={`Quote ${c.quoteNumber ?? "(draft)"}`}
+                      subtitle="Quote"
+                      leading={<IconTile icon="quote" />}
+                      chevron
+                      onPress={() =>
+                        router.push({
+                          pathname: "/quote/[id]",
+                          params: { id: c.quoteId! },
+                        })
+                      }
+                    />
+                  ) : null}
+                  {c.projectId && can("project.read") ? (
+                    <ListItem
+                      title={c.projectName ?? "Open the project"}
+                      subtitle="Project"
+                      leading={<IconTile icon="folder" />}
+                      chevron
+                      onPress={() =>
+                        router.push({
+                          pathname: "/project/[id]",
+                          params: { id: c.projectId! },
+                        })
+                      }
+                    />
+                  ) : null}
+                </ListGroup>
               </View>
-            </Section>
+            ) : null}
+
+            <View>
+              <SectionHeader title="Contract" />
+              <ListGroup>
+                <View style={styles.body}>
+                  <ContractText text={c.renderedBody ?? c.body} />
+                </View>
+              </ListGroup>
+            </View>
           </>
         )}
       </ScrollView>
-    </Screen>
+      {c && main ? (
+        <BottomActionBar>
+          {main === "send" ? (
+            <Button
+              title="Mark as sent"
+              icon="check"
+              loading={step.isPending}
+              disabled={unresolved.length > 0}
+              onPress={() => void markSent()}
+            />
+          ) : main === "sign" ? (
+            <Button
+              title="Record signature"
+              icon="edit"
+              onPress={() => open("sign")}
+            />
+          ) : (
+            <Button title="Email client" icon="mail" onPress={email} />
+          )}
+        </BottomActionBar>
+      ) : null}
+    </View>
   )
 }
 
 function Summary({
   contract: c,
   date,
-  canOpenClient,
-  canOpenQuote,
-  canOpenProject,
+  unresolved,
 }: {
   contract: Contract
   date: (iso: string) => string
-  canOpenClient: boolean
-  canOpenQuote: boolean
-  canOpenProject: boolean
+  unresolved: string[]
 }) {
   const t = useTheme()
-  const tone = contractTone(c.status)
   const term = [
     c.effectiveDate ? `From ${date(c.effectiveDate)}` : null,
     c.endDate ? `until ${date(c.endDate)}` : null,
@@ -270,75 +365,91 @@ function Summary({
           : c.status === "sent" && c.sentAt
             ? `Sent ${date(c.sentAt)}, waiting for the client to sign`
             : "Not sent"
-  const link = (label: string, onPress: () => void) => (
-    <Pressable accessibilityRole="link" onPress={onPress}>
-      <Text style={[Type.small, { color: t.primary }]}>{label}</Text>
-    </Pressable>
-  )
   return (
-    <View style={styles.summary}>
-      {canOpenClient ? (
-        <Pressable
-          accessibilityRole="link"
-          accessibilityHint="Opens the client"
-          onPress={() =>
-            router.push({
-              pathname: "/client/[id]",
-              params: { id: c.clientId },
-            })
-          }
-          style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
-        >
-          <Text style={[Type.heading, { color: t.primary }]}>
-            {c.clientName}
-          </Text>
-        </Pressable>
-      ) : (
-        <Text style={[Type.heading, { color: t.text }]}>{c.clientName}</Text>
-      )}
-      {c.title ? (
-        <Text style={[Type.body, { color: t.textSecondary }]}>{c.title}</Text>
-      ) : null}
-      <Text style={[Type.small, { color: t.textSecondary }]}>
-        <Text
-          style={{
-            color:
-              tone === "good" ? t.primary : tone === "bad" ? t.danger : t.text,
-            fontWeight: "600",
-          }}
-        >
-          {CONTRACT_STATUS_LABELS[c.status]}
+    <Card>
+      <View style={styles.head}>
+        <Text variant="callout" tone="muted" numberOfLines={1}>
+          {c.number ?? "Draft contract"}
         </Text>
-        {term ? ` · ${term}` : ""}
-      </Text>
-      <Body muted style={Type.small}>
+        <Badge label={CONTRACT_STATUS_LABELS[c.status]} tone={TONE[c.status]} />
+      </View>
+      <View style={styles.tight}>
+        <Text variant="headline" selectable>
+          {c.clientName}
+        </Text>
+        {c.title ? (
+          <Text variant="callout" tone="muted">
+            {c.title}
+          </Text>
+        ) : null}
+      </View>
+      {term ? (
+        <View style={styles.inline}>
+          <Icon name="calendar" size={18} tone="muted" />
+          <Text variant="callout" style={styles.flex}>
+            {term}
+          </Text>
+        </View>
+      ) : null}
+      <Text variant="callout" tone="muted">
         {`${state}.`}
-      </Body>
-      {c.quoteId && canOpenQuote
-        ? link(`Quote ${c.quoteNumber ?? "(draft)"} ›`, () =>
-            router.push({
-              pathname: "/quote/[id]",
-              params: { id: c.quoteId! },
-            })
-          )
-        : null}
-      {c.projectId && canOpenProject
-        ? link(`Project: ${c.projectName ?? "open it"} ›`, () =>
-            router.push({
-              pathname: "/project/[id]",
-              params: { id: c.projectId! },
-            })
-          )
-        : null}
-    </View>
+      </Text>
+      {c.status === "draft" ? (
+        unresolved.length > 0 ? (
+          <View style={[styles.warn, { backgroundColor: t.warningSoft }]}>
+            <Icon name="alert" size={18} tone="warning" />
+            <Text variant="callout" tone="warning" style={styles.flex}>
+              {`Fill in ${unresolved.map((f) => `{{${f}}}`).join(", ")} on the web before sending.`}
+            </Text>
+          </View>
+        ) : (
+          <Text variant="callout" tone="muted">
+            Edit drafts on the web.
+          </Text>
+        )
+      ) : null}
+    </Card>
+  )
+}
+
+function Loading() {
+  return (
+    <>
+      <Card>
+        <Skeleton width="40%" height={12} />
+        <Skeleton width="70%" height={18} />
+        <Skeleton width="60%" height={12} />
+      </Card>
+      <SkeletonRows rows={3} />
+    </>
   )
 }
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  content: { padding: Spacing.four, gap: Spacing.four },
-  summary: { gap: Spacing.one },
-  actions: { gap: Spacing.two },
-  row: { flexDirection: "row", gap: Spacing.two },
-  body: { paddingVertical: Spacing.three },
+  content: {
+    padding: Space[4],
+    gap: Space[4],
+    width: "100%",
+    maxWidth: MAX_CONTENT_WIDTH,
+    alignSelf: "center",
+  },
+  head: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: Space[2],
+  },
+  tight: { gap: Space[0.5] },
+  inline: { flexDirection: "row", alignItems: "center", gap: Space[2] },
+  warn: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: Space[2],
+    padding: Space[3],
+    borderRadius: Radius.md,
+  },
+  actions: { gap: Space[2] },
+  row: { flexDirection: "row", gap: Space[2] },
+  body: { paddingHorizontal: Space[4], paddingVertical: Space[4] },
 })

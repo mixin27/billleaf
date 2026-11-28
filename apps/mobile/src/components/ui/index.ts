@@ -48,12 +48,4 @@ export {
   toast,
 } from "./feedback"
 export { Icon, type IconName, Text, type Tone } from "./text"
-export {
-  Body,
-  ClearableInput,
-  Field,
-  KeyboardAvoid,
-  Screen,
-  Section,
-  Title,
-} from "./legacy"
+export { KeyboardAvoid } from "./keyboard"

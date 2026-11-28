@@ -1,14 +1,15 @@
 /**
  * Billleaf mobile design tokens (brand: docs/product/brand.md; the
  * proposal: the "Billleaf Mobile Redesign" artifact). Screens use these
- * names only: raw colours in `src/app` and `src/components` fail lint.
+ * names only: raw colours in `src/app` and `src/components` fail the
+ * colour check (scripts/check-colours.mjs).
  *
  * Surfaces: `canvas` is the page, `surface` the cards, rows, bars and
  * sheets on it. Money: `in*` for cash in and money received, `out*` for
  * cash out, overdue, errors and destructive actions. Text on a fill uses
  * the matching `on*` colour.
  */
-import { Platform, type TextStyle } from "react-native"
+import type { TextStyle } from "react-native"
 
 const brand = {
   green: "#15803D",
@@ -81,26 +82,7 @@ const dark = {
   shadow: "#000000",
 } as const
 
-/**
- * Old names, kept so untouched screens keep working while they move to the
- * new tokens (removed once every screen has moved).
- */
-function legacy<T extends typeof light | typeof dark>(c: T) {
-  return {
-    ...c,
-    textSecondary: c.textMuted,
-    background: c.canvas,
-    backgroundElement: c.surface,
-    backgroundSelected: c.surfaceSelected,
-    accent: c.inText,
-    danger: c.outText,
-    warningBackground: c.warningSoft,
-    tabBar: c.surface,
-    tabIndicator: c.primarySoft,
-  }
-}
-
-export const Colors = { light: legacy(light), dark: legacy(dark) }
+export const Colors = { light, dark }
 
 export type Theme = (typeof Colors)["light"] | (typeof Colors)["dark"]
 export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark
@@ -119,17 +101,6 @@ export const Space = {
   10: 40,
   12: 48,
   16: 64,
-} as const
-
-/** Old spacing names (two = 8, three = 16, …). */
-export const Spacing = {
-  half: 2,
-  one: 4,
-  two: 8,
-  three: 16,
-  four: 24,
-  five: 32,
-  six: 64,
 } as const
 
 /** 8 is the default (buttons, inputs, list groups), as on the web. */
@@ -185,19 +156,5 @@ export const TextVariants = {
 
 export type TextVariant = keyof typeof TextVariants
 
-/** Old type names, now in Inter. */
-export const Type = {
-  title: { ...font("700"), fontSize: 28, lineHeight: 34 },
-  heading: { ...font("600"), fontSize: 20, lineHeight: 26 },
-  body: { ...font("400"), fontSize: 16, lineHeight: 22 },
-  small: { ...font("400"), fontSize: 13, lineHeight: 18 },
-  mono: { ...font("700"), fontSize: 32, ...num },
-} satisfies Record<string, TextStyle>
-
 /** Motion durations (ms); collapse to fades with reduced motion. */
 export const Motion = { press: 120, enter: 200, segment: 250 } as const
-
-export const Fonts = Platform.select({
-  ios: { sans: "Inter", rounded: "Inter", mono: "ui-monospace" },
-  default: { sans: "Inter", rounded: "Inter", mono: "monospace" },
-})

@@ -1,31 +1,36 @@
-import type { ContractSummary } from "@workspace/contracts"
+import type { ContractStatus, ContractSummary } from "@workspace/contracts"
 import { router } from "expo-router"
-import { Pressable, StyleSheet, Text, View } from "react-native"
 
-import { Spacing, Type } from "@/constants/theme"
-import { CONTRACT_STATUS_LABELS, contractTone } from "@/features/contracts"
-import { useTheme } from "@/hooks/use-theme"
+import { Badge, type BadgeTone, IconTile, ListItem } from "@/components/ui"
+import { CONTRACT_STATUS_LABELS } from "@/features/contracts"
 import { shortDate } from "@/lib/format"
+
+const TONES: Record<ContractStatus, BadgeTone> = {
+  draft: "neutral",
+  sent: "warning",
+  signed: "in",
+  declined: "out",
+  void: "neutral",
+}
 
 /**
  * One contract in a list: client (or title, with `byTitle`), number and
- * the date that matters for its state. Opens the contract.
+ * the date that matters for its state. Opens the contract. Put rows in a
+ * `ListGroup`.
  */
 export function ContractRow({
   contract: c,
   locale,
   today,
-  first,
   byTitle,
 }: {
   contract: ContractSummary
   locale: string
   today: string | undefined
-  first: boolean
+  /** @deprecated The ListGroup draws dividers. */
+  first?: boolean
   byTitle?: boolean
 }) {
-  const t = useTheme()
-  const tone = contractTone(c.status)
   const date = (iso: string) => shortDate(iso.slice(0, 10), locale, today)
   const when =
     c.status === "signed" && c.signedAt
@@ -39,55 +44,22 @@ export function ContractRow({
     .filter(Boolean)
     .join(" · ")
   const status = CONTRACT_STATUS_LABELS[c.status]
+  const tone = TONES[c.status]
   return (
-    <Pressable
-      accessibilityRole="button"
+    <ListItem
+      title={heading}
+      subtitle={sub}
+      leading={
+        <IconTile
+          icon="contract"
+          tone={tone === "in" ? "in" : tone === "out" ? "out" : "neutral"}
+        />
+      }
+      trailing={<Badge label={status} tone={tone} />}
       accessibilityLabel={`${heading}, ${status}, ${sub}`}
       onPress={() =>
         router.push({ pathname: "/contract/[id]", params: { id: c.id } })
       }
-      style={({ pressed }) => [
-        styles.row,
-        !first && { borderTopWidth: 1, borderTopColor: t.border },
-        { opacity: pressed ? 0.6 : 1 },
-      ]}
-    >
-      <View style={styles.flex}>
-        <Text style={[Type.body, { color: t.text }]} numberOfLines={1}>
-          {heading}
-        </Text>
-        <Text
-          style={[Type.small, { color: t.textSecondary }]}
-          numberOfLines={1}
-        >
-          {sub}
-        </Text>
-      </View>
-      <Text
-        style={[
-          Type.small,
-          {
-            color:
-              tone === "good"
-                ? t.primary
-                : tone === "bad"
-                  ? t.danger
-                  : t.textSecondary,
-          },
-        ]}
-      >
-        {status}
-      </Text>
-    </Pressable>
+    />
   )
 }
-
-const styles = StyleSheet.create({
-  flex: { flex: 1 },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.three,
-    paddingVertical: Spacing.two + 2,
-  },
-})

@@ -1,29 +1,30 @@
-import { addDays } from "@workspace/contracts"
 import { router, useLocalSearchParams } from "expo-router"
 import * as React from "react"
-import { Alert, Platform, ScrollView, StyleSheet, View } from "react-native"
-import { SafeAreaView } from "react-native-safe-area-context"
+import { ScrollView, StyleSheet, View } from "react-native"
 
 import {
-  Body,
   Button,
-  Chip,
-  Field,
-  KeyboardAvoid,
-  Screen,
-  Title,
+  confirm,
+  DateField,
   ErrorState,
+  KeyboardAvoid,
+  SheetFooter,
+  SheetHeader,
+  Skeleton,
+  Text,
+  TextField,
+  toast,
 } from "@/components/ui"
-import { Spacing, Type } from "@/constants/theme"
+import { Space } from "@/constants/theme"
 import {
   useContract,
   useContractStep,
   useSignContract,
 } from "@/features/contracts"
 import { useDashboard } from "@/features/dashboard"
+import { useWorkspaceProfile } from "@/features/workspaces"
+import { useTheme } from "@/hooks/use-theme"
 import { errorMessage } from "@/lib/api"
-
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
 
 /**
  * Record a signature you got outside the client portal (who signed, and
@@ -35,10 +36,14 @@ export default function ContractStepScreen() {
     step: "sign" | "void"
   }>()
   const isVoid = step === "void"
+  const t = useTheme()
   const contract = useContract(id)
   const sign = useSignContract(id)
   const voiding = useContractStep(id)
   const today = useDashboard().data?.today
+  const locale =
+    useWorkspaceProfile().data?.locale ??
+    Intl.DateTimeFormat().resolvedOptions().locale
   const c = contract.data
 
   const [name, setName] = React.useState("")
@@ -47,15 +52,27 @@ export default function ContractStepScreen() {
   const [touched, setTouched] = React.useState(false)
 
   const date = signedOn ?? today ?? ""
+  const dirty = isVoid
+    ? reason.trim().length > 0
+    : name.trim().length > 0 || signedOn !== null
   const nameError =
     touched && !name.trim() ? "Who signed for the client?" : undefined
-  const dateError = touched
-    ? !ISO_DATE.test(date)
-      ? "Use YYYY-MM-DD"
-      : today && date > today
-        ? "Can't be in the future"
-        : undefined
-    : undefined
+  const dateError =
+    touched && today && date > today ? "Can't be in the future" : undefined
+
+  const close = async () => {
+    if (
+      dirty &&
+      !(await confirm({
+        title: isVoid ? "Discard the reason?" : "Discard this signature?",
+        message: "What you've typed isn't saved.",
+        confirmLabel: "Discard",
+        destructive: true,
+      }))
+    )
+      return
+    router.back()
+  }
 
   const submit = () => {
     setTouched(true)
@@ -63,145 +80,142 @@ export default function ContractStepScreen() {
       voiding.mutate(
         { step: "void", reason: reason.trim() || undefined },
         {
-          onSuccess: () => router.back(),
-          onError: (e) => Alert.alert("Couldn't void it", errorMessage(e)),
+          onSuccess: () => {
+            toast.success("Contract voided")
+            router.back()
+          },
+          onError: (e) => toast.error(`Couldn't void it: ${errorMessage(e)}`),
         }
       )
       return
     }
-    if (!name.trim() || !ISO_DATE.test(date) || (today && date > today)) return
+    if (!name.trim() || !date || (today && date > today)) return
     sign.mutate(
       { signedByName: name.trim(), signedAt: date },
       {
-        onSuccess: () => router.back(),
+        onSuccess: () => {
+          toast.success("Signature recorded")
+          router.back()
+        },
         onError: (e) =>
-          Alert.alert("Couldn't record the signature", errorMessage(e)),
+          toast.error(`Couldn't record the signature: ${errorMessage(e)}`),
       }
     )
   }
 
   return (
-    <Screen>
-      {/* An iOS sheet leaves room at the top; Android shows it full screen. */}
-      <SafeAreaView
-        style={styles.flex}
-        edges={Platform.OS === "android" ? ["top", "bottom"] : ["bottom"]}
-      >
-        <KeyboardAvoid>
-          <View style={styles.header}>
-            <Title>{isVoid ? "Void contract" : "Record signature"}</Title>
-            <Button
-              title="Cancel"
-              variant="link"
-              onPress={() => router.back()}
+    <View style={[styles.flex, { backgroundColor: t.surface }]}>
+      <SheetHeader
+        title={isVoid ? "Void contract" : "Record signature"}
+        onClose={() => void close()}
+      />
+      <KeyboardAvoid>
+        <ScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets
+        >
+          {contract.error && !contract.data ? (
+            <ErrorState
+              compact
+              error={contract.error}
+              onRetry={() => void contract.refetch()}
             />
-          </View>
-          <ScrollView
-            contentContainerStyle={styles.content}
-            keyboardShouldPersistTaps="handled"
-            automaticallyAdjustKeyboardInsets
-          >
-            {contract.error && !contract.data ? (
-              <ErrorState
-                compact
-                error={contract.error}
-                onRetry={() => void contract.refetch()}
+          ) : !c ? (
+            <View style={styles.loading}>
+              <Skeleton width="90%" height={14} />
+              <Skeleton width="70%" height={14} />
+              <Skeleton width="100%" height={48} />
+            </View>
+          ) : isVoid ? (
+            <>
+              <Text variant="body" tone="muted">
+                {`${c.number ?? "The contract"} with ${c.clientName} stops being in force. It stays on record, marked void.`}
+              </Text>
+              <TextField
+                label="Reason"
+                value={reason}
+                onChangeText={setReason}
+                placeholder="Optional, e.g. replaced by a new contract"
+                maxLength={500}
+                multiline
+                textAlignVertical="top"
+                style={styles.reason}
               />
-            ) : !c ? (
-              <Body muted>Loading…</Body>
-            ) : isVoid ? (
-              <>
-                <Body muted>
-                  {`${c.number ?? "The contract"} with ${c.clientName} stops being in force. It stays on record, marked void.`}
-                </Body>
-                <Field
-                  label="Reason"
-                  value={reason}
-                  onChangeText={setReason}
-                  placeholder="Optional, e.g. replaced by a new contract"
-                  maxLength={500}
-                  multiline
-                  textAlignVertical="top"
-                  style={styles.reason}
-                />
-                <Button
-                  title="Void contract"
-                  variant="danger"
-                  loading={voiding.isPending}
-                  onPress={submit}
-                />
-              </>
-            ) : (
-              <>
-                <Body muted>
-                  {`For a signature you got outside the client portal, on paper or by email. ${c.number} becomes signed.`}
-                </Body>
-                <Field
-                  label="Signed by"
-                  value={name}
-                  onChangeText={setName}
-                  placeholder={`Who signed for ${c.clientName}`}
-                  autoCapitalize="words"
-                  autoComplete="name"
-                  maxLength={200}
-                  error={nameError}
-                />
+            </>
+          ) : (
+            <>
+              <Text variant="body" tone="muted">
+                {`For a signature you got outside the client portal, on paper or by email. ${c.number} becomes signed.`}
+              </Text>
+              <TextField
+                label="Signed by"
+                icon="user"
+                value={name}
+                onChangeText={setName}
+                placeholder={`Who signed for ${c.clientName}`}
+                autoCapitalize="words"
+                autoComplete="name"
+                maxLength={200}
+                error={nameError}
+              />
+              {today ? (
                 <View style={styles.gap}>
-                  <Field
+                  <DateField
                     label="Signed on"
                     value={date}
-                    onChangeText={setSignedOn}
-                    keyboardType="numbers-and-punctuation"
-                    autoCorrect={false}
-                    maxLength={10}
-                    error={dateError}
+                    onChange={(d) => setSignedOn(d ?? today)}
+                    today={today}
+                    locale={locale}
                   />
-                  {today ? (
-                    <View style={styles.wrap}>
-                      {[
-                        ["Today", today],
-                        ["Yesterday", addDays(today, -1)],
-                      ].map(([label, value]) => (
-                        <Chip
-                          key={label}
-                          label={label!}
-                          selected={date === value}
-                          onPress={() => setSignedOn(value!)}
-                        />
-                      ))}
-                    </View>
+                  {dateError ? (
+                    <Text variant="caption" tone="out">
+                      {dateError}
+                    </Text>
                   ) : null}
                 </View>
-                <Button
-                  title="Record signature"
-                  loading={sign.isPending}
-                  disabled={!today}
-                  onPress={submit}
-                />
-                <Body muted style={Type.small}>
-                  Clients who sign in the portal are recorded on their own, with
-                  a signature certificate on the PDF.
-                </Body>
-              </>
-            )}
-          </ScrollView>
-        </KeyboardAvoid>
-      </SafeAreaView>
-    </Screen>
+              ) : (
+                <Skeleton width="100%" height={48} />
+              )}
+              <Text variant="callout" tone="muted">
+                Clients who sign in the portal are recorded on their own, with a
+                signature certificate on the PDF.
+              </Text>
+            </>
+          )}
+        </ScrollView>
+        <SheetFooter>
+          <Button
+            title="Cancel"
+            variant="secondary"
+            onPress={() => void close()}
+          />
+          {isVoid ? (
+            <Button
+              title="Void contract"
+              variant="danger"
+              loading={voiding.isPending}
+              disabled={!c}
+              onPress={submit}
+            />
+          ) : (
+            <Button
+              title="Record signature"
+              loading={sign.isPending}
+              disabled={!c || !today}
+              onPress={submit}
+            />
+          )}
+        </SheetFooter>
+      </KeyboardAvoid>
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: Spacing.four,
-    paddingTop: Spacing.four,
-  },
-  content: { padding: Spacing.four, gap: Spacing.four },
-  gap: { gap: Spacing.two },
-  wrap: { flexDirection: "row", flexWrap: "wrap", gap: Spacing.two },
-  reason: { minHeight: 90, paddingTop: Spacing.three },
+  content: { padding: Space[4], gap: Space[4], paddingBottom: Space[8] },
+  gap: { gap: Space[1] },
+  loading: { gap: Space[3] },
+  reason: { minHeight: 90 },
 })

@@ -1,14 +1,15 @@
 import type { LineItem } from "@workspace/contracts"
 import type * as React from "react"
-import { StyleSheet, Text, View } from "react-native"
+import { StyleSheet, View } from "react-native"
 
-import { Body } from "@/components/ui"
-import { Spacing, Type } from "@/constants/theme"
+import { ListGroup, ListItem, Text } from "@/components/ui"
+import { Space } from "@/constants/theme"
 import { useTheme } from "@/hooks/use-theme"
 
 /**
  * A document's lines (quantity × price, tax) and, under a rule, its
- * totals: pass `Total` rows as children. Goes inside a `Section`.
+ * totals: pass `Total` rows as children. Draws its own `ListGroup`; put a
+ * `SectionHeader` above it.
  */
 export function LineItems({
   lines,
@@ -21,39 +22,45 @@ export function LineItems({
 }) {
   const t = useTheme()
   return (
-    <>
+    <ListGroup>
       {lines.length === 0 ? (
-        <Body muted style={styles.empty}>
-          No items.
-        </Body>
-      ) : (
-        lines.map((l, i) => (
-          <View
-            key={l.id}
-            style={[
-              styles.line,
-              i > 0 && { borderTopWidth: 1, borderTopColor: t.border },
-            ]}
-          >
-            <View style={styles.flex}>
-              <Text style={[Type.body, { color: t.text }]}>
-                {l.description}
-              </Text>
-              <Text style={[Type.small, { color: t.textSecondary }]}>
-                {`${l.quantity} × ${money(l.unitPrice)}`}
-                {l.taxRateBps ? ` · tax ${l.taxRateBps / 100}%` : ""}
-              </Text>
-            </View>
-            <Text style={[Type.body, styles.num, { color: t.text }]}>
-              {money(l.amount)}
+        <ListItem
+          title={
+            <Text variant="callout" tone="muted">
+              No items.
             </Text>
-          </View>
-        ))
+          }
+        />
+      ) : (
+        lines.map((l) => {
+          const detail = `${l.quantity} × ${money(l.unitPrice)}${l.taxRateBps ? ` · tax ${l.taxRateBps / 100}%` : ""}`
+          return (
+            <ListItem
+              key={l.id}
+              title={
+                <Text variant="body" selectable>
+                  {l.description}
+                </Text>
+              }
+              subtitle={
+                <Text variant="callout" tone="muted" numeric>
+                  {detail}
+                </Text>
+              }
+              trailing={
+                <Text variant="bodyStrong" numeric>
+                  {money(l.amount)}
+                </Text>
+              }
+              accessibilityLabel={`${l.description}, ${detail}, ${money(l.amount)}`}
+            />
+          )
+        })
       )}
-      <View style={[styles.totals, { borderTopColor: t.border }]}>
+      <View style={[styles.totals, { backgroundColor: t.surfaceMuted }]}>
         {children}
       </View>
-    </>
+    </ListGroup>
   )
 }
 
@@ -67,14 +74,20 @@ export function Total({
   value: string
   bold?: boolean
 }) {
-  const t = useTheme()
-  const weight = bold ? styles.bold : null
   return (
-    <View style={styles.total} accessible>
-      <Text style={[Type.body, weight, { color: t.textSecondary }]}>
+    <View
+      style={styles.total}
+      accessible
+      accessibilityLabel={`${label}, ${value}`}
+    >
+      <Text
+        variant={bold ? "bodyStrong" : "callout"}
+        tone={bold ? "default" : "muted"}
+        style={styles.label}
+      >
         {label}
       </Text>
-      <Text style={[Type.body, styles.num, weight, { color: t.text }]}>
+      <Text variant={bold ? "bodyStrong" : "label"} numeric>
         {value}
       </Text>
     </View>
@@ -82,20 +95,16 @@ export function Total({
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1 },
-  empty: { paddingVertical: Spacing.two + 2 },
-  line: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: Spacing.three,
-    paddingVertical: Spacing.two + 2,
-  },
-  num: { fontVariant: ["tabular-nums"] },
-  bold: { fontWeight: "700" },
   totals: {
-    borderTopWidth: 1,
-    paddingVertical: Spacing.two,
-    gap: Spacing.one,
+    paddingHorizontal: Space[4] - 2,
+    paddingVertical: Space[3],
+    gap: Space[1],
   },
-  total: { flexDirection: "row", justifyContent: "space-between" },
+  total: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "baseline",
+    gap: Space[3],
+  },
+  label: { flexShrink: 1 },
 })

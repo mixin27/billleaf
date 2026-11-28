@@ -1,21 +1,24 @@
 import { formatMoney } from "@workspace/contracts"
 import { router, useLocalSearchParams } from "expo-router"
 import * as React from "react"
-import { Alert, Platform, ScrollView, StyleSheet, View } from "react-native"
-import { SafeAreaView } from "react-native-safe-area-context"
+import { ScrollView, StyleSheet, View } from "react-native"
 
 import {
-  Body,
   Button,
-  Field,
-  KeyboardAvoid,
-  Screen,
-  Title,
+  confirm,
   ErrorState,
+  KeyboardAvoid,
+  SheetFooter,
+  SheetHeader,
+  SkeletonRows,
+  Text,
+  TextField,
+  toast,
 } from "@/components/ui"
-import { Spacing } from "@/constants/theme"
+import { Radius, Space } from "@/constants/theme"
 import { useInvoicePayments, useVoidPayment } from "@/features/invoices"
 import { useWorkspaceProfile } from "@/features/workspaces"
+import { useTheme } from "@/hooks/use-theme"
 import { errorMessage } from "@/lib/api"
 
 /**
@@ -27,6 +30,7 @@ export default function VoidPaymentScreen() {
     invoiceId: string
     paymentId: string
   }>()
+  const t = useTheme()
   const payments = useInvoicePayments(invoiceId)
   const voiding = useVoidPayment(paymentId)
   const locale =
@@ -43,80 +47,87 @@ export default function VoidPaymentScreen() {
     setTouched(true)
     if (reason.trim().length < 3) return
     voiding.mutate(reason.trim(), {
-      onSuccess: () => router.back(),
-      onError: (e) => Alert.alert("Couldn't void the payment", errorMessage(e)),
+      onSuccess: () => {
+        toast.success("Payment voided")
+        router.back()
+      },
+      onError: (e) =>
+        toast.error(`Couldn't void the payment: ${errorMessage(e)}`),
     })
   }
 
+  const close = async () => {
+    if (
+      reason.trim() &&
+      !(await confirm({
+        title: "Discard this?",
+        message: "The payment stays as it is.",
+        confirmLabel: "Discard",
+        destructive: true,
+      }))
+    )
+      return
+    router.back()
+  }
+
   return (
-    <Screen>
-      {/* An iOS sheet leaves room at the top; Android shows it full screen. */}
-      <SafeAreaView
-        style={styles.flex}
-        edges={Platform.OS === "android" ? ["top", "bottom"] : ["bottom"]}
-      >
-        <KeyboardAvoid>
-          <View style={styles.header}>
-            <Title>Void payment</Title>
-            <Button
-              title="Cancel"
-              variant="link"
-              onPress={() => router.back()}
+    <View style={[styles.flex, { backgroundColor: t.surface }]}>
+      <SheetHeader title="Void payment" onClose={close} />
+      <KeyboardAvoid>
+        <ScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets
+        >
+          {payments.error && !payments.data ? (
+            <ErrorState
+              error={payments.error}
+              onRetry={() => void payments.refetch()}
             />
-          </View>
-          <ScrollView
-            contentContainerStyle={styles.content}
-            keyboardShouldPersistTaps="handled"
-            automaticallyAdjustKeyboardInsets
-          >
-            {payments.error && !payments.data ? (
-              <ErrorState
-                compact
-                error={payments.error}
-                onRetry={() => void payments.refetch()}
-              />
-            ) : !p ? (
-              <Body muted>Loading…</Body>
-            ) : (
-              <>
-                <Body muted>
+          ) : !p ? (
+            <SkeletonRows rows={2} />
+          ) : (
+            <>
+              <View
+                style={[styles.notice, { backgroundColor: t.outSoft }]}
+                accessible
+              >
+                <Text variant="callout" tone="out">
                   {`For a payment recorded by mistake, e.g. the money never arrived or it went on the wrong invoice. ${formatMoney({ amount: p.amount, currency: p.currency }, locale)} comes off ${p.invoiceNumber ?? "the invoice"}, receipt ${p.receiptNumber ?? ""} is marked void, and it no longer counts as income.`}
-                </Body>
-                <Field
-                  label="Reason"
-                  value={reason}
-                  onChangeText={setReason}
-                  placeholder="e.g. Recorded on the wrong invoice"
-                  maxLength={500}
-                  multiline
-                  textAlignVertical="top"
-                  style={styles.reason}
-                  error={reasonError}
-                />
-                <Button
-                  title="Void payment"
-                  variant="danger"
-                  loading={voiding.isPending}
-                  onPress={submit}
-                />
-              </>
-            )}
-          </ScrollView>
-        </KeyboardAvoid>
-      </SafeAreaView>
-    </Screen>
+                </Text>
+              </View>
+              <TextField
+                label="Reason"
+                value={reason}
+                onChangeText={setReason}
+                placeholder="e.g. Recorded on the wrong invoice"
+                maxLength={500}
+                multiline
+                textAlignVertical="top"
+                style={styles.reason}
+                error={reasonError}
+              />
+            </>
+          )}
+        </ScrollView>
+        {p ? (
+          <SheetFooter>
+            <Button
+              title="Void payment"
+              variant="danger"
+              loading={voiding.isPending}
+              onPress={submit}
+            />
+          </SheetFooter>
+        ) : null}
+      </KeyboardAvoid>
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: Spacing.four,
-    paddingTop: Spacing.four,
-  },
-  content: { padding: Spacing.four, gap: Spacing.four },
-  reason: { minHeight: 90, paddingTop: Spacing.three },
+  content: { padding: Space[4], gap: Space[4], paddingBottom: Space[8] },
+  notice: { borderRadius: Radius.lg, padding: Space[4] },
+  reason: { minHeight: 90 },
 })
