@@ -75,7 +75,13 @@ export function Button({
           borderWidth: ring ? 1 : 0,
           borderColor: ring ?? "transparent",
           opacity: off ? 0.45 : 1,
-          alignSelf: fullWidth && v !== "ghost" ? "stretch" : "flex-start",
+          // A compact button follows its container (centred in an empty
+          // state, level with a field in a row); full width stretches.
+          alignSelf: !fullWidth
+            ? "auto"
+            : v === "ghost"
+              ? "flex-start"
+              : "stretch",
         },
         pressed && !off && { opacity: 0.85 },
       ]}

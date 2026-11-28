@@ -343,7 +343,11 @@ export function SalesView({ stacked }: { stacked?: boolean }) {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  content: { padding: Spacing.four, gap: Spacing.three },
+  content: {
+    paddingHorizontal: Spacing.four,
+    paddingTop: Spacing.two,
+    gap: Spacing.three,
+  },
   bleed: { marginHorizontal: -Spacing.four },
   chips: { gap: Spacing.two, paddingHorizontal: Spacing.four },
   panes: { flexDirection: "row", gap: Spacing.two },

@@ -6,7 +6,6 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   View,
 } from "react-native"
@@ -19,6 +18,7 @@ import {
   KeyboardAvoid,
   Screen,
   Title,
+  Toggle,
 } from "@/components/ui"
 import { Spacing, Type } from "@/constants/theme"
 import {
@@ -221,10 +221,10 @@ export default function SendScreen() {
                     <Text style={[Type.body, styles.flex, { color: t.text }]}>
                       {`Save as ${inv.clientName}'s email`}
                     </Text>
-                    <Switch
+                    <Toggle
                       value={save}
                       onValueChange={setSave}
-                      accessibilityLabel={`Save as ${inv.clientName}'s email`}
+                      label={`Save as ${inv.clientName}'s email`}
                     />
                   </View>
                 ) : null}
