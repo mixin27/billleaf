@@ -1,19 +1,20 @@
 import { formatMoney, type Permission } from "@workspace/contracts"
 import * as React from "react"
-import {
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native"
+import { ScrollView, StyleSheet, Text, View } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 
 import { ContractRow } from "@/components/contract-row"
 import { InvoiceRow, totalsByCurrency } from "@/components/invoice-row"
 import { QuoteRow } from "@/components/quote-row"
 import { useMiniPlayerInset } from "@/components/nav/mini-player"
-import { Body, Chip, Screen, Title } from "@/components/ui"
+import {
+  Body,
+  Chip,
+  Screen,
+  Title,
+  ErrorState,
+  RefreshControl,
+} from "@/components/ui"
 import { Radius, Spacing, Type } from "@/constants/theme"
 import {
   CONTRACT_FILTERS,
@@ -168,8 +169,12 @@ export default function InvoicesScreen() {
                   />
                 ))}
               </ScrollView>
-              {contracts.error ? (
-                <Body>{errorMessage(contracts.error)}</Body>
+              {contracts.error && !contracts.data ? (
+                <ErrorState
+                  compact
+                  error={contracts.error}
+                  onRetry={() => void contracts.refetch()}
+                />
               ) : !contracts.data ? (
                 <Body muted>Loading…</Body>
               ) : contracts.data.items.length === 0 ? (
@@ -219,8 +224,12 @@ export default function InvoicesScreen() {
                   />
                 ))}
               </ScrollView>
-              {quotes.error ? (
-                <Body>{errorMessage(quotes.error)}</Body>
+              {quotes.error && !quotes.data ? (
+                <ErrorState
+                  compact
+                  error={quotes.error}
+                  onRetry={() => void quotes.refetch()}
+                />
               ) : !quotes.data ? (
                 <Body muted>Loading…</Body>
               ) : quotes.data.items.length === 0 ? (
@@ -286,8 +295,12 @@ export default function InvoicesScreen() {
                 </Text>
               ) : null}
 
-              {list.error ? (
-                <Body>{errorMessage(list.error)}</Body>
+              {list.error && !list.items ? (
+                <ErrorState
+                  compact
+                  error={list.error}
+                  onRetry={() => void list.refetch()}
+                />
               ) : !list.items ? (
                 <Body muted>Loading…</Body>
               ) : list.items.length === 0 ? (

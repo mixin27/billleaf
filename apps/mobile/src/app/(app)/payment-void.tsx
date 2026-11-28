@@ -11,6 +11,7 @@ import {
   KeyboardAvoid,
   Screen,
   Title,
+  ErrorState,
 } from "@/components/ui"
 import { Spacing } from "@/constants/theme"
 import { useInvoicePayments, useVoidPayment } from "@/features/invoices"
@@ -68,8 +69,12 @@ export default function VoidPaymentScreen() {
             keyboardShouldPersistTaps="handled"
             automaticallyAdjustKeyboardInsets
           >
-            {payments.error ? (
-              <Body>{errorMessage(payments.error)}</Body>
+            {payments.error && !payments.data ? (
+              <ErrorState
+                compact
+                error={payments.error}
+                onRetry={() => void payments.refetch()}
+              />
             ) : !p ? (
               <Body muted>Loading…</Body>
             ) : (

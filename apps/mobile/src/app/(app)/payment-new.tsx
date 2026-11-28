@@ -27,6 +27,7 @@ import {
   KeyboardAvoid,
   Screen,
   Title,
+  ErrorState,
 } from "@/components/ui"
 import { Spacing, Type } from "@/constants/theme"
 import { useDashboard } from "@/features/dashboard"
@@ -141,8 +142,12 @@ export default function RecordPaymentScreen() {
             keyboardShouldPersistTaps="handled"
             automaticallyAdjustKeyboardInsets
           >
-            {invoice.error ? (
-              <Body>{errorMessage(invoice.error)}</Body>
+            {invoice.error && !invoice.data ? (
+              <ErrorState
+                compact
+                error={invoice.error}
+                onRetry={() => void invoice.refetch()}
+              />
             ) : !inv ? (
               <Body muted>Loading…</Body>
             ) : (

@@ -111,6 +111,14 @@ The redesign proposal (CashBook-style, on the Billleaf brand) is the reference f
 - **Appearance**: System / Light / Dark on the Account screen (`stores/appearance-store.ts`); `useColorScheme()` and `useTheme()` follow it.
 - **Tablets**: `useBreakpoint()` is `compact` (< 600), `medium` (600–839) or `expanded` (≥ 840). Phones stay portrait; tablets rotate.
 
+### Errors and offline
+
+- **Messages**: `errorMessage(e)` (`lib/api-error.ts`) turns any error into plain words (offline, can't reach Billleaf, server fault, session ended, the API's own message) and never shows a raw exception; `errorKind(e)` and `isRetryable(e)` sort it. Unit tested.
+- **Loading errors**: `<ErrorState error={q.error} onRetry={() => void q.refetch()} />` (`compact` inside a card), and only when there's nothing to show (`q.error && !q.data`): a failed refresh keeps what was loaded.
+- **Offline**: React Query's `onlineManager` follows `expo-network` (`lib/query-client.ts`), so queries pause instead of failing and refetch when the connection is back; mutations fail at once with "You're offline". `OfflineBanner` says so once, at the top. Use `RefreshControl` from `@/components/ui` (it tells you you're offline instead of spinning).
+- **Saved data**: the query cache is saved to a file (`lib/query-persist.ts`) and restored at launch, so the app opens with the last data, offline too; signing out deletes it. A cached session opens the app without waiting for the server.
+- **Session ended**: a 401 with no session left signs out with a toast (`features/session-expiry.ts`).
+
 ### Navigation and the timer
 
 - **Tabs** (`app/(app)/(tabs)/_layout.tsx`): expo-router's JS `Tabs` drawn by our own `TabBar` (`components/nav/tab-bar.tsx`): a bottom bar on phones, a side rail on tablets. Which tabs show for a role and plan is `navSlotsFor` in `lib/nav.ts` (unit tested): Home · Money · [timer] · Time · More, with Sales and Clients taking free places. Routes not on the bar (Invoices, Clients on a phone) open from **More**, which then lights up.

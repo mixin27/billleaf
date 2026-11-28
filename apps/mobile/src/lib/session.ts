@@ -1,6 +1,7 @@
 import { authClient } from "@/lib/auth-client"
 import { unregisterPush } from "@/lib/push"
 import { queryClient } from "@/lib/query-client"
+import { clearPersistedQueries } from "@/lib/query-persist"
 import { cancelTimerReminder } from "@/lib/timer-reminder"
 import { useWorkspaceStore } from "@/stores/workspace-store"
 
@@ -11,5 +12,6 @@ export async function signOut() {
   await authClient.signOut()
   useWorkspaceStore.getState().setWorkspace(null)
   queryClient.clear()
+  await clearPersistedQueries()
   await cancelTimerReminder()
 }

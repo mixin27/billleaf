@@ -1,19 +1,20 @@
 import type { Client, ProjectStatus } from "@workspace/contracts"
 import { router } from "expo-router"
 import * as React from "react"
-import {
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native"
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 
 import { ProjectRow } from "@/components/project-row"
 import { useMiniPlayerInset } from "@/components/nav/mini-player"
-import { Body, Chip, Field, Screen, Title } from "@/components/ui"
+import {
+  Body,
+  Chip,
+  Field,
+  Screen,
+  Title,
+  ErrorState,
+  RefreshControl,
+} from "@/components/ui"
 import { Radius, Spacing, Type } from "@/constants/theme"
 import { useClients } from "@/features/clients"
 import { useDashboard } from "@/features/dashboard"
@@ -134,8 +135,12 @@ export default function ClientsScreen() {
             </View>
           ) : null}
 
-          {list.error ? (
-            <Body>{errorMessage(list.error)}</Body>
+          {list.error && !list.data ? (
+            <ErrorState
+              compact
+              error={list.error}
+              onRetry={() => void list.refetch()}
+            />
           ) : !list.data ? (
             <Body muted>Loading…</Body>
           ) : list.data.items.length === 0 ? (

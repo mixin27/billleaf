@@ -11,7 +11,6 @@ import * as React from "react"
 import {
   Alert,
   Pressable,
-  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -19,7 +18,14 @@ import {
 } from "react-native"
 
 import { LineItems, Total } from "@/components/line-items"
-import { Body, Button, Screen, Section } from "@/components/ui"
+import {
+  Body,
+  Button,
+  Screen,
+  Section,
+  ErrorState,
+  RefreshControl,
+} from "@/components/ui"
 import { Radius, Spacing, Type } from "@/constants/theme"
 import { useDashboard } from "@/features/dashboard"
 import {
@@ -110,8 +116,12 @@ export default function InvoiceScreen() {
           />
         }
       >
-        {invoice.error ? (
-          <Body>{errorMessage(invoice.error)}</Body>
+        {invoice.error && !invoice.data ? (
+          <ErrorState
+            compact
+            error={invoice.error}
+            onRetry={() => void invoice.refetch()}
+          />
         ) : !inv ? (
           <Body muted>Loading…</Body>
         ) : (

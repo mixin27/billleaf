@@ -12,7 +12,6 @@ import {
   Linking,
   Platform,
   Pressable,
-  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -23,7 +22,14 @@ import { ContractRow } from "@/components/contract-row"
 import { InvoiceRow, totalsByCurrency } from "@/components/invoice-row"
 import { ProjectRow } from "@/components/project-row"
 import { QuoteRow } from "@/components/quote-row"
-import { Body, Button, Screen, Section } from "@/components/ui"
+import {
+  Body,
+  Button,
+  Screen,
+  Section,
+  ErrorState,
+  RefreshControl,
+} from "@/components/ui"
 import { Spacing, Type } from "@/constants/theme"
 import { useClient } from "@/features/clients"
 import { useContracts } from "@/features/contracts"
@@ -108,8 +114,12 @@ export default function ClientScreen() {
           />
         }
       >
-        {client.error ? (
-          <Body>{errorMessage(client.error)}</Body>
+        {client.error && !client.data ? (
+          <ErrorState
+            compact
+            error={client.error}
+            onRetry={() => void client.refetch()}
+          />
         ) : !c ? (
           <Body muted>Loading…</Body>
         ) : (
@@ -117,8 +127,13 @@ export default function ClientScreen() {
             <Header client={c} />
             <Reach client={c} />
 
-            {!can("invoice.read") ? null : invoices.error ? (
-              <Body>{errorMessage(invoices.error)}</Body>
+            {!can("invoice.read") ? null : invoices.error &&
+              !invoices.unpaid ? (
+              <ErrorState
+                compact
+                error={invoices.error}
+                onRetry={() => void invoices.refetch()}
+              />
             ) : !invoices.unpaid || !invoices.recent ? (
               <Body muted>Loading invoices…</Body>
             ) : (

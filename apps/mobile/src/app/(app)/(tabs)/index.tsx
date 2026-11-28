@@ -1,18 +1,18 @@
 import { formatDuration, formatMoney } from "@workspace/contracts"
 import { router } from "expo-router"
 import * as React from "react"
-import {
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native"
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 
 import { useMiniPlayerInset } from "@/components/nav/mini-player"
-import { Body, Screen, Title } from "@/components/ui"
+import {
+  Body,
+  EmptyState,
+  ErrorState,
+  Screen,
+  Title,
+  RefreshControl,
+} from "@/components/ui"
 import { Radius, Spacing, Type } from "@/constants/theme"
 import { useDashboard, useWeekTime } from "@/features/dashboard"
 import { useInvoiceFilter } from "@/features/invoices"
@@ -52,7 +52,10 @@ export default function DashboardScreen() {
   }
 
   const d = dashboard.data
-  const error = me.error ?? dashboard.error ?? week.error
+  // Only a load with nothing to show is an error: a failed refresh keeps
+  // what was loaded before.
+  const failed = [me, dashboard, week].find((q) => q.error && !q.data)
+  const error = failed?.error
   const firstName = session.data?.user.name?.split(" ")[0]
 
   return (
@@ -106,9 +109,13 @@ export default function DashboardScreen() {
           <Title>{firstName ? `Hi, ${firstName}` : "Hi there"}</Title>
 
           {error ? (
-            <Card>
-              <Body>{errorMessage(error)}</Body>
-            </Card>
+            <ErrorState error={error} onRetry={() => void refresh()} />
+          ) : !d && dashboard.fetchStatus === "paused" ? (
+            <EmptyState
+              icon="offline"
+              title="You're offline"
+              body="Home fills in as soon as you're back online."
+            />
           ) : null}
 
           {tracksTime ? (

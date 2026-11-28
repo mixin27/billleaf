@@ -18,6 +18,7 @@ import {
   KeyboardAvoid,
   Screen,
   Section,
+  ErrorState,
 } from "@/components/ui"
 import { Spacing, Type } from "@/constants/theme"
 import {
@@ -109,8 +110,12 @@ export default function BookSettingsScreen() {
           contentInsetAdjustmentBehavior="automatic"
           keyboardShouldPersistTaps="handled"
         >
-          {book.error ? (
-            <Body>{errorMessage(book.error)}</Body>
+          {book.error && !book.data ? (
+            <ErrorState
+              compact
+              error={book.error}
+              onRetry={() => void book.refetch()}
+            />
           ) : !b ? (
             <Body muted>Loading…</Body>
           ) : (

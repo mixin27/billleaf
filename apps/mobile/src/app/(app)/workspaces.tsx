@@ -5,14 +5,20 @@ import {
   ActivityIndicator,
   FlatList,
   Pressable,
-  RefreshControl,
   StyleSheet,
   Text,
   View,
 } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 
-import { Body, Button, Screen, Title } from "@/components/ui"
+import {
+  Body,
+  Button,
+  Screen,
+  Title,
+  ErrorState,
+  RefreshControl,
+} from "@/components/ui"
 import { Radius, Spacing, Type } from "@/constants/theme"
 import { useWorkspaces } from "@/features/workspaces"
 import { useTheme } from "@/hooks/use-theme"
@@ -56,10 +62,13 @@ export default function WorkspacesScreen() {
         <Title>Workspaces</Title>
         {workspaces.isPending ? (
           <ActivityIndicator style={styles.loading} />
-        ) : workspaces.error ? (
+        ) : workspaces.error && !workspaces.data ? (
           <View style={styles.empty}>
-            <Body>{errorMessage(workspaces.error)}</Body>
-            <Button title="Try again" onPress={() => workspaces.refetch()} />
+            <ErrorState
+              compact
+              error={workspaces.error}
+              onRetry={() => void workspaces.refetch()}
+            />
             {footer}
           </View>
         ) : (

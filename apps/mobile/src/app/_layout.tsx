@@ -1,4 +1,4 @@
-import { QueryClientProvider } from "@tanstack/react-query"
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client"
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from "expo-router"
 import * as ScreenOrientation from "expo-screen-orientation"
 import * as SplashScreen from "expo-splash-screen"
@@ -7,11 +7,13 @@ import * as React from "react"
 import { Dimensions, StyleSheet } from "react-native"
 import { GestureHandlerRootView } from "react-native-gesture-handler"
 
+import { OfflineBanner } from "@/components/nav/offline-banner"
 import { FeedbackHost } from "@/components/ui"
 import { Colors } from "@/constants/theme"
 import { useColorScheme } from "@/hooks/use-color-scheme"
 import { authClient } from "@/lib/auth-client"
 import { queryClient } from "@/lib/query-client"
+import { PERSIST_MAX_AGE, queryPersister } from "@/lib/query-persist"
 
 SplashScreen.preventAutoHideAsync()
 
@@ -34,8 +36,10 @@ export default function RootLayout() {
   // signed out; blanking the app then unmounted the sign-in screen and
   // dropped its two-factor code step, so 2FA accounts looped back to the
   // password form.
+  // A session cached on the phone counts too, so the app opens at once
+  // (and offline) instead of waiting for the server to confirm it.
   const [ready, setReady] = React.useState(false)
-  if (!ready && !session.isPending) setReady(true)
+  if (!ready && (!session.isPending || session.data)) setReady(true)
 
   React.useEffect(() => {
     if (ready) SplashScreen.hideAsync()
@@ -46,7 +50,10 @@ export default function RootLayout() {
   const c = Colors[scheme === "dark" ? "dark" : "light"]
   return (
     <GestureHandlerRootView style={StyleSheet.absoluteFill}>
-      <QueryClientProvider client={queryClient}>
+      <PersistQueryClientProvider
+        client={queryClient}
+        persistOptions={{ persister: queryPersister, maxAge: PERSIST_MAX_AGE }}
+      >
         <ThemeProvider
           value={{
             ...base,
@@ -69,9 +76,10 @@ export default function RootLayout() {
               <Stack.Screen name="(app)" />
             </Stack.Protected>
           </Stack>
+          <OfflineBanner />
           <FeedbackHost />
         </ThemeProvider>
-      </QueryClientProvider>
+      </PersistQueryClientProvider>
     </GestureHandlerRootView>
   )
 }

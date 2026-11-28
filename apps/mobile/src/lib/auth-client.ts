@@ -14,6 +14,10 @@ import { API_URL, APP_SCHEME } from "./config"
 export const authClient = createAuthClient({
   baseURL: API_URL,
   basePath: "/api/auth",
+  // Without an answer by then, give up (React Native's fetch never does):
+  // the app then opens on sign-in, or the cached session, instead of
+  // hanging on the splash.
+  fetchOptions: { timeout: 15_000 },
   plugins: [
     expoClient({
       scheme: APP_SCHEME,

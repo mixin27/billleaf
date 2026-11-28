@@ -6,13 +6,15 @@ import { SafeAreaView } from "react-native-safe-area-context"
 import {
   Body,
   Button,
-  Field,
   KeyboardAvoid,
+  PasswordField,
   Screen,
+  TextField,
   Title,
 } from "@/components/ui"
 import { Spacing } from "@/constants/theme"
 import { useTheme } from "@/hooks/use-theme"
+import { ApiError, errorMessage } from "@/lib/api-error"
 import { authClient } from "@/lib/auth-client"
 import { WEB_URL } from "@/lib/config"
 
@@ -21,6 +23,24 @@ import { WEB_URL } from "@/lib/config"
  * two-factor authentication. New accounts and password resets happen on
  * the web (opened in an in-app browser).
  */
+type AuthError = { status?: number; message?: string | null }
+
+/** A thrown fetch failure, as an auth error with no status. */
+function thrown(e: unknown): AuthError {
+  return { message: e instanceof Error ? e.message : null }
+}
+
+/**
+ * The auth server's own message for a wrong password or code; plain words
+ * for no connection, a server fault or too many tries.
+ */
+function authError(e: AuthError, fallback: string) {
+  if (!e.status) return errorMessage(new Error(e.message ?? fallback))
+  if (e.status >= 500 || e.status === 429)
+    return errorMessage(new ApiError(e.status, {}))
+  return e.message || fallback
+}
+
 export default function SignInScreen() {
   const t = useTheme()
   const [step, setStep] = React.useState<"password" | "code">("password")
@@ -35,16 +55,15 @@ export default function SignInScreen() {
   const signIn = async () => {
     setPending(true)
     setError(null)
-    const { data, error } = await authClient.signIn.email({
-      email: email.trim(),
-      password,
-    })
+    const { data, error } = await authClient.signIn
+      .email({ email: email.trim(), password })
+      .catch((e: unknown) => ({ data: null, error: thrown(e) }))
     setPending(false)
     if (error) {
       setError(
         error.status === 403
           ? "Verify your email first: open the link we sent you, then sign in."
-          : (error.message ?? "Couldn't sign in")
+          : authError(error, "Couldn't sign in")
       )
       return
     }
@@ -56,11 +75,13 @@ export default function SignInScreen() {
     setPending(true)
     setError(null)
     const input = { code: code.replace(/\s/g, ""), trustDevice: true }
-    const { error } = backup
-      ? await authClient.twoFactor.verifyBackupCode(input)
-      : await authClient.twoFactor.verifyTotp(input)
+    const { error } = await (
+      backup
+        ? authClient.twoFactor.verifyBackupCode(input)
+        : authClient.twoFactor.verifyTotp(input)
+    ).catch((e: unknown) => ({ error: thrown(e) }))
     setPending(false)
-    if (error) setError(error.message ?? "That code didn't work")
+    if (error) setError(authError(error, "That code didn't work"))
   }
 
   const openWeb = (path: string) =>
@@ -95,7 +116,7 @@ export default function SignInScreen() {
 
             {step === "password" ? (
               <View style={{ gap: Spacing.three }}>
-                <Field
+                <TextField
                   label="Email"
                   value={email}
                   onChangeText={setEmail}
@@ -105,13 +126,10 @@ export default function SignInScreen() {
                   keyboardType="email-address"
                   textContentType="emailAddress"
                 />
-                <Field
+                <PasswordField
                   label="Password"
                   value={password}
                   onChangeText={setPassword}
-                  secureTextEntry
-                  autoCapitalize="none"
-                  autoCorrect={false}
                   autoComplete="current-password"
                   textContentType="password"
                   onSubmitEditing={signIn}
@@ -142,7 +160,7 @@ export default function SignInScreen() {
               </View>
             ) : (
               <View style={{ gap: Spacing.three }}>
-                <Field
+                <TextField
                   key={backup ? "backup" : "totp"}
                   label={backup ? "Backup code" : "Code"}
                   value={code}

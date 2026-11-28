@@ -9,7 +9,6 @@ import * as React from "react"
 import {
   Alert,
   Pressable,
-  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -17,7 +16,14 @@ import {
 } from "react-native"
 
 import { LineItems, Total } from "@/components/line-items"
-import { Body, Button, Screen, Section } from "@/components/ui"
+import {
+  Body,
+  Button,
+  Screen,
+  Section,
+  ErrorState,
+  RefreshControl,
+} from "@/components/ui"
 import { Spacing, Type } from "@/constants/theme"
 import { useDashboard } from "@/features/dashboard"
 import { useMe } from "@/features/me"
@@ -144,8 +150,12 @@ export default function QuoteScreen() {
           />
         }
       >
-        {quote.error ? (
-          <Body>{errorMessage(quote.error)}</Body>
+        {quote.error && !quote.data ? (
+          <ErrorState
+            compact
+            error={quote.error}
+            onRetry={() => void quote.refetch()}
+          />
         ) : !q ? (
           <Body muted>Loading…</Body>
         ) : (

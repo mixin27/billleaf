@@ -3,7 +3,7 @@ import { router } from "expo-router"
 import * as React from "react"
 import { Pressable, StyleSheet, Text, View } from "react-native"
 
-import { Body, Button, Chip } from "@/components/ui"
+import { Body, Button, Chip, ErrorState } from "@/components/ui"
 import { Radius, Spacing, Type } from "@/constants/theme"
 import { useCashbooks } from "@/features/cashbook"
 import { useTheme } from "@/hooks/use-theme"
@@ -50,8 +50,12 @@ export function CashbookBooks({
           onPress={() => setArchived(!archived)}
         />
       </View>
-      {books.error ? (
-        <Body>{errorMessage(books.error)}</Body>
+      {books.error && !books.data ? (
+        <ErrorState
+          compact
+          error={books.error}
+          onRetry={() => void books.refetch()}
+        />
       ) : !books.data ? (
         <Body muted>Loading…</Body>
       ) : books.data.length === 0 ? (

@@ -3,7 +3,14 @@ import { Stack, useLocalSearchParams } from "expo-router"
 import * as React from "react"
 import { Alert, ScrollView, StyleSheet, Text, View } from "react-native"
 
-import { Body, Button, Chip, Screen, Section } from "@/components/ui"
+import {
+  Body,
+  Button,
+  Chip,
+  Screen,
+  Section,
+  ErrorState,
+} from "@/components/ui"
 import { Spacing, Type } from "@/constants/theme"
 import {
   shareCashbookFile,
@@ -108,8 +115,12 @@ export default function BookReportScreen() {
           ) : null}
         </ScrollView>
 
-        {report.error ? (
-          <Body>{errorMessage(report.error)}</Body>
+        {report.error && !report.data ? (
+          <ErrorState
+            compact
+            error={report.error}
+            onRetry={() => void report.refetch()}
+          />
         ) : !r ? (
           <Body muted>Loading…</Body>
         ) : (

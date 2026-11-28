@@ -12,7 +12,7 @@ import {
   View,
 } from "react-native"
 
-import { Body, Button, Screen, Section } from "@/components/ui"
+import { Body, Button, Screen, Section, ErrorState } from "@/components/ui"
 import { Radius, Spacing, Type } from "@/constants/theme"
 import {
   useCashbook,
@@ -93,8 +93,12 @@ export default function CashbookEntryScreen() {
         contentContainerStyle={styles.content}
         contentInsetAdjustmentBehavior="automatic"
       >
-        {entry.error ? (
-          <Body>{errorMessage(entry.error)}</Body>
+        {entry.error && !entry.data ? (
+          <ErrorState
+            compact
+            error={entry.error}
+            onRetry={() => void entry.refetch()}
+          />
         ) : !e ? (
           <Body muted>Loading…</Body>
         ) : (

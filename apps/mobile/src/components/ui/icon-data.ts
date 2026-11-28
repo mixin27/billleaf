@@ -1529,6 +1529,150 @@ export const ICON_DATA = {
       },
     ],
   ],
+  offline: [
+    [
+      "path",
+      {
+        d: "M8.5 14.5C9.62137 13.3944 10.9643 12.887 12.5 13.0212",
+        stroke: "currentColor",
+        strokeLinecap: "round",
+        strokeLinejoin: "round",
+        strokeWidth: "1.5",
+      },
+    ],
+    [
+      "path",
+      {
+        d: "M18.5 11.5C17.0073 10.1794 15.2848 9.27433 13.5 9.00012",
+        stroke: "currentColor",
+        strokeLinecap: "round",
+        strokeLinejoin: "round",
+        strokeWidth: "1.5",
+      },
+    ],
+    [
+      "path",
+      {
+        d: "M5.5 11.4999C6.59299 10.5891 7.778 9.91296 9 9.49989",
+        stroke: "currentColor",
+        strokeLinecap: "round",
+        strokeLinejoin: "round",
+        strokeWidth: "1.5",
+      },
+    ],
+    [
+      "path",
+      {
+        d: "M22 8.49989C18.0717 5.18273 13.7362 3.92879 9.5 4.73808",
+        stroke: "currentColor",
+        strokeLinecap: "round",
+        strokeLinejoin: "round",
+        strokeWidth: "1.5",
+      },
+    ],
+    [
+      "path",
+      {
+        d: "M2 8.5C3.22409 7.46632 4.5 6.5 5.5 6",
+        stroke: "currentColor",
+        strokeLinecap: "round",
+        strokeLinejoin: "round",
+        strokeWidth: "1.5",
+      },
+    ],
+    [
+      "circle",
+      {
+        cx: "12",
+        cy: "18",
+        r: "1.5",
+        stroke: "currentColor",
+        strokeLinecap: "round",
+        strokeLinejoin: "round",
+        strokeWidth: "1.5",
+      },
+    ],
+    [
+      "path",
+      {
+        d: "M2 2L22 22",
+        stroke: "currentColor",
+        strokeLinecap: "round",
+        strokeWidth: "1.5",
+      },
+    ],
+  ],
+  eye: [
+    [
+      "path",
+      {
+        d: "M21.544 11.045C21.848 11.4713 22 11.6845 22 12C22 12.3155 21.848 12.5287 21.544 12.955C20.1779 14.8706 16.6892 19 12 19C7.31078 19 3.8221 14.8706 2.45604 12.955C2.15201 12.5287 2 12.3155 2 12C2 11.6845 2.15201 11.4713 2.45604 11.045C3.8221 9.12944 7.31078 5 12 5C16.6892 5 20.1779 9.12944 21.544 11.045Z",
+        stroke: "currentColor",
+        strokeWidth: "1.5",
+      },
+    ],
+    [
+      "path",
+      {
+        d: "M15 12C15 10.3431 13.6569 9 12 9C10.3431 9 9 10.3431 9 12C9 13.6569 10.3431 15 12 15C13.6569 15 15 13.6569 15 12Z",
+        stroke: "currentColor",
+        strokeWidth: "1.5",
+      },
+    ],
+  ],
+  eyeOff: [
+    [
+      "path",
+      {
+        d: "M19.439 15.439C20.3636 14.5212 21.0775 13.6091 21.544 12.955C21.848 12.5287 22 12.3155 22 12C22 11.6845 21.848 11.4713 21.544 11.045C20.1779 9.12944 16.6892 5 12 5C11.0922 5 10.2294 5.15476 9.41827 5.41827M6.74742 6.74742C4.73118 8.1072 3.24215 9.94266 2.45604 11.045C2.15201 11.4713 2 11.6845 2 12C2 12.3155 2.15201 12.5287 2.45604 12.955C3.8221 14.8706 7.31078 19 12 19C13.9908 19 15.7651 18.2557 17.2526 17.2526",
+        stroke: "currentColor",
+        strokeLinecap: "round",
+        strokeLinejoin: "round",
+        strokeWidth: "1.5",
+      },
+    ],
+    [
+      "path",
+      {
+        d: "M9.85786 10C9.32783 10.53 9 11.2623 9 12.0711C9 13.6887 10.3113 15 11.9289 15C12.7377 15 13.47 14.6722 14 14.1421",
+        stroke: "currentColor",
+        strokeLinecap: "round",
+        strokeWidth: "1.5",
+      },
+    ],
+    [
+      "path",
+      {
+        d: "M3 3L21 21",
+        stroke: "currentColor",
+        strokeLinecap: "round",
+        strokeLinejoin: "round",
+        strokeWidth: "1.5",
+      },
+    ],
+  ],
+  cloudOff: [
+    [
+      "path",
+      {
+        d: "M17.4776 10.5001C17.485 10.5 17.4925 10.5 17.5 10.5C19.9853 10.5 22 12.5147 22 15C22 15.8582 21.7597 16.6604 21.3428 17.3428M17.4776 10.5001C17.4924 10.3354 17.5 10.1686 17.5 10C17.5 6.96243 15.0376 4.5 12 4.5C10.9945 4.5 10.052 4.76982 9.24101 5.24101M17.4776 10.5001C17.4039 11.3178 17.1512 12.0839 16.759 12.759M6.52042 9.5227C3.98398 9.76407 2 11.9003 2 14.5C2 17.2614 4.23858 19.5 7 19.5H17.5C18.0928 19.5 18.6588 19.3854 19.1771 19.1771M6.52042 9.5227C6.67826 9.50768 6.83823 9.5 7 9.5C8.12582 9.5 9.16474 9.87209 10.0005 10.5M6.52042 9.5227C6.59145 8.69641 6.84518 7.92232 7.24101 7.24101",
+        stroke: "currentColor",
+        strokeLinecap: "round",
+        strokeLinejoin: "round",
+        strokeWidth: "1.5",
+      },
+    ],
+    [
+      "path",
+      {
+        d: "M2 2L22 22",
+        stroke: "currentColor",
+        strokeLinecap: "round",
+        strokeLinejoin: "round",
+        strokeWidth: "1.5",
+      },
+    ],
+  ],
 } as const
 
 export type IconName = keyof typeof ICON_DATA
