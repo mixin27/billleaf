@@ -82,11 +82,21 @@ const idList = z
   .optional()
   .transform((v) => (v === undefined ? undefined : [v].flat()))
 
+/** Members by id, or "me" for whoever is asking. */
+const memberIdList = z
+  .union([
+    z.literal("me"),
+    z.uuid(),
+    z.array(z.union([z.literal("me"), z.uuid()])).max(100),
+  ])
+  .optional()
+  .transform((v) => (v === undefined ? undefined : [v].flat()))
+
 export const reportFiltersSchema = z.object({
   from: z.iso.date(),
   to: z.iso.date(),
-  /** Without time.read only your own time is reported. */
-  memberId: idList,
+  /** Without time.read only your own time is reported. "me" is you. */
+  memberId: memberIdList,
   projectId: idList,
   clientId: idList,
   tagId: idList,

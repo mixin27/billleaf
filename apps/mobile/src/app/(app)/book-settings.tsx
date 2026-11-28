@@ -371,13 +371,15 @@ function Options({
                     onSubmitEditing={rename}
                   />
                 </View>
-                <Button
-                  title="Save"
-                  variant="secondary"
-                  fullWidth={false}
-                  loading={save.isPending}
-                  onPress={rename}
-                />
+                <View style={styles.endButton}>
+                  <Button
+                    title="Save"
+                    variant="secondary"
+                    fullWidth={false}
+                    loading={save.isPending}
+                    onPress={rename}
+                  />
+                </View>
               </View>
             ) : (
               <ListItem
@@ -423,14 +425,16 @@ function Options({
               onSubmitEditing={add}
             />
           </View>
-          <Button
-            title="Add"
-            icon="plus"
-            variant="secondary"
-            fullWidth={false}
-            loading={save.isPending && !editing}
-            onPress={add}
-          />
+          <View style={styles.endButton}>
+            <Button
+              title="Add"
+              icon="plus"
+              variant="secondary"
+              fullWidth={false}
+              loading={save.isPending && !editing}
+              onPress={add}
+            />
+          </View>
         </View>
       ) : null}
     </View>
@@ -438,6 +442,7 @@ function Options({
 }
 
 const styles = StyleSheet.create({
+  endButton: { justifyContent: "flex-end" },
   flex: { flex: 1 },
   content: {
     padding: Space[4],

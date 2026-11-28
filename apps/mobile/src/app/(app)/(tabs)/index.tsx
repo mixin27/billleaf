@@ -145,7 +145,7 @@ export default function DashboardScreen() {
                 me.data?.permissions.includes("invoice.read")
                   ? () => {
                       useInvoiceFilter.getState().setFilter("unpaid")
-                      router.navigate("/invoices")
+                      router.push("/sales")
                     }
                   : undefined
               }

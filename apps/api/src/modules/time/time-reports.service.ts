@@ -95,7 +95,9 @@ export class TimeReportsService {
       throw new BadRequestException("`from` must be on or before `to`")
     if (dayCount(q.from, q.to) > MAX_DAYS)
       throw new BadRequestException("Reports cover at most one year")
-    let memberIds = q.memberId
+    let memberIds = q.memberId?.map((id) =>
+      id === "me" ? this.ctx.memberId : id
+    )
     if (!this.ctx.permissions.has("time.read")) {
       if (memberIds?.some((id) => id !== this.ctx.memberId))
         throw new ForbiddenException("You can only report on your own time")

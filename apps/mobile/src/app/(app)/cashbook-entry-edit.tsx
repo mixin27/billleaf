@@ -368,13 +368,15 @@ export default function CashbookEntryEditScreen() {
                       onSubmitEditing={createCategory}
                     />
                   </View>
-                  <Button
-                    title="Add"
-                    variant="secondary"
-                    fullWidth={false}
-                    loading={addCategory.isPending}
-                    onPress={createCategory}
-                  />
+                  <View style={styles.endButton}>
+                    <Button
+                      title="Add"
+                      variant="secondary"
+                      fullWidth={false}
+                      loading={addCategory.isPending}
+                      onPress={createCategory}
+                    />
+                  </View>
                 </View>
               ) : null}
             </View>
@@ -474,6 +476,7 @@ export default function CashbookEntryEditScreen() {
 }
 
 const styles = StyleSheet.create({
+  endButton: { justifyContent: "flex-end" },
   flex: { flex: 1 },
   content: { padding: Space[4], gap: Space[4], paddingBottom: Space[8] },
   row: { flexDirection: "row", gap: Space[3], alignItems: "flex-end" },
