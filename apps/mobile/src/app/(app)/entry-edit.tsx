@@ -1,5 +1,4 @@
 import {
-  addDays,
   formatDuration,
   hhmm,
   parseDuration,
@@ -9,28 +8,29 @@ import {
 } from "@workspace/contracts"
 import { router, useLocalSearchParams } from "expo-router"
 import * as React from "react"
-import {
-  Alert,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  View,
-} from "react-native"
-import { SafeAreaView } from "react-native-safe-area-context"
+import { ScrollView, StyleSheet, View } from "react-native"
 
 import {
-  Body,
   Button,
   Chip,
-  Field,
+  confirm,
+  DateField,
+  EmptyState,
+  Icon,
+  IconTile,
   KeyboardAvoid,
-  Screen,
-  Title,
+  ListGroup,
+  ListItem,
+  SegmentedControl,
+  SheetFooter,
+  SheetHeader,
+  SwitchRow,
+  Text,
+  TextField,
+  TimeField,
+  toast,
 } from "@/components/ui"
-import { Radius, Spacing, Type } from "@/constants/theme"
+import { Radius, Space } from "@/constants/theme"
 import { useDashboard } from "@/features/dashboard"
 import {
   entryLockReason,
@@ -44,7 +44,9 @@ import { useTheme } from "@/hooks/use-theme"
 import { errorMessage } from "@/lib/api"
 import { NO_PROJECT, useEditDraft } from "@/stores/timer-draft"
 
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
+/** One-tap durations, in minutes. */
+const QUICK = [15, 30, 60, 120, 240, 480]
+const quickLabel = (m: number) => (m < 60 ? `${m}m` : `${m / 60}h`)
 
 /**
  * One sheet for finished time.
@@ -52,7 +54,7 @@ const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
  * - `?id=…`: edit or delete an entry from the Time list (description,
  *   project, billable, and its clock times in the workspace's time zone, or
  *   its duration when it was logged without times). Locked entries open
- *   read-only.
+ *   read-only with the reason.
  * - no id (`?date=YYYY-MM-DD` optional): log new time for a day, as a
  *   duration (quickest on a phone) or a start and end.
  */
@@ -61,7 +63,10 @@ export default function EntryScreen() {
   const params = useLocalSearchParams<{ id?: string; date?: string }>()
   const isNew = !params.id
   const entry = useCachedEntry(params.id)
-  const tz = useWorkspaceProfile().data?.timezone ?? "UTC"
+  const profile = useWorkspaceProfile()
+  const tz = profile.data?.timezone ?? "UTC"
+  const locale =
+    profile.data?.locale ?? Intl.DateTimeFormat().resolvedOptions().locale
   const today = useDashboard().data?.today
   const create = useCreateTimeEntry()
   const update = useUpdateTimeEntry()
@@ -81,29 +86,37 @@ export default function EntryScreen() {
   const [mode, setMode] = React.useState<"duration" | "times">("duration")
   const [date, setDate] = React.useState<string | null>(params.date ?? null)
   const [from, setFrom] = React.useState(() =>
-    entry?.hasTimes ? hhmm(zonedParts(entry.startedAt, tz).minutes) : ""
+    entry?.hasTimes ? hhmm(zonedParts(entry.startedAt, tz).minutes) : "09:00"
   )
   const [to, setTo] = React.useState(() =>
     entry?.hasTimes && entry.endedAt
       ? hhmm(zonedParts(entry.endedAt, tz).minutes)
-      : ""
+      : "10:00"
   )
   const [duration, setDuration] = React.useState(() =>
     entry && !entry.hasTimes ? formatDuration(entry.durationSeconds ?? 0) : ""
   )
   const [touched, setTouched] = React.useState(false)
+  const [dirty, setDirty] = React.useState(false)
+  const change =
+    <T,>(set: (v: T) => void) =>
+    (v: T) => {
+      setDirty(true)
+      set(v)
+    }
 
   if (!isNew && !entry) {
     return (
-      <Screen>
-        <SafeAreaView style={styles.flex}>
-          <View style={styles.missing}>
-            <Title>Entry not found</Title>
-            <Body muted>It may have been changed or deleted elsewhere.</Body>
-            <Button title="Close" onPress={() => router.back()} />
-          </View>
-        </SafeAreaView>
-      </Screen>
+      <View style={[styles.flex, { backgroundColor: t.surface }]}>
+        <SheetHeader title="Time entry" onClose={() => router.back()} />
+        <View style={styles.content}>
+          <EmptyState
+            icon="clock"
+            title="Entry not found"
+            body="It may have been changed or deleted elsewhere."
+          />
+        </View>
+      </View>
     )
   }
 
@@ -127,21 +140,14 @@ export default function EntryScreen() {
   const timedMinutes = start !== null && end !== null ? end - start : null
   const minutes = hasTimes ? timedMinutes : parseDuration(duration)
   const minutesValid = minutes !== null && minutes > 0 && minutes <= 1440
-  const timeError =
-    touched && !minutesValid
-      ? hasTimes
-        ? "Use 24-hour times, e.g. 09:30"
-        : "Enter a duration, e.g. 1:30 or 45m"
+  const durationError =
+    touched && !minutesValid && !hasTimes
+      ? "Enter a duration, e.g. 1:30, 90m or 1.5"
       : undefined
-  const dateError =
-    touched && !ISO_DATE.test(day) ? "Use YYYY-MM-DD" : undefined
-
-  const onError = (title: string) => (e: unknown) =>
-    Alert.alert(title, errorMessage(e))
 
   const save = () => {
     setTouched(true)
-    if (!minutesValid || !ISO_DATE.test(day)) return
+    if (!minutesValid || !day) return
     const times = hasTimes
       ? {
           startedAt: zonedToUtc(day, start!, tz).toISOString(),
@@ -157,319 +163,260 @@ export default function EntryScreen() {
       ...(billable !== null ? { billable } : {}),
       ...times,
     }
+    const logged = formatDuration(minutes! * 60)
     if (entry)
       update.mutate(
         { id: entry.id, ...fields },
-        { onSuccess: () => router.back(), onError: onError("Couldn't save") }
+        {
+          onSuccess: () => {
+            toast.success("Time saved")
+            router.back()
+          },
+          onError: (e) => toast.error(errorMessage(e)),
+        }
       )
     else
       create.mutate(fields, {
-        onSuccess: () => router.back(),
-        onError: onError("Couldn't log the time"),
+        onSuccess: () => {
+          toast.success(`${logged} logged`)
+          router.back()
+        },
+        onError: (e) => toast.error(errorMessage(e)),
       })
   }
 
-  const confirmDelete = () =>
-    entry &&
-    Alert.alert(
-      "Delete this entry?",
-      `${formatDuration(entry.durationSeconds ?? 0)}${entry.description ? ` of “${entry.description}”` : ""} will be removed. This can't be undone.`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: () =>
-            remove.mutate(entry.id, {
-              onSuccess: () => router.back(),
-              onError: onError("Couldn't delete"),
-            }),
-        },
-      ]
+  const askDelete = async () => {
+    if (!entry) return
+    const ok = await confirm({
+      title: "Delete this entry?",
+      message: `${formatDuration(entry.durationSeconds ?? 0)}${entry.description ? ` of “${entry.description}”` : ""} will be removed. This can't be undone.`,
+      confirmLabel: "Delete",
+      destructive: true,
+    })
+    if (!ok) return
+    remove.mutate(entry.id, {
+      onSuccess: () => {
+        toast.success("Entry deleted")
+        router.back()
+      },
+      onError: (e) => toast.error(errorMessage(e)),
+    })
+  }
+
+  const close = async () => {
+    if (
+      dirty &&
+      !locked &&
+      !(await confirm({
+        title: isNew ? "Discard this time?" : "Discard your changes?",
+        message: "What you've entered isn't saved.",
+        confirmLabel: "Discard",
+        destructive: true,
+      }))
     )
+      return
+    router.back()
+  }
 
   return (
-    <Screen>
-      {/* An iOS sheet leaves room at the top; Android shows it full screen. */}
-      <SafeAreaView
-        style={styles.flex}
-        edges={Platform.OS === "android" ? ["top", "bottom"] : ["bottom"]}
-      >
-        <KeyboardAvoid>
-          <View style={styles.header}>
-            <Title>
-              {isNew ? "Log time" : locked ? "Time entry" : "Edit time"}
-            </Title>
-            <Button
-              title={locked ? "Close" : "Cancel"}
-              variant="link"
-              onPress={() => router.back()}
-            />
-          </View>
-          <ScrollView
-            contentContainerStyle={styles.content}
-            keyboardShouldPersistTaps="handled"
-            automaticallyAdjustKeyboardInsets
-          >
-            {locked ? (
-              <View
-                style={[
-                  styles.notice,
-                  {
-                    backgroundColor: t.backgroundElement,
-                    borderColor: t.border,
-                  },
-                ]}
+    <View style={[styles.flex, { backgroundColor: t.surface }]}>
+      <SheetHeader
+        title={isNew ? "Log time" : locked ? "Time entry" : "Edit time"}
+        onClose={close}
+      />
+      <KeyboardAvoid>
+        <ScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets
+        >
+          {locked ? (
+            <View style={[styles.notice, { backgroundColor: t.warningSoft }]}>
+              <Icon name="lock" size={18} color={t.warning} />
+              <Text
+                variant="callout"
+                style={[styles.flex, { color: t.warning }]}
               >
-                <Body muted>{locked}</Body>
-              </View>
-            ) : null}
-
-            <Field
-              label="What did you work on?"
-              value={description}
-              onChangeText={setDescription}
-              editable={!locked}
-              maxLength={500}
-            />
-
-            <View style={styles.gap}>
-              <Text style={[Type.small, styles.label, { color: t.text }]}>
-                Project
+                {locked}
               </Text>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={
-                  projectLabel
-                    ? `Project: ${projectLabel}. Change`
-                    : "Pick a project"
-                }
-                disabled={Boolean(locked)}
-                onPress={() =>
-                  router.push({
-                    pathname: "/project-picker",
-                    params: { for: "edit", current: project.projectId ?? "" },
-                  })
-                }
-                style={({ pressed }) => [
-                  styles.project,
-                  { borderColor: t.border, opacity: pressed ? 0.7 : 1 },
-                ]}
-              >
-                <View style={styles.flex}>
-                  <Text
-                    style={[
-                      Type.body,
-                      { color: projectLabel ? t.primary : t.textSecondary },
-                    ]}
-                    numberOfLines={1}
-                  >
-                    {projectLabel ?? "No project"}
-                  </Text>
-                  {project.clientName ? (
-                    <Text
-                      style={[Type.small, { color: t.textSecondary }]}
-                      numberOfLines={1}
-                    >
-                      {project.clientName}
-                    </Text>
-                  ) : null}
-                </View>
-                {locked ? null : (
-                  <Text style={[Type.small, { color: t.textSecondary }]}>
-                    {projectLabel ? "Change" : "Pick"}
-                  </Text>
-                )}
-              </Pressable>
             </View>
+          ) : null}
 
-            {isNew ? (
-              <View style={styles.gap}>
-                <Field
-                  label="Date"
-                  value={day}
-                  onChangeText={setDate}
-                  keyboardType="numbers-and-punctuation"
-                  autoCorrect={false}
-                  maxLength={10}
-                  error={dateError}
-                />
-                {today ? (
-                  <View style={styles.chips}>
-                    {(
-                      [
-                        ["Today", today],
-                        ["Yesterday", addDays(today, -1)],
-                      ] as const
-                    ).map(([label, value]) => (
-                      <Chip
-                        key={label}
-                        label={label}
-                        selected={day === value}
-                        onPress={() => setDate(value)}
-                      />
-                    ))}
-                  </View>
-                ) : null}
-              </View>
-            ) : null}
+          <TextField
+            label="What did you work on?"
+            value={description}
+            onChangeText={change(setDescription)}
+            editable={!locked}
+            maxLength={500}
+            placeholder="e.g. Homepage layout"
+          />
 
-            {isNew ? (
-              <View style={styles.chips}>
-                <Chip
-                  label="Duration"
-                  selected={mode === "duration"}
-                  onPress={() => setMode("duration")}
+          <ListGroup>
+            <ListItem
+              title={projectLabel ?? "No project"}
+              subtitle={
+                project.clientName ??
+                (projectLabel ? undefined : "Pick a project or a recent entry")
+              }
+              leading={
+                <IconTile
+                  icon="folder"
+                  tone={projectLabel ? "primary" : "neutral"}
                 />
-                <Chip
-                  label="Start and end"
-                  selected={mode === "times"}
-                  onPress={() => setMode("times")}
-                />
-              </View>
-            ) : null}
+              }
+              chevron={!locked}
+              accessibilityLabel={
+                projectLabel
+                  ? `Project: ${projectLabel}. Change`
+                  : "Pick a project"
+              }
+              onPress={
+                locked
+                  ? undefined
+                  : () => {
+                      setDirty(true)
+                      router.push({
+                        pathname: "/project-picker",
+                        params: {
+                          for: "edit",
+                          current: project.projectId ?? "",
+                        },
+                      })
+                    }
+              }
+            />
+            <SwitchRow
+              title="Billable"
+              subtitle={billable === null ? "Follows the project" : undefined}
+              value={billable ?? true}
+              onValueChange={change(setBillable)}
+              disabled={Boolean(locked)}
+            />
+          </ListGroup>
 
-            {hasTimes ? (
-              <View style={styles.gap}>
-                <View style={styles.row}>
-                  <View style={styles.flex}>
-                    <Field
+          {isNew && today ? (
+            <DateField
+              label="Date"
+              value={day}
+              onChange={(d) => change(setDate)(d ?? today)}
+              today={today}
+              locale={locale}
+            />
+          ) : null}
+
+          {isNew ? (
+            <SegmentedControl
+              options={[
+                { value: "duration", label: "Duration" },
+                { value: "times", label: "Start and end" },
+              ]}
+              value={mode}
+              onChange={setMode}
+            />
+          ) : null}
+
+          {hasTimes ? (
+            <View style={styles.group}>
+              <View style={styles.row}>
+                <View style={styles.flex}>
+                  {locked ? (
+                    <TextField label="Start" value={from} editable={false} />
+                  ) : (
+                    <TimeField
                       label="Start"
                       value={from}
-                      onChangeText={setFrom}
-                      editable={!locked}
-                      keyboardType="numbers-and-punctuation"
-                      placeholder="09:00"
-                      maxLength={5}
+                      onChange={change(setFrom)}
+                      locale={locale}
                     />
-                  </View>
-                  <View style={styles.flex}>
-                    <Field
+                  )}
+                </View>
+                <View style={styles.flex}>
+                  {locked ? (
+                    <TextField label="End" value={to} editable={false} />
+                  ) : (
+                    <TimeField
                       label="End"
                       value={to}
-                      onChangeText={setTo}
-                      editable={!locked}
-                      keyboardType="numbers-and-punctuation"
-                      placeholder="17:00"
-                      maxLength={5}
+                      onChange={change(setTo)}
+                      locale={locale}
                     />
-                  </View>
+                  )}
                 </View>
-                <Text
-                  style={[
-                    Type.small,
-                    { color: timeError ? t.danger : t.textSecondary },
-                  ]}
-                >
-                  {timeError ??
-                    (timedMinutes && timedMinutes > 0
-                      ? `${formatDuration(timedMinutes * 60)}${end! > 1440 ? " · ends the next day" : ""} · ${tz}`
-                      : `24-hour times, ${tz}`)}
-                </Text>
               </View>
-            ) : (
-              <Field
+              <Text
+                variant="caption"
+                tone={touched && !minutesValid ? "out" : "muted"}
+              >
+                {timedMinutes && timedMinutes > 0
+                  ? `${formatDuration(timedMinutes * 60)}${end! > 1440 ? " · ends the next day" : ""} · ${tz}`
+                  : `Times in ${tz}`}
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.group}>
+              <TextField
                 label="Duration"
+                icon="clock"
                 value={duration}
-                onChangeText={setDuration}
+                onChangeText={change(setDuration)}
                 editable={!locked}
                 keyboardType="numbers-and-punctuation"
                 placeholder="1:30"
-                error={timeError}
+                error={durationError}
+                hint={durationError ? undefined : "Hours:minutes, 90m or 1.5"}
               />
-            )}
-
-            {/* The whole row toggles: a bigger target than the switch. */}
-            <Pressable
-              accessibilityRole="switch"
-              accessibilityState={{
-                checked: billable ?? true,
-                disabled: Boolean(locked),
-              }}
-              accessibilityLabel="Billable"
-              disabled={Boolean(locked)}
-              onPress={() => setBillable((b) => !(b ?? true))}
-              style={[styles.switchRow, { borderColor: t.border }]}
-            >
-              <View>
-                <Text style={[Type.body, { color: t.text }]}>Billable</Text>
-                {billable === null ? (
-                  <Text style={[Type.small, { color: t.textSecondary }]}>
-                    Follows the project
-                  </Text>
-                ) : null}
-              </View>
-              <Switch
-                value={billable ?? true}
-                onValueChange={setBillable}
-                disabled={Boolean(locked)}
-                trackColor={{ true: t.primary, false: t.borderStrong }}
-                thumbColor={t.surface}
-                ios_backgroundColor={t.borderStrong}
-                importantForAccessibility="no-hide-descendants"
-                accessibilityElementsHidden
-              />
-            </Pressable>
-
-            {locked ? null : (
+              {locked ? null : (
+                <View style={styles.wrap}>
+                  {QUICK.map((m) => (
+                    <Chip
+                      key={m}
+                      label={quickLabel(m)}
+                      selected={parseDuration(duration) === m}
+                      onPress={() =>
+                        change(setDuration)(formatDuration(m * 60))
+                      }
+                    />
+                  ))}
+                </View>
+              )}
+            </View>
+          )}
+        </ScrollView>
+        {locked ? null : (
+          <SheetFooter>
+            {entry ? (
               <Button
-                title={isNew ? "Log time" : "Save"}
-                loading={create.isPending || update.isPending}
-                disabled={isNew && !today}
-                onPress={save}
-              />
-            )}
-            {entry && !locked ? (
-              <Button
-                title="Delete entry"
+                title="Delete"
+                icon="trash"
                 variant="secondary"
-                disabled={remove.isPending}
-                onPress={confirmDelete}
+                loading={remove.isPending}
+                onPress={askDelete}
               />
             ) : null}
-          </ScrollView>
-        </KeyboardAvoid>
-      </SafeAreaView>
-    </Screen>
+            <Button
+              title={isNew ? "Log time" : "Save"}
+              loading={create.isPending || update.isPending}
+              disabled={isNew && !today}
+              onPress={save}
+            />
+          </SheetFooter>
+        )}
+      </KeyboardAvoid>
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: Spacing.four,
-    paddingTop: Spacing.four,
-  },
-  content: { padding: Spacing.four, gap: Spacing.four },
-  missing: { padding: Spacing.four, gap: Spacing.three },
+  content: { padding: Space[4], gap: Space[4], paddingBottom: Space[8] },
   notice: {
-    borderWidth: 1,
-    borderRadius: Radius.md,
-    padding: Spacing.three,
-  },
-  gap: { gap: Spacing.two },
-  label: { fontWeight: "600" },
-  row: { flexDirection: "row", gap: Spacing.three },
-  chips: { flexDirection: "row", gap: Spacing.two },
-  project: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.two,
-    borderWidth: 1,
+    gap: Space[2],
     borderRadius: Radius.md,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: 10,
-    minHeight: 48,
+    padding: Space[3],
+    alignItems: "flex-start",
   },
-  switchRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    paddingVertical: Spacing.two,
-  },
+  group: { gap: Space[2] },
+  row: { flexDirection: "row", gap: Space[3], alignItems: "flex-start" },
+  wrap: { flexDirection: "row", flexWrap: "wrap", gap: Space[2] },
 })
