@@ -5,32 +5,41 @@ import {
   type InvoiceSummary,
   type Permission,
 } from "@workspace/contracts"
-import { useLocalSearchParams } from "expo-router"
+import { Stack, useLocalSearchParams } from "expo-router"
 import * as React from "react"
 import {
-  Alert,
   Linking,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
-  Text,
   View,
 } from "react-native"
 
 import { ContractRow } from "@/components/contract-row"
 import { InvoiceRow, totalsByCurrency } from "@/components/invoice-row"
+import { useMiniPlayerInset } from "@/components/nav/mini-player"
 import { ProjectRow } from "@/components/project-row"
 import { QuoteRow } from "@/components/quote-row"
 import {
-  Body,
+  Avatar,
+  Badge,
   Button,
-  Screen,
-  Section,
+  Card,
   ErrorState,
+  IconButton,
+  initialsOf,
+  KeyValue,
+  ListGroup,
+  ListItem,
   RefreshControl,
+  SectionHeader,
+  Skeleton,
+  SkeletonRows,
+  Text,
+  toast,
 } from "@/components/ui"
-import { Spacing, Type } from "@/constants/theme"
+import { Space } from "@/constants/theme"
 import { useClient } from "@/features/clients"
 import { useContracts } from "@/features/contracts"
 import { useDashboard } from "@/features/dashboard"
@@ -40,14 +49,14 @@ import { useProjects } from "@/features/projects"
 import { useQuotes } from "@/features/quotes"
 import { useWorkspaceProfile } from "@/features/workspaces"
 import { useTheme } from "@/hooks/use-theme"
-import { errorMessage } from "@/lib/api"
+import { MAX_CONTENT_WIDTH } from "@/lib/breakpoint"
 
 /** Opens the phone, mail, maps or browser app; says so when there's none. */
 async function open(url: string) {
   try {
     await Linking.openURL(url)
   } catch {
-    Alert.alert("Couldn't open it", "No app on this phone can open that.")
+    toast.error("Couldn't open it. No app on this phone can open that.")
   }
 }
 const tel = (phone: string) => `tel:${phone.replace(/[^\d+]/g, "")}`
@@ -66,6 +75,8 @@ const web = (url: string) =>
  */
 export default function ClientScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
+  const t = useTheme()
+  const playerInset = useMiniPlayerInset()
   const me = useMe()
   const can = (p: Permission) => me.data?.permissions.includes(p) ?? false
   const client = useClient(id)
@@ -80,22 +91,32 @@ export default function ClientScreen() {
   const [refreshing, setRefreshing] = React.useState(false)
   const c = client.data
 
-  const rows = (items: InvoiceSummary[]) =>
-    items.map((inv, i) => (
-      <InvoiceRow
-        key={inv.id}
-        invoice={inv}
-        locale={locale}
-        today={today}
-        first={i === 0}
-        byNumber
-      />
-    ))
+  const rows = (items: InvoiceSummary[]) => (
+    <ListGroup>
+      {items.map((inv, i) => (
+        <InvoiceRow
+          key={inv.id}
+          invoice={inv}
+          locale={locale}
+          today={today}
+          first={i === 0}
+          byNumber
+        />
+      ))}
+    </ListGroup>
+  )
+
+  const liveProjects =
+    projects.data?.items.filter((p) => p.status !== "archived") ?? []
 
   return (
-    <Screen>
+    <View style={[styles.flex, { backgroundColor: t.canvas }]}>
+      <Stack.Screen options={{ title: c?.name ?? "Client" }} />
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: Space[8] + playerInset },
+        ]}
         contentInsetAdjustmentBehavior="automatic"
         refreshControl={
           <RefreshControl
@@ -116,77 +137,117 @@ export default function ClientScreen() {
       >
         {client.error && !client.data ? (
           <ErrorState
-            compact
             error={client.error}
             onRetry={() => void client.refetch()}
           />
         ) : !c ? (
-          <Body muted>Loading…</Body>
+          <>
+            <Card>
+              <Skeleton width="60%" height={22} />
+              <Skeleton width="30%" height={12} />
+              <Skeleton width="45%" height={28} />
+            </Card>
+            <SkeletonRows rows={3} />
+          </>
         ) : (
           <>
-            <Header client={c} />
-            <Reach client={c} />
+            <Card>
+              <Header client={c} />
+              <Reach client={c} />
+              {!can("invoice.read") ? null : invoices.error &&
+                !invoices.unpaid ? null : !invoices.unpaid ||
+                !invoices.recent ? (
+                <View style={styles.gap} accessibilityLabel="Loading invoices">
+                  <Skeleton width="25%" height={12} />
+                  <Skeleton width="50%" height={28} />
+                </View>
+              ) : (
+                <Owed unpaid={invoices.unpaid} locale={locale} name={c.name} />
+              )}
+            </Card>
 
-            {!can("invoice.read") ? null : invoices.error &&
-              !invoices.unpaid ? (
+            {can("invoice.read") && invoices.error && !invoices.unpaid ? (
               <ErrorState
                 compact
                 error={invoices.error}
                 onRetry={() => void invoices.refetch()}
               />
-            ) : !invoices.unpaid || !invoices.recent ? (
-              <Body muted>Loading invoices…</Body>
-            ) : (
-              <>
-                <Owed unpaid={invoices.unpaid} locale={locale} name={c.name} />
-                {invoices.unpaid.length > 0 ? (
-                  <Section title="Unpaid">{rows(invoices.unpaid)}</Section>
-                ) : null}
-                {invoices.recent.length > 0 ? (
-                  <Section title="Recent invoices">
-                    {rows(invoices.recent)}
-                  </Section>
-                ) : null}
-              </>
-            )}
+            ) : null}
+
+            {can("invoice.read") && invoices.unpaid?.length ? (
+              <View>
+                <SectionHeader title="Unpaid" />
+                {rows(invoices.unpaid)}
+              </View>
+            ) : null}
+            {can("invoice.read") && invoices.recent?.length ? (
+              <View>
+                <SectionHeader title="Recent invoices" />
+                {rows(invoices.recent)}
+              </View>
+            ) : null}
+
+            {c.contacts.length > 0 ? (
+              <View>
+                <SectionHeader title="Contacts" />
+                <ListGroup>
+                  {c.contacts.map((p) => (
+                    <Contact key={p.id} contact={p} />
+                  ))}
+                </ListGroup>
+              </View>
+            ) : null}
+
+            <View>
+              <SectionHeader title="Details" />
+              <Details
+                client={c}
+                currency={profile?.defaultCurrency}
+                terms={profile?.paymentTermsDays}
+              />
+            </View>
 
             {can("quote.read") && quotes.data?.items.length ? (
-              <Section title="Quotes">
-                {quotes.data.items.slice(0, 5).map((q, i) => (
-                  <QuoteRow
-                    key={q.id}
-                    quote={q}
-                    locale={locale}
-                    today={today}
-                    first={i === 0}
-                    byNumber
-                  />
-                ))}
-              </Section>
+              <View>
+                <SectionHeader title="Quotes" />
+                <ListGroup>
+                  {quotes.data.items.slice(0, 5).map((q, i) => (
+                    <QuoteRow
+                      key={q.id}
+                      quote={q}
+                      locale={locale}
+                      today={today}
+                      first={i === 0}
+                      byNumber
+                    />
+                  ))}
+                </ListGroup>
+              </View>
             ) : null}
 
             {can("contract.read") && contracts.data?.items.length ? (
-              <Section title="Contracts">
-                {contracts.data.items.slice(0, 5).map((k, i) => (
-                  <ContractRow
-                    key={k.id}
-                    contract={k}
-                    locale={locale}
-                    today={today}
-                    first={i === 0}
-                    byTitle
-                  />
-                ))}
-              </Section>
+              <View>
+                <SectionHeader title="Contracts" />
+                <ListGroup>
+                  {contracts.data.items.slice(0, 5).map((k, i) => (
+                    <ContractRow
+                      key={k.id}
+                      contract={k}
+                      locale={locale}
+                      today={today}
+                      first={i === 0}
+                      byTitle
+                    />
+                  ))}
+                </ListGroup>
+              </View>
             ) : null}
 
-            {can("project.read") &&
-            projects.data &&
-            projects.data.items.some((p) => p.status !== "archived") ? (
-              <Section title="Projects">
-                {projects.data.items
-                  .filter((p) => p.status !== "archived")
-                  .map((p, i) => (
+            {can("project.read") && liveProjects.length > 0 ? (
+              <View>
+                <SectionHeader title="Projects" />
+                <ListGroup>
+                  {liveProjects.map((p, i) => (
                     <ProjectRow
                       key={p.id}
                       project={p}
@@ -196,52 +257,47 @@ export default function ClientScreen() {
                       noClient
                     />
                   ))}
-              </Section>
+                </ListGroup>
+              </View>
             ) : null}
-
-            {c.contacts.length > 0 ? (
-              <Section title="Contacts">
-                {c.contacts.map((p, i) => (
-                  <Contact key={p.id} contact={p} first={i === 0} />
-                ))}
-              </Section>
-            ) : null}
-
-            <Section title="Details">
-              <Details
-                client={c}
-                currency={profile?.defaultCurrency}
-                terms={profile?.paymentTermsDays}
-              />
-            </Section>
 
             {c.notes ? (
-              <Section title="Notes">
-                <Body style={styles.notes} selectable>
-                  {c.notes}
-                </Body>
-              </Section>
+              <View>
+                <SectionHeader title="Notes" />
+                <ListGroup>
+                  <View style={styles.notes}>
+                    <Text selectable>{c.notes}</Text>
+                  </View>
+                </ListGroup>
+              </View>
             ) : null}
 
-            <Body muted style={Type.small}>
+            <Text variant="caption" tone="muted" style={styles.center}>
               Edit clients and contacts on the web.
-            </Body>
+            </Text>
           </>
         )}
       </ScrollView>
-    </Screen>
+    </View>
   )
 }
 
 function Header({ client: c }: { client: ClientDetail }) {
-  const t = useTheme()
   const kind = c.type === "company" ? "Company" : "Individual"
   return (
-    <View style={styles.gap}>
-      <Text style={[Type.title, { color: t.text }]}>{c.name}</Text>
-      <Text style={[Type.small, { color: t.textSecondary }]}>
-        {c.status === "archived" ? `${kind} · Archived` : kind}
-      </Text>
+    <View style={styles.head}>
+      <Avatar label={initialsOf(c.name)} size={56} round />
+      <View style={styles.headText}>
+        <Text variant="headline" accessibilityRole="header">
+          {c.name}
+        </Text>
+        <View style={styles.badges}>
+          <Text variant="callout" tone="muted">
+            {kind}
+          </Text>
+          {c.status === "archived" ? <Badge label="Archived" /> : null}
+        </View>
+      </View>
     </View>
   )
 }
@@ -255,7 +311,9 @@ function Reach({ client: c }: { client: ClientDetail }) {
         <View style={styles.flex}>
           <Button
             title="Call"
+            icon="call"
             variant="secondary"
+            size="sm"
             accessibilityLabel={`Call ${c.name}`}
             onPress={() => open(tel(c.phone!))}
           />
@@ -265,7 +323,9 @@ function Reach({ client: c }: { client: ClientDetail }) {
         <View style={styles.flex}>
           <Button
             title="Email"
+            icon="mail"
             variant="secondary"
+            size="sm"
             accessibilityLabel={`Email ${c.name}`}
             onPress={() => open(mailto(c.email!))}
           />
@@ -284,11 +344,14 @@ function Owed({
   locale: string
   name: string
 }) {
-  const t = useTheme()
   const owed = totalsByCurrency(unpaid)
   const overdue = unpaid.filter((i) => i.displayStatus === "overdue").length
   if (owed.length === 0)
-    return <Body muted>{`${name} doesn't owe you anything right now.`}</Body>
+    return (
+      <Text variant="callout" tone="muted">
+        {`${name} doesn't owe you anything right now.`}
+      </Text>
+    )
   const amounts = owed
     .map((o) => formatMoney({ amount: o.amount, currency: o.currency }, locale))
     .join(" + ")
@@ -299,63 +362,56 @@ function Owed({
       accessible
       accessibilityLabel={`Owes you ${amounts}, ${count}${overdue ? `, ${overdue} overdue` : ""}`}
     >
-      <Text style={[Type.small, { color: t.textSecondary }]}>Owes you</Text>
-      <Text
-        style={[styles.big, { color: t.text }]}
-        adjustsFontSizeToFit
-        numberOfLines={1}
-      >
+      <Text variant="caption" tone="muted">
+        Owes you
+      </Text>
+      <Text variant="display" numeric adjustsFontSizeToFit numberOfLines={1}>
         {amounts}
       </Text>
-      <Text style={[Type.small, { color: t.textSecondary }]}>
-        {count}
-        {overdue > 0 ? (
-          <Text style={{ color: t.danger, fontWeight: "600" }}>
-            {` · ${overdue} overdue`}
-          </Text>
-        ) : null}
-      </Text>
+      <View style={styles.badges}>
+        <Text variant="callout" tone="muted">
+          {count}
+        </Text>
+        {overdue > 0 ? <Badge label={`${overdue} overdue`} tone="out" /> : null}
+      </View>
     </View>
   )
 }
 
-function Contact({
-  contact: p,
-  first,
-}: {
-  contact: ClientContact
-  first: boolean
-}) {
-  const t = useTheme()
+function Contact({ contact: p }: { contact: ClientContact }) {
   const role = [p.title, p.isPrimary ? "Primary" : null]
     .filter(Boolean)
     .join(" · ")
+  const sub = [role, p.email, p.phone].filter(Boolean).join("\n")
   return (
-    <View
-      style={[
-        styles.item,
-        !first && { borderTopWidth: 1, borderTopColor: t.border },
-      ]}
-    >
-      <Text style={[Type.body, { color: t.text }]}>{p.name}</Text>
-      {role ? (
-        <Text style={[Type.small, { color: t.textSecondary }]}>{role}</Text>
-      ) : null}
-      {p.email ? (
-        <Link
-          label={p.email}
-          a11y={`Email ${p.name}, ${p.email}`}
-          url={mailto(p.email)}
-        />
-      ) : null}
-      {p.phone ? (
-        <Link
-          label={p.phone}
-          a11y={`Call ${p.name}, ${p.phone}`}
-          url={tel(p.phone)}
-        />
-      ) : null}
-    </View>
+    <ListItem
+      title={p.name}
+      subtitle={sub || undefined}
+      subtitleLines={3}
+      leading={
+        <Avatar label={initialsOf(p.name)} size={40} round tone="neutral" />
+      }
+      trailing={
+        <View style={styles.row}>
+          {p.phone ? (
+            <IconButton
+              icon="call"
+              tone="primary"
+              label={`Call ${p.name}, ${p.phone}`}
+              onPress={() => open(tel(p.phone!))}
+            />
+          ) : null}
+          {p.email ? (
+            <IconButton
+              icon="mail"
+              tone="primary"
+              label={`Email ${p.name}, ${p.email}`}
+              onPress={() => open(mailto(p.email!))}
+            />
+          ) : null}
+        </View>
+      }
+    />
   )
 }
 
@@ -399,27 +455,26 @@ function Details({
     },
   ]
   const rows = all.filter((r): r is Row => Boolean(r))
-  return rows.map((r, i) => <Detail key={r.label} {...r} first={i === 0} />)
-}
-
-function Detail({ label, value, url, a11y, first }: Row & { first: boolean }) {
-  const t = useTheme()
   return (
-    <View
-      style={[
-        styles.item,
-        !first && { borderTopWidth: 1, borderTopColor: t.border },
-      ]}
-    >
-      <Text style={[Type.small, { color: t.textSecondary }]}>{label}</Text>
-      {url ? (
-        <Link label={value} a11y={a11y ?? `${label}: ${value}`} url={url} />
-      ) : (
-        <Text style={[Type.body, { color: t.text }]} selectable>
-          {value}
-        </Text>
-      )}
-    </View>
+    <ListGroup>
+      {rows.map((r) => (
+        <KeyValue
+          key={r.label}
+          label={r.label}
+          value={
+            r.url ? (
+              <Link
+                label={r.value}
+                a11y={r.a11y ?? `${r.label}: ${r.value}`}
+                url={r.url}
+              />
+            ) : (
+              r.value
+            )
+          }
+        />
+      ))}
+    </ListGroup>
   )
 }
 
@@ -432,26 +487,42 @@ function Link({
   a11y: string
   url: string
 }) {
-  const t = useTheme()
   return (
     <Pressable
       accessibilityRole="link"
       accessibilityLabel={a11y}
       onPress={() => open(url)}
       hitSlop={6}
-      style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+      style={({ pressed }) => [styles.link, { opacity: pressed ? 0.6 : 1 }]}
     >
-      <Text style={[Type.body, { color: t.primary }]}>{label}</Text>
+      <Text variant="label" tone="primary" style={styles.right}>
+        {label}
+      </Text>
     </Pressable>
   )
 }
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  content: { padding: Spacing.four, gap: Spacing.four },
-  gap: { gap: Spacing.one },
-  row: { flexDirection: "row", gap: Spacing.two },
-  big: { fontSize: 34, fontWeight: "700", fontVariant: ["tabular-nums"] },
-  item: { paddingVertical: Spacing.two + 2, gap: Spacing.half },
-  notes: { paddingVertical: Spacing.two + 2 },
+  content: {
+    padding: Space[4],
+    gap: Space[4],
+    width: "100%",
+    maxWidth: MAX_CONTENT_WIDTH,
+    alignSelf: "center",
+  },
+  gap: { gap: Space[1] },
+  row: { flexDirection: "row", gap: Space[2] },
+  head: { flexDirection: "row", alignItems: "center", gap: Space[3] },
+  headText: { flex: 1, gap: Space[1] },
+  badges: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: Space[2],
+  },
+  notes: { paddingHorizontal: Space[4] - 2, paddingVertical: Space[3] },
+  link: { flexShrink: 1 },
+  right: { textAlign: "right" },
+  center: { textAlign: "center" },
 })

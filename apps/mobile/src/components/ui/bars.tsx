@@ -40,14 +40,24 @@ export function BottomActionBar({
         },
       ]}
     >
-      {React.Children.toArray(children)
-        .filter(Boolean)
-        .map((c, i) => (
-          <View key={i} style={{ flex: 1 }}>
-            {c}
-          </View>
-        ))}
+      {flatten(children).map((c, i) => (
+        <View key={i} style={{ flex: 1 }}>
+          {c}
+        </View>
+      ))}
     </View>
+  )
+}
+
+/** Children as a flat list: a fragment's items each get their own slot. */
+function flatten(children: React.ReactNode): React.ReactNode[] {
+  return React.Children.toArray(children).flatMap((c) =>
+    React.isValidElement<{ children?: React.ReactNode }>(c) &&
+    c.type === React.Fragment
+      ? flatten(c.props.children)
+      : c
+        ? [c]
+        : []
   )
 }
 
@@ -144,13 +154,11 @@ export function SheetFooter({ children }: { children: React.ReactNode }) {
         },
       ]}
     >
-      {React.Children.toArray(children)
-        .filter(Boolean)
-        .map((c, i) => (
-          <View key={i} style={{ flex: 1 }}>
-            {c}
-          </View>
-        ))}
+      {flatten(children).map((c, i) => (
+        <View key={i} style={{ flex: 1 }}>
+          {c}
+        </View>
+      ))}
     </View>
   )
 }

@@ -119,7 +119,12 @@ export function Avatar({
 
 /** "Aye Aye Trading" → "AA". */
 export function initialsOf(name: string) {
-  const parts = name.trim().split(/\s+/).filter(Boolean)
+  // Letters and digits only: "[SAMPLE] Client A" → "SA", not "[A".
+  const parts = name
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
   const s =
     parts.length > 1
       ? `${parts[0]![0]}${parts[parts.length - 1]![0]}`

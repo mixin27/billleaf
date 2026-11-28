@@ -1,15 +1,16 @@
 import { inlineRuns, parseContractText } from "@workspace/contracts"
 import * as React from "react"
-import { Linking, StyleSheet, Text, View } from "react-native"
+import { Linking, StyleSheet, View } from "react-native"
 
-import { Spacing, Type } from "@/constants/theme"
+import { Text } from "@/components/ui"
+import { Radius, Space, type TextVariant } from "@/constants/theme"
 import { useTheme } from "@/hooks/use-theme"
 
 const FIELD = /(\{\{\s*[a-z_.]+\s*\}\})/g
 const IS_FIELD = /^\{\{\s*[a-z_.]+\s*\}\}$/
 
 /** Bold, italic and links, and unresolved {{fields}} highlighted (as on the web). */
-function Inline({ text }: { text: string }) {
+function Inline({ text, variant }: { text: string; variant: TextVariant }) {
   const t = useTheme()
   return (
     <>
@@ -18,6 +19,8 @@ function Inline({ text }: { text: string }) {
           part ? (
             <Text
               key={`${i}-${j}`}
+              variant={variant}
+              tone={run.href ? "primary" : "default"}
               onPress={
                 run.href
                   ? () => Linking.openURL(run.href!).catch(() => {})
@@ -25,14 +28,12 @@ function Inline({ text }: { text: string }) {
               }
               accessibilityRole={run.href ? "link" : undefined}
               style={[
+                styles.line,
                 run.bold && styles.bold,
                 run.italic && styles.italic,
-                run.href && {
-                  color: t.primary,
-                  textDecorationLine: "underline",
-                },
+                run.href && styles.link,
                 IS_FIELD.test(part) && {
-                  backgroundColor: t.warningBackground,
+                  backgroundColor: t.warningSoft,
                   color: t.warning,
                 },
               ]}
@@ -55,30 +56,27 @@ export function ContractText({ text }: { text: string }) {
   const blocks = parseContractText(text)
   if (blocks.length === 0)
     return (
-      <Text style={[Type.body, { color: t.textSecondary }]}>
+      <Text variant="body" tone="muted">
         Nothing written yet.
       </Text>
     )
-  const body = [Type.body, styles.line, { color: t.text }]
   return (
     <View style={styles.gap}>
       {blocks.map((b, i) => {
-        if (b.type === "heading")
+        if (b.type === "heading") {
+          const variant: TextVariant = b.level === 1 ? "headline" : "bodyStrong"
           return (
             <Text
               key={i}
+              variant={variant}
               accessibilityRole="header"
               selectable
-              style={[
-                b.level === 1 ? Type.heading : Type.body,
-                styles.bold,
-                i > 0 && styles.headingGap,
-                { color: t.text },
-              ]}
+              style={i > 0 && styles.headingGap}
             >
-              <Inline text={b.text} />
+              <Inline text={b.text} variant={variant} />
             </Text>
           )
+        }
         if (b.type === "rule")
           return (
             <View
@@ -91,19 +89,28 @@ export function ContractText({ text }: { text: string }) {
             <View key={i} style={styles.list}>
               {b.items.map((item, j) => (
                 <View key={j} style={styles.item}>
-                  <Text style={[body, styles.marker]}>
+                  <Text
+                    variant="body"
+                    tone="muted"
+                    style={[styles.line, styles.marker]}
+                    numeric
+                  >
                     {b.ordered ? `${j + 1}.` : "•"}
                   </Text>
-                  <Text style={[body, styles.flex]} selectable>
-                    <Inline text={item} />
+                  <Text
+                    variant="body"
+                    style={[styles.line, styles.flex]}
+                    selectable
+                  >
+                    <Inline text={item} variant="body" />
                   </Text>
                 </View>
               ))}
             </View>
           )
         return (
-          <Text key={i} style={body} selectable>
-            <Inline text={b.text} />
+          <Text key={i} variant="body" style={styles.line} selectable>
+            <Inline text={b.text} variant="body" />
           </Text>
         )
       })}
@@ -113,13 +120,18 @@ export function ContractText({ text }: { text: string }) {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  gap: { gap: Spacing.three },
+  gap: { gap: Space[3] },
   bold: { fontWeight: "600" },
   italic: { fontStyle: "italic" },
-  rule: { height: StyleSheet.hairlineWidth * 2, marginVertical: Spacing.one },
-  line: { lineHeight: 23 },
-  headingGap: { marginTop: Spacing.two },
-  list: { gap: Spacing.one },
-  item: { flexDirection: "row", gap: Spacing.two },
+  link: { textDecorationLine: "underline" },
+  rule: {
+    height: StyleSheet.hairlineWidth * 2,
+    marginVertical: Space[1],
+    borderRadius: Radius.xs,
+  },
+  line: { lineHeight: 24 },
+  headingGap: { marginTop: Space[2] },
+  list: { gap: Space[1] },
+  item: { flexDirection: "row", gap: Space[2] },
   marker: { minWidth: 18 },
 })

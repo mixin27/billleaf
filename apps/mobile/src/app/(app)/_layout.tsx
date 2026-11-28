@@ -95,7 +95,7 @@ export default function AppLayout() {
   const pushed = {
     headerShown: true,
     headerTintColor: t.primary,
-    headerStyle: { backgroundColor: t.background },
+    headerStyle: { backgroundColor: t.canvas },
     headerTitleStyle: { color: t.text },
     headerShadowVisible: false,
   }

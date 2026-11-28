@@ -7,27 +7,31 @@ import {
   type ProjectTimeSummary,
   type Task,
 } from "@workspace/contracts"
-import { router, useLocalSearchParams } from "expo-router"
+import { router, Stack, useLocalSearchParams } from "expo-router"
 import * as React from "react"
-import {
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native"
+import { Pressable, ScrollView, StyleSheet, View } from "react-native"
 
+import { useMiniPlayerInset } from "@/components/nav/mini-player"
 import { ProjectTasks } from "@/components/project-tasks"
 import {
-  Body,
+  Badge,
+  type BadgeTone,
+  BottomActionBar,
   Button,
-  Screen,
-  Section,
+  Card,
+  confirm,
   ErrorState,
+  Icon,
+  KeyValue,
+  ListGroup,
   RefreshControl,
+  SectionHeader,
+  Skeleton,
+  SkeletonRows,
+  Text,
+  toast,
 } from "@/components/ui"
-import { Radius, Spacing, Type } from "@/constants/theme"
+import { Radius, Space } from "@/constants/theme"
 import { useDashboard } from "@/features/dashboard"
 import { useMe } from "@/features/me"
 import {
@@ -39,10 +43,18 @@ import { canTrackTime, useRunningTimer, useStartTimer } from "@/features/time"
 import { useWorkspaceProfile } from "@/features/workspaces"
 import { useTheme } from "@/hooks/use-theme"
 import { errorMessage } from "@/lib/api"
+import { MAX_CONTENT_WIDTH } from "@/lib/breakpoint"
 import { shortDate } from "@/lib/format"
 
 /** "12.5 h", for budgets (the time rows use 12:30). */
 const hours = (seconds: number) => `${Math.round((seconds / 3600) * 10) / 10} h`
+
+const STATUS_TONE: Record<Project["status"], BadgeTone> = {
+  active: "primary",
+  on_hold: "warning",
+  completed: "in",
+  archived: "neutral",
+}
 
 /**
  * One project: start a timer on it or one of its tasks, tick tasks off,
@@ -52,6 +64,7 @@ const hours = (seconds: number) => `${Math.round((seconds / 3600) * 10) / 10} h`
 export default function ProjectScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
   const t = useTheme()
+  const playerInset = useMiniPlayerInset()
   const me = useMe()
   const can = (p: Permission) => me.data?.permissions.includes(p) ?? false
   const project = useProject(id)
@@ -74,28 +87,28 @@ export default function ProjectScreen() {
 
   const onThis = running.data?.projectId === id && !running.data.taskId
   /** On the project, or one of its tasks. */
-  const startTimer = (task?: Task) => {
+  const startTimer = async (task?: Task) => {
     const go = () =>
       start.mutate(
         { projectId: id, taskId: task?.id ?? null },
         {
           onSuccess: () => router.navigate("/time"),
           onError: (e) =>
-            Alert.alert("Couldn't start the timer", errorMessage(e)),
+            toast.error(`Couldn't start the timer. ${errorMessage(e)}`),
         }
       )
     const other = running.data
     if (!other) return go()
     const from = [other.projectName, other.taskTitle].filter(Boolean).join(": ")
     const to = task ? `${p?.name}: ${task.title}` : p?.name
-    Alert.alert(
-      "Switch the timer?",
-      `This stops the timer${from ? ` on ${from}` : ""} and starts one on ${to}.`,
-      [
-        { text: "Cancel", style: "cancel" },
-        { text: "Switch", onPress: go },
-      ]
+    if (
+      await confirm({
+        title: "Switch the timer?",
+        message: `This stops the timer${from ? ` on ${from}` : ""} and starts one on ${to}.`,
+        confirmLabel: "Switch",
+      })
     )
+      go()
   }
 
   const canInvoice =
@@ -103,37 +116,40 @@ export default function ProjectScreen() {
     Boolean(p.clientId) &&
     can("invoice.create") &&
     can("time.read")
-  const invoiceTime = () => {
+  const invoiceTime = async () => {
     if (!p || !s) return
-    Alert.alert(
-      "Invoice unbilled time?",
-      `Creates a draft invoice to ${p.clientName} for ${formatDuration(s.unbilledSeconds)} of billable time${
+    const ok = await confirm({
+      title: "Invoice unbilled time?",
+      message: `Creates a draft invoice to ${p.clientName} for ${formatDuration(s.unbilledSeconds)} of billable time${
         s.unbilledAmount ? ` (${money(s.unbilledAmount, s.currency)})` : ""
       }. Review and issue it on the web.`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Create draft",
-          onPress: () =>
-            invoice.mutate(id, {
-              onSuccess: (inv) =>
-                router.push({
-                  pathname: "/invoice/[id]",
-                  params: { id: inv.id },
-                }),
-              onError: (e) =>
-                Alert.alert("Couldn't create the invoice", errorMessage(e)),
-            }),
-        },
-      ]
-    )
+      confirmLabel: "Create draft",
+    })
+    if (!ok) return
+    invoice.mutate(id, {
+      onSuccess: (inv) =>
+        router.push({
+          pathname: "/invoice/[id]",
+          params: { id: inv.id },
+        }),
+      onError: (e) =>
+        toast.error(`Couldn't create the invoice. ${errorMessage(e)}`),
+    })
   }
 
+  const showBar = Boolean(p) && tracks && p?.status !== "archived"
+
   return (
-    <Screen>
+    <View style={[styles.flex, { backgroundColor: t.canvas }]}>
+      <Stack.Screen options={{ title: p?.name ?? "Project" }} />
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: Space[8] + (showBar ? 0 : playerInset) },
+        ]}
         contentInsetAdjustmentBehavior="automatic"
+        keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -147,34 +163,49 @@ export default function ProjectScreen() {
       >
         {project.error && !project.data ? (
           <ErrorState
-            compact
             error={project.error}
             onRetry={() => void project.refetch()}
           />
         ) : !p ? (
-          <Body muted>Loading…</Body>
+          <>
+            <Card>
+              <Skeleton width="60%" height={22} />
+              <Skeleton width="35%" height={12} />
+              <Skeleton width="80%" height={28} />
+            </Card>
+            <SkeletonRows rows={3} />
+          </>
         ) : (
           <>
-            <Header
-              project={p}
-              canOpenClient={can("client.read")}
-              date={date}
-            />
-
-            {tracks && p.status !== "archived" ? (
-              onThis ? (
-                <Button
-                  title="Timer running on this project"
-                  variant="secondary"
-                  onPress={() => router.navigate("/time")}
-                />
+            <Card>
+              <Header
+                project={p}
+                canOpenClient={can("client.read")}
+                date={date}
+              />
+              {summary.error && !summary.data ? null : s ? (
+                <TimeStats summary={s} money={money} />
               ) : (
+                <Skeleton width="80%" height={28} />
+              )}
+              {s && canInvoice && s.unbilledSeconds > 0 ? (
                 <Button
-                  title="Start timer"
-                  loading={start.isPending}
-                  onPress={() => startTimer()}
+                  title="Invoice unbilled time"
+                  icon="invoice"
+                  variant="secondary"
+                  size="sm"
+                  loading={invoice.isPending}
+                  onPress={invoiceTime}
                 />
-              )
+              ) : null}
+            </Card>
+
+            {summary.error && !summary.data ? (
+              <ErrorState
+                compact
+                error={summary.error}
+                onRetry={() => void summary.refetch()}
+              />
             ) : null}
 
             <ProjectTasks
@@ -187,99 +218,107 @@ export default function ProjectScreen() {
               onStart={startTimer}
             />
 
-            {summary.error && !summary.data ? (
-              <ErrorState
-                compact
-                error={summary.error}
-                onRetry={() => void summary.refetch()}
-              />
-            ) : s ? (
-              <Section title="Time">
-                <TimeRows summary={s} money={money} />
-                {canInvoice && s.unbilledSeconds > 0 ? (
-                  <View style={styles.action}>
-                    <Button
-                      title="Invoice unbilled time"
-                      variant="secondary"
-                      loading={invoice.isPending}
-                      onPress={invoiceTime}
-                    />
-                  </View>
-                ) : null}
-              </Section>
-            ) : null}
-
             {s &&
             (p.estimateMinutes ||
               (p.estimateAmount && s.billableAmount !== null)) ? (
-              <Section title="Budget">
-                {p.estimateMinutes ? (
-                  <Meter
-                    label="Time"
-                    used={s.totalSeconds / 60}
-                    of={p.estimateMinutes}
-                    text={`${hours(s.totalSeconds)} of ${hours(p.estimateMinutes * 60)}`}
-                  />
-                ) : null}
-                {p.estimateAmount && s.billableAmount !== null ? (
-                  <Meter
-                    label="Money"
-                    used={s.billableAmount}
-                    of={p.estimateAmount}
-                    text={`${money(s.billableAmount, s.currency)} of ${money(p.estimateAmount, s.currency)}`}
-                  />
-                ) : null}
-              </Section>
+              <View>
+                <SectionHeader title="Budget" />
+                <ListGroup>
+                  {p.estimateMinutes ? (
+                    <Meter
+                      label="Time"
+                      used={s.totalSeconds / 60}
+                      of={p.estimateMinutes}
+                      text={`${hours(s.totalSeconds)} of ${hours(p.estimateMinutes * 60)}`}
+                    />
+                  ) : null}
+                  {p.estimateAmount && s.billableAmount !== null ? (
+                    <Meter
+                      label="Money"
+                      used={s.billableAmount}
+                      of={p.estimateAmount}
+                      text={`${money(s.billableAmount, s.currency)} of ${money(p.estimateAmount, s.currency)}`}
+                    />
+                  ) : null}
+                </ListGroup>
+              </View>
             ) : null}
 
-            <Section title="Details">
-              <Detail label="Billing" value={billingLabel(p, money)} first />
-              {p.startDate || p.dueDate ? (
-                <Detail
-                  label="Dates"
-                  value={[
-                    p.startDate ? `Starts ${date(p.startDate)}` : null,
-                    p.dueDate ? `Due ${date(p.dueDate)}` : null,
-                  ]
-                    .filter(Boolean)
-                    .join(" · ")}
-                />
-              ) : null}
-              {p.quoteNumber ? (
-                <Detail label="From quote" value={p.quoteNumber} />
-              ) : null}
-            </Section>
+            <View>
+              <SectionHeader title="Details" />
+              <ListGroup>
+                <KeyValue label="Billing" value={billingLabel(p, money)} />
+                {p.startDate || p.dueDate ? (
+                  <KeyValue
+                    label="Dates"
+                    value={[
+                      p.startDate ? `Starts ${date(p.startDate)}` : null,
+                      p.dueDate ? `Due ${date(p.dueDate)}` : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  />
+                ) : null}
+                {p.quoteNumber ? (
+                  <KeyValue label="From quote" value={p.quoteNumber} />
+                ) : null}
+              </ListGroup>
+            </View>
 
             {p.description ? (
-              <Section title="Description">
-                <Body style={styles.notes} selectable>
-                  {p.description}
-                </Body>
-              </Section>
+              <View>
+                <SectionHeader title="Description" />
+                <ListGroup>
+                  <View style={styles.notes}>
+                    <Text selectable>{p.description}</Text>
+                  </View>
+                </ListGroup>
+              </View>
             ) : null}
 
-            {s && s.unapprovedSeconds > 0 ? (
-              <Body muted style={Type.small}>
-                {`${hours(s.unapprovedSeconds)} of unbilled time is waiting for timesheet approval and can't be invoiced yet.`}
-              </Body>
-            ) : null}
-            {s && s.unratedSeconds > 0 ? (
-              <Body muted style={Type.small}>
-                {`${hours(s.unratedSeconds)} of unbilled time has no hourly rate. Set one on the web.`}
-              </Body>
-            ) : null}
-            {p.billing === "hourly" && !p.clientId ? (
-              <Body muted style={Type.small}>
-                Add a client to the project on the web to invoice its time.
-              </Body>
-            ) : null}
-            <Body muted style={[Type.small, { color: t.textSecondary }]}>
-              Edit the project and its tasks on the web.
-            </Body>
+            <View style={styles.notesGap}>
+              {s && s.unapprovedSeconds > 0 ? (
+                <Text variant="caption" tone="muted">
+                  {`${hours(s.unapprovedSeconds)} of unbilled time is waiting for timesheet approval and can't be invoiced yet.`}
+                </Text>
+              ) : null}
+              {s && s.unratedSeconds > 0 ? (
+                <Text variant="caption" tone="muted">
+                  {`${hours(s.unratedSeconds)} of unbilled time has no hourly rate. Set one on the web.`}
+                </Text>
+              ) : null}
+              {p.billing === "hourly" && !p.clientId ? (
+                <Text variant="caption" tone="muted">
+                  Add a client to the project on the web to invoice its time.
+                </Text>
+              ) : null}
+              <Text variant="caption" tone="muted">
+                Edit the project and its tasks on the web.
+              </Text>
+            </View>
           </>
         )}
       </ScrollView>
-    </Screen>
+      {showBar ? (
+        <BottomActionBar>
+          {onThis ? (
+            <Button
+              title="Timer running on this project"
+              icon="timer"
+              variant="secondary"
+              onPress={() => router.navigate("/time")}
+            />
+          ) : (
+            <Button
+              title="Start timer"
+              icon="play"
+              loading={start.isPending}
+              onPress={() => void startTimer()}
+            />
+          )}
+        </BottomActionBar>
+      ) : null}
+    </View>
   )
 }
 
@@ -304,16 +343,18 @@ function Header({
   canOpenClient: boolean
   date: (iso: string) => string
 }) {
-  const t = useTheme()
-  const status =
-    p.status === "active"
-      ? p.isOverdue && p.dueDate
-        ? `Overdue, was due ${date(p.dueDate)}`
-        : "Active"
-      : PROJECT_STATUS_LABELS[p.status]
+  const overdue = p.status === "active" && p.isOverdue && p.dueDate
+  const status = overdue
+    ? `Overdue, was due ${date(p.dueDate!)}`
+    : PROJECT_STATUS_LABELS[p.status]
   return (
     <View style={styles.gap}>
-      <Text style={[Type.title, { color: t.text }]}>{p.name}</Text>
+      <View style={styles.head}>
+        <Text variant="headline" accessibilityRole="header" style={styles.flex}>
+          {p.name}
+        </Text>
+        <Badge label={status} tone={overdue ? "out" : STATUS_TONE[p.status]} />
+      </View>
       {p.clientName && p.clientId ? (
         canOpenClient ? (
           <Pressable
@@ -325,79 +366,69 @@ function Header({
                 params: { id: p.clientId! },
               })
             }
-            style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+            hitSlop={6}
+            style={({ pressed }) => [
+              styles.client,
+              { opacity: pressed ? 0.6 : 1 },
+            ]}
           >
-            <Text style={[Type.body, { color: t.primary }]}>
+            <Icon name="user" size={16} tone="primary" />
+            <Text variant="label" tone="primary">
               {p.clientName}
             </Text>
           </Pressable>
         ) : (
-          <Text style={[Type.body, { color: t.textSecondary }]}>
-            {p.clientName}
-          </Text>
+          <View style={styles.client}>
+            <Icon name="user" size={16} tone="muted" />
+            <Text variant="label" tone="muted">
+              {p.clientName}
+            </Text>
+          </View>
         )
       ) : null}
-      <Text
-        style={[
-          Type.small,
-          { color: p.isOverdue ? t.danger : t.textSecondary },
-        ]}
-      >
-        {status}
-      </Text>
     </View>
   )
 }
 
-function TimeRows({
+/** Tracked, billable and not invoiced yet, side by side. */
+function TimeStats({
   summary: s,
   money,
 }: {
   summary: ProjectTimeSummary
   money: (n: number, currency?: string) => string
 }) {
-  const rows = [
+  const stats = [
     { label: "Tracked", value: formatDuration(s.totalSeconds) },
     { label: "Billable", value: formatDuration(s.billableSeconds) },
     {
       label: "Not invoiced yet",
-      value: `${formatDuration(s.unbilledSeconds)}${
-        s.unbilledAmount ? ` · ${money(s.unbilledAmount, s.currency)}` : ""
-      }`,
+      value: formatDuration(s.unbilledSeconds),
+      sub: s.unbilledAmount ? money(s.unbilledAmount, s.currency) : undefined,
     },
   ]
-  return rows.map((r, i) => (
-    <Detail key={r.label} label={r.label} value={r.value} first={i === 0} row />
-  ))
-}
-
-function Detail({
-  label,
-  value,
-  first,
-  row,
-}: {
-  label: string
-  value: string
-  first?: boolean
-  /** Label and value side by side (numbers). */
-  row?: boolean
-}) {
-  const t = useTheme()
   return (
-    <View
-      accessible
-      style={[
-        row ? styles.pair : styles.item,
-        !first && { borderTopWidth: 1, borderTopColor: t.border },
-      ]}
-    >
-      <Text style={[row ? Type.body : Type.small, { color: t.textSecondary }]}>
-        {label}
-      </Text>
-      <Text style={[Type.body, row && styles.num, { color: t.text }]}>
-        {value}
-      </Text>
+    <View style={styles.split}>
+      {stats.map((x) => (
+        <View
+          key={x.label}
+          style={styles.flex}
+          accessible
+          accessibilityLabel={`${x.label}: ${[x.value, x.sub].filter(Boolean).join(", ")}`}
+        >
+          <Text variant="caption" tone="muted" numberOfLines={1}>
+            {x.label}
+          </Text>
+          <Text variant="title" numeric adjustsFontSizeToFit numberOfLines={1}>
+            {x.value}
+          </Text>
+          {x.sub ? (
+            <Text variant="caption" tone="muted" numeric numberOfLines={1}>
+              {x.sub}
+            </Text>
+          ) : null}
+        </View>
+      ))}
     </View>
   )
 }
@@ -419,34 +450,28 @@ function Meter({
   const over = used > of
   return (
     <View
-      style={styles.item}
+      style={styles.meter}
       accessible
       accessibilityLabel={`${label}: ${text}, ${pct}%`}
     >
       <View style={styles.meterHead}>
-        <Text style={[Type.body, { color: t.text }]}>{label}</Text>
-        <Text
-          style={[
-            Type.small,
-            styles.num,
-            { color: over ? t.danger : t.textSecondary },
-          ]}
-        >
+        <Text variant="label">{label}</Text>
+        <Text variant="label" numeric tone={over ? "out" : "muted"}>
           {`${pct}%`}
         </Text>
       </View>
-      <View style={[styles.track, { backgroundColor: t.backgroundSelected }]}>
+      <View style={[styles.track, { backgroundColor: t.surfaceMuted }]}>
         <View
           style={[
             styles.fill,
             {
               width: `${Math.min(100, Math.max(0, pct))}%`,
-              backgroundColor: over ? t.danger : t.primary,
+              backgroundColor: over ? t.outFill : t.primary,
             },
           ]}
         />
       </View>
-      <Text style={[Type.small, styles.num, { color: t.textSecondary }]}>
+      <Text variant="caption" tone="muted" numeric>
         {text}
       </Text>
     </View>
@@ -454,18 +479,35 @@ function Meter({
 }
 
 const styles = StyleSheet.create({
-  content: { padding: Spacing.four, gap: Spacing.four },
-  gap: { gap: Spacing.one },
-  item: { paddingVertical: Spacing.two + 2, gap: Spacing.one },
-  pair: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    gap: Spacing.three,
-    paddingVertical: Spacing.two + 2,
+  flex: { flex: 1 },
+  content: {
+    padding: Space[4],
+    gap: Space[4],
+    width: "100%",
+    maxWidth: MAX_CONTENT_WIDTH,
+    alignSelf: "center",
   },
-  num: { fontVariant: ["tabular-nums"] },
-  notes: { paddingVertical: Spacing.two + 2 },
-  action: { paddingBottom: Spacing.two },
+  gap: { gap: Space[1] },
+  head: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: Space[2],
+  },
+  client: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Space[1],
+    alignSelf: "flex-start",
+  },
+  split: { flexDirection: "row", gap: Space[3] },
+  notes: { paddingHorizontal: Space[4] - 2, paddingVertical: Space[3] },
+  notesGap: { gap: Space[2] },
+  meter: {
+    gap: Space[2],
+    paddingHorizontal: Space[4] - 2,
+    paddingVertical: Space[3],
+  },
   meterHead: { flexDirection: "row", justifyContent: "space-between" },
   track: { height: 8, borderRadius: Radius.full, overflow: "hidden" },
   fill: { height: 8, borderRadius: Radius.full },

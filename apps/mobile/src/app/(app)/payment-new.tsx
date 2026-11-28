@@ -1,5 +1,5 @@
 import {
-  addDays,
+  displayDigits,
   formatMoney,
   fromMinorUnits,
   PAYMENT_METHOD_LABELS,
@@ -9,35 +9,30 @@ import {
 } from "@workspace/contracts"
 import { router, useLocalSearchParams } from "expo-router"
 import * as React from "react"
-import {
-  Alert,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native"
-import { SafeAreaView } from "react-native-safe-area-context"
+import { ScrollView, StyleSheet, View } from "react-native"
 
 import {
-  Body,
   Button,
   Chip,
-  Field,
-  KeyboardAvoid,
-  Screen,
-  Title,
+  confirm,
+  DateField,
   ErrorState,
+  KeyboardAvoid,
+  MoneyInput,
+  SheetFooter,
+  SheetHeader,
+  Skeleton,
+  Text,
+  TextField,
+  toast,
 } from "@/components/ui"
-import { Spacing, Type } from "@/constants/theme"
+import { Space } from "@/constants/theme"
 import { useDashboard } from "@/features/dashboard"
 import { useInvoice, useRecordPayment } from "@/features/invoices"
 import { useWorkspaceProfile } from "@/features/workspaces"
 import { useTheme } from "@/hooks/use-theme"
 import { normalizeAmount } from "@/lib/amount"
 import { errorMessage } from "@/lib/api"
-
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
 
 /**
  * Record money received against an issued invoice: the balance by default,
@@ -60,6 +55,13 @@ export default function RecordPaymentScreen() {
   const [method, setMethod] = React.useState<PaymentMethod>("bank_transfer")
   const [reference, setReference] = React.useState("")
   const [touched, setTouched] = React.useState(false)
+  const [dirty, setDirty] = React.useState(false)
+  const change =
+    <T,>(set: (v: T) => void) =>
+    (v: T) => {
+      setDirty(true)
+      set(v)
+    }
 
   // The balance until you type something else.
   const text = amount ?? (inv ? fromMinorUnits(inv.amountDue, currency) : "")
@@ -76,10 +78,7 @@ export default function RecordPaymentScreen() {
       : minor > due
         ? `More than the ${formatMoney({ amount: due, currency }, locale)} due`
         : undefined
-  const dateError =
-    touched && !ISO_DATE.test(date) ? "Use YYYY-MM-DD" : undefined
-  const valid =
-    minor !== null && minor >= 1 && minor <= due && ISO_DATE.test(date)
+  const valid = minor !== null && minor >= 1 && minor <= due && Boolean(date)
 
   const submit = () => {
     setTouched(true)
@@ -94,163 +93,150 @@ export default function RecordPaymentScreen() {
       {
         onSuccess: (payment) => {
           router.back()
-          if (!payment.receiptNumber) return
-          Alert.alert(
-            "Payment recorded",
-            `Receipt ${payment.receiptNumber} is ready. Email it to ${inv?.clientName ?? "the client"}?`,
-            [
-              { text: "Not now", style: "cancel" },
-              {
-                text: "Send receipt",
-                onPress: () =>
-                  router.push({
-                    pathname: "/send",
-                    params: {
-                      kind: "receipt",
-                      invoiceId,
-                      paymentId: payment.id,
-                    },
-                  }),
-              },
-            ]
+          if (!payment.receiptNumber) {
+            toast.success("Payment recorded")
+            return
+          }
+          toast.success(
+            `Payment recorded. Receipt ${payment.receiptNumber} is ready.`,
+            {
+              label: "Send receipt",
+              onPress: () =>
+                router.push({
+                  pathname: "/send",
+                  params: {
+                    kind: "receipt",
+                    invoiceId,
+                    paymentId: payment.id,
+                  },
+                }),
+            }
           )
         },
         onError: (e) =>
-          Alert.alert("Couldn't record the payment", errorMessage(e)),
+          toast.error(`Couldn't record the payment: ${errorMessage(e)}`),
       }
     )
   }
 
-  return (
-    <Screen>
-      {/* An iOS sheet leaves room at the top; Android shows it full screen. */}
-      <SafeAreaView
-        style={styles.flex}
-        edges={Platform.OS === "android" ? ["top", "bottom"] : ["bottom"]}
-      >
-        <KeyboardAvoid>
-          <View style={styles.header}>
-            <Title>Record payment</Title>
-            <Button
-              title="Cancel"
-              variant="link"
-              onPress={() => router.back()}
-            />
-          </View>
-          <ScrollView
-            contentContainerStyle={styles.content}
-            keyboardShouldPersistTaps="handled"
-            automaticallyAdjustKeyboardInsets
-          >
-            {invoice.error && !invoice.data ? (
-              <ErrorState
-                compact
-                error={invoice.error}
-                onRetry={() => void invoice.refetch()}
-              />
-            ) : !inv ? (
-              <Body muted>Loading…</Body>
-            ) : (
-              <>
-                <Body muted>
-                  {`${inv.number} · ${inv.clientName} · ${formatMoney({ amount: due, currency }, locale)} due`}
-                </Body>
+  const close = async () => {
+    if (
+      dirty &&
+      !(await confirm({
+        title: "Discard this payment?",
+        message: "What you've entered isn't saved.",
+        confirmLabel: "Discard",
+        destructive: true,
+      }))
+    )
+      return
+    router.back()
+  }
 
-                <Field
-                  label={`Amount received (${currency})`}
+  return (
+    <View style={[styles.flex, { backgroundColor: t.surface }]}>
+      <SheetHeader title="Record payment" onClose={close} />
+      <KeyboardAvoid>
+        <ScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets
+        >
+          {invoice.error && !invoice.data ? (
+            <ErrorState
+              error={invoice.error}
+              onRetry={() => void invoice.refetch()}
+            />
+          ) : !inv ? (
+            <View style={styles.group}>
+              <Skeleton width="70%" height={14} />
+              <Skeleton width="100%" height={60} />
+              <Skeleton width="50%" height={36} />
+            </View>
+          ) : (
+            <>
+              <Text variant="callout" tone="muted">
+                {`${inv.number} · ${inv.clientName} · ${formatMoney({ amount: due, currency }, locale)} due`}
+              </Text>
+
+              <View style={styles.group}>
+                <Text variant="label" tone="muted">
+                  {`Amount received (${currency})`}
+                </Text>
+                <MoneyInput
                   value={text}
-                  onChangeText={setAmount}
-                  keyboardType="decimal-pad"
-                  selectTextOnFocus
+                  onChangeText={change(setAmount)}
+                  currency={currency}
+                  tone="in"
+                  decimals={displayDigits(currency) > 0}
                   error={amountError}
                 />
+              </View>
 
-                <View style={styles.gap}>
-                  <Field
-                    label="Paid on"
-                    value={date}
-                    onChangeText={setPaidOn}
-                    keyboardType="numbers-and-punctuation"
-                    autoCorrect={false}
-                    maxLength={10}
-                    error={dateError}
-                  />
-                  {today ? (
-                    <View style={styles.wrap}>
-                      {[
-                        ["Today", today],
-                        ["Yesterday", addDays(today, -1)],
-                      ].map(([label, value]) => (
-                        <Chip
-                          key={label}
-                          label={label!}
-                          selected={date === value}
-                          onPress={() => setPaidOn(value!)}
-                        />
-                      ))}
-                    </View>
-                  ) : null}
-                </View>
-
-                <View style={styles.gap}>
-                  <Text style={[Type.small, styles.label, { color: t.text }]}>
-                    Method
-                  </Text>
-                  <View style={styles.wrap}>
-                    {paymentMethodSchema.options.map((m) => (
-                      <Chip
-                        key={m}
-                        label={PAYMENT_METHOD_LABELS[m]}
-                        selected={method === m}
-                        onPress={() => setMethod(m)}
-                      />
-                    ))}
-                  </View>
-                </View>
-
-                <Field
-                  label="Reference"
-                  value={reference}
-                  onChangeText={setReference}
-                  placeholder="Optional, e.g. a transfer ID"
-                  autoCorrect={false}
-                  maxLength={200}
+              {today ? (
+                <DateField
+                  label="Paid on"
+                  value={date}
+                  onChange={(d) => change(setPaidOn)(d ?? today)}
+                  today={today}
+                  locale={locale}
                 />
+              ) : null}
 
-                <Button
-                  title={
-                    minor && minor >= 1 && minor <= due
-                      ? `Record ${formatMoney({ amount: minor, currency }, locale)}`
-                      : "Record payment"
-                  }
-                  loading={record.isPending}
-                  disabled={!today}
-                  onPress={submit}
-                />
-                <Body muted style={Type.small}>
-                  A receipt is created for the payment. You can email it to the
-                  client next.
-                </Body>
-              </>
-            )}
-          </ScrollView>
-        </KeyboardAvoid>
-      </SafeAreaView>
-    </Screen>
+              <View style={styles.group}>
+                <Text variant="label" tone="muted">
+                  Method
+                </Text>
+                <View style={styles.wrap}>
+                  {paymentMethodSchema.options.map((m) => (
+                    <Chip
+                      key={m}
+                      label={PAYMENT_METHOD_LABELS[m]}
+                      selected={method === m}
+                      onPress={() => change(setMethod)(m)}
+                    />
+                  ))}
+                </View>
+              </View>
+
+              <TextField
+                label="Reference"
+                value={reference}
+                onChangeText={change(setReference)}
+                placeholder="Optional, e.g. a transfer ID"
+                autoCorrect={false}
+                maxLength={200}
+              />
+
+              <Text variant="caption" tone="muted">
+                A receipt is created for the payment. You can email it to the
+                client next.
+              </Text>
+            </>
+          )}
+        </ScrollView>
+        {inv ? (
+          <SheetFooter>
+            <Button
+              title={
+                minor && minor >= 1 && minor <= due
+                  ? `Record ${formatMoney({ amount: minor, currency }, locale)}`
+                  : "Record payment"
+              }
+              loading={record.isPending}
+              disabled={!today}
+              onPress={submit}
+            />
+          </SheetFooter>
+        ) : null}
+      </KeyboardAvoid>
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: Spacing.four,
-    paddingTop: Spacing.four,
-  },
-  content: { padding: Spacing.four, gap: Spacing.four },
-  gap: { gap: Spacing.two },
-  label: { fontWeight: "600" },
-  wrap: { flexDirection: "row", flexWrap: "wrap", gap: Spacing.two },
+  content: { padding: Space[4], gap: Space[4], paddingBottom: Space[8] },
+  group: { gap: Space[2] },
+  wrap: { flexDirection: "row", flexWrap: "wrap", gap: Space[2] },
 })
