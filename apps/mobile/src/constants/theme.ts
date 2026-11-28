@@ -44,6 +44,8 @@ const light = {
   info: "#1D4ED8",
   infoSoft: "#E0EAFF",
   scrim: "rgba(11,20,20,0.45)",
+  /** Text and icons on the scrim (always light). */
+  onScrim: "#FFFFFF",
   shadow: "#000000",
 } as const
 
@@ -75,6 +77,7 @@ const dark = {
   info: "#93B4FF",
   infoSoft: "#18264A",
   scrim: "rgba(0,0,0,0.6)",
+  onScrim: "#FFFFFF",
   shadow: "#000000",
 } as const
 

@@ -1,18 +1,18 @@
+import { Image } from "expo-image"
 import * as WebBrowser from "expo-web-browser"
 import * as React from "react"
 import { ScrollView, StyleSheet, View } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 
 import {
-  Body,
   Button,
   KeyboardAvoid,
   PasswordField,
-  Screen,
   TextField,
-  Title,
+  Icon,
+  Text,
 } from "@/components/ui"
-import { Spacing } from "@/constants/theme"
+import { Radius, Space } from "@/constants/theme"
 import { useTheme } from "@/hooks/use-theme"
 import { ApiError, errorMessage } from "@/lib/api-error"
 import { authClient } from "@/lib/auth-client"
@@ -88,8 +88,8 @@ export default function SignInScreen() {
     WebBrowser.openBrowserAsync(`${WEB_URL}${path}`)
 
   return (
-    <Screen>
-      <SafeAreaView style={{ flex: 1 }}>
+    <View style={[styles.flex, { backgroundColor: t.canvas }]}>
+      <SafeAreaView style={styles.flex}>
         <KeyboardAvoid>
           {/* Insets, not KeyboardAvoidingView: its layout animation made the
             fields jump under your finger as the keyboard opened. */}
@@ -98,24 +98,29 @@ export default function SignInScreen() {
             keyboardShouldPersistTaps="handled"
             automaticallyAdjustKeyboardInsets
           >
-            <View style={{ gap: Spacing.one }}>
-              <Body style={[styles.wordmark, { color: t.primary }]}>
-                billleaf
-              </Body>
-              <Title>
-                {step === "password" ? "Sign in" : "Two-factor authentication"}
-              </Title>
-              {step === "code" ? (
-                <Body muted>
-                  {backup
+            <View style={styles.head}>
+              <Image
+                source={require("../../../../packages/brand/assets/splash-icon.png")}
+                style={styles.mark}
+                contentFit="contain"
+                accessibilityLabel="Billleaf"
+              />
+              <Text variant="title" accessibilityRole="header">
+                {step === "password"
+                  ? "Sign in to Billleaf"
+                  : "Two-factor authentication"}
+              </Text>
+              <Text variant="callout" tone="muted">
+                {step === "password"
+                  ? "Use the email and password you use on the web."
+                  : backup
                     ? "Enter one of the backup codes you saved when you turned on two-factor. Each works once."
                     : "Enter the 6-digit code from your authenticator app."}
-                </Body>
-              ) : null}
+              </Text>
             </View>
 
             {step === "password" ? (
-              <View style={{ gap: Spacing.three }}>
+              <View style={{ gap: Space[3] }}>
                 <TextField
                   label="Email"
                   value={email}
@@ -135,7 +140,15 @@ export default function SignInScreen() {
                   onSubmitEditing={signIn}
                 />
                 {error ? (
-                  <Body style={{ color: t.danger }}>{error}</Body>
+                  <View
+                    accessibilityRole="alert"
+                    style={[styles.error, { backgroundColor: t.outSoft }]}
+                  >
+                    <Icon name="alert" size={18} tone="out" />
+                    <Text variant="callout" tone="out" style={styles.flex}>
+                      {error}
+                    </Text>
+                  </View>
                 ) : null}
                 <Button
                   title="Sign in"
@@ -159,7 +172,7 @@ export default function SignInScreen() {
                 />
               </View>
             ) : (
-              <View style={{ gap: Spacing.three }}>
+              <View style={{ gap: Space[3] }}>
                 <TextField
                   key={backup ? "backup" : "totp"}
                   label={backup ? "Backup code" : "Code"}
@@ -174,7 +187,15 @@ export default function SignInScreen() {
                   onSubmitEditing={verify}
                 />
                 {error ? (
-                  <Body style={{ color: t.danger }}>{error}</Body>
+                  <View
+                    accessibilityRole="alert"
+                    style={[styles.error, { backgroundColor: t.outSoft }]}
+                  >
+                    <Icon name="alert" size={18} tone="out" />
+                    <Text variant="callout" tone="out" style={styles.flex}>
+                      {error}
+                    </Text>
+                  </View>
                 ) : null}
                 <Button
                   title="Verify"
@@ -212,7 +233,7 @@ export default function SignInScreen() {
           </ScrollView>
         </KeyboardAvoid>
       </SafeAreaView>
-    </Screen>
+    </View>
   )
 }
 
@@ -220,11 +241,20 @@ const styles = StyleSheet.create({
   content: {
     flexGrow: 1,
     justifyContent: "center",
-    padding: Spacing.four,
-    gap: Spacing.four,
+    padding: Space[5],
+    gap: Space[6],
     maxWidth: 480,
     width: "100%",
     alignSelf: "center",
   },
-  wordmark: { fontSize: 22, fontWeight: "700" },
+  flex: { flex: 1 },
+  head: { gap: Space[2] },
+  mark: { width: 56, height: 56, marginBottom: Space[2] },
+  error: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: Space[2],
+    padding: Space[3],
+    borderRadius: Radius.md,
+  },
 })

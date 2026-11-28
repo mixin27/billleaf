@@ -123,6 +123,7 @@ export const SHEET_ROUTES = [
   "cashbook-transfer",
   "workspaces",
   "home-actions",
+  "expense",
 ] as const
 
 const TAB_PATHS = new Set([

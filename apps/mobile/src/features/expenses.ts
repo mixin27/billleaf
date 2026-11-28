@@ -105,3 +105,15 @@ export function useCreateExpense() {
       ]),
   })
 }
+
+/**
+ * An expense from the loaded list (there's no need for another request:
+ * the detail sheet only opens from the list on screen).
+ */
+export function useCachedExpense(id: string | undefined): Expense | null {
+  const qc = useQueryClient()
+  const ws = useWs()
+  if (!id) return null
+  const list = qc.getQueryData<{ items: Expense[] }>(expenseKeys.recent(ws))
+  return list?.items.find((e) => e.id === id) ?? null
+}

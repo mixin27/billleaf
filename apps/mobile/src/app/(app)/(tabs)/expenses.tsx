@@ -85,7 +85,7 @@ export default function MoneyScreen() {
       ? canCreateBook && hasBooks
         ? { label: "Add book", onPress: addBook }
         : null
-      : has("expense.create")
+      : has("expense.create") && (expenses.data?.items.length ?? 0) > 0
         ? { label: "Add expense", onPress: () => router.push("/expense-new") }
         : null
 
@@ -131,7 +131,11 @@ export default function MoneyScreen() {
           onAdd={addBook}
         />
       ) : (
-        <ExpensesPane canCreate={false} list={expenses} locale={locale} />
+        <ExpensesPane
+          canCreate={has("expense.create")}
+          list={expenses}
+          locale={locale}
+        />
       )}
     </ScrollView>
   )
