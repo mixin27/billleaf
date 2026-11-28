@@ -152,6 +152,7 @@ export default function AppLayout() {
           />
           <Stack.Screen name="cashbook-entry" options={sheet} />
           <Stack.Screen name="home-actions" options={sheet} />
+          <Stack.Screen name="expense/[id]" options={sheet} />
           <Stack.Screen
             name="book-settings"
             options={{
@@ -211,7 +212,7 @@ export default function AppLayout() {
         </Stack.Protected>
         <Stack.Screen
           name="workspaces"
-          options={{ presentation: workspace ? "modal" : "card" }}
+          options={workspace ? sheet : { presentation: "card" }}
         />
       </Stack>
       {workspace ? <MiniPlayer /> : null}

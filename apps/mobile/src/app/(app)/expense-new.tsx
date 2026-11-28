@@ -1,34 +1,29 @@
 import {
-  addDays,
+  displayDigits,
   EXPENSE_PAYMENT_METHOD_LABELS,
   type ExpensePaymentMethod,
-  formatMoney,
   toMinorUnits,
 } from "@workspace/contracts"
 import { Image } from "expo-image"
 import { router } from "expo-router"
 import * as React from "react"
-import {
-  Alert,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native"
-import { SafeAreaView } from "react-native-safe-area-context"
+import { Pressable, ScrollView, StyleSheet, View } from "react-native"
 
 import {
-  Body,
   Button,
   Chip,
-  Field,
+  confirm,
+  DateField,
+  Icon,
   KeyboardAvoid,
-  Screen,
-  Title,
+  MoneyInput,
+  SheetFooter,
+  SheetHeader,
+  Text,
+  TextField,
+  toast,
 } from "@/components/ui"
-import { Radius, Spacing, Type } from "@/constants/theme"
+import { Radius, Space } from "@/constants/theme"
 import { useDashboard } from "@/features/dashboard"
 import { useCreateExpense, useExpenseCategories } from "@/features/expenses"
 import { useMe } from "@/features/me"
@@ -38,7 +33,6 @@ import { normalizeAmount } from "@/lib/amount"
 import { errorMessage } from "@/lib/api"
 import { pickReceiptPhoto, type ReceiptPhoto } from "@/lib/receipt-photo"
 
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
 /** What you'd pay a receipt with on the go, most likely first. */
 const METHODS: ExpensePaymentMethod[] = [
   "card",
@@ -49,9 +43,9 @@ const METHODS: ExpensePaymentMethod[] = [
 ]
 
 /**
- * Record an expense with a photo of its receipt. Amounts are in the
- * workspace's default currency (other currencies, clients and billable
- * expenses are set on the web).
+ * Record an expense, receipt first: snap it, then the amount (in the
+ * workspace's default currency), the date, who you paid and how. Other
+ * currencies, clients and billable expenses are set on the web.
  */
 export default function NewExpenseScreen() {
   const t = useTheme()
@@ -65,40 +59,42 @@ export default function NewExpenseScreen() {
   const currency = profile.data?.defaultCurrency ?? "USD"
   const locale =
     profile.data?.locale ?? Intl.DateTimeFormat().resolvedOptions().locale
-  const [photo, setPhoto] = React.useState<
-    (ReceiptPhoto & { source: "camera" | "library" }) | null
-  >(null)
+  const [photo, setPhoto] = React.useState<ReceiptPhoto | null>(null)
   const [amount, setAmount] = React.useState("")
   const [spentOn, setSpentOn] = React.useState<string | null>(null)
   const [vendor, setVendor] = React.useState("")
   const [categoryId, setCategoryId] = React.useState<string | null>(null)
   const [note, setNote] = React.useState("")
   const [method, setMethod] = React.useState<ExpensePaymentMethod>("card")
-  /** Which button is opening the camera or library (for its spinner). */
-  const [picking, setPicking] = React.useState<"camera" | "library" | null>(
-    null
-  )
+  const [picking, setPicking] = React.useState(false)
   const [touched, setTouched] = React.useState(false)
+  const [dirty, setDirty] = React.useState(false)
+  const change =
+    <T,>(set: (v: T) => void) =>
+    (v: T) => {
+      setDirty(true)
+      set(v)
+    }
 
   const date = spentOn ?? today ?? ""
   const minor = amount.trim()
     ? toMinorUnits(normalizeAmount(amount), currency)
     : null
-  const amountError =
-    touched && (minor === null || minor < 1) ? "Enter the amount" : undefined
-  const dateError =
-    touched && !ISO_DATE.test(date) ? "Use YYYY-MM-DD" : undefined
-  const valid = minor !== null && minor >= 1 && ISO_DATE.test(date)
+  const valid = minor !== null && minor >= 1 && Boolean(date)
+  const amountError = touched && !valid ? "Enter the amount" : undefined
 
   const pick = async (source: "camera" | "library") => {
-    setPicking(source)
+    setPicking(true)
     try {
       const p = await pickReceiptPhoto(source)
-      if (p) setPhoto({ ...p, source })
+      if (p) {
+        setPhoto(p)
+        setDirty(true)
+      }
     } catch (e) {
-      Alert.alert("Couldn't use that photo", errorMessage(e))
+      toast.error(errorMessage(e))
     } finally {
-      setPicking(null)
+      setPicking(false)
     }
   }
 
@@ -111,8 +107,8 @@ export default function NewExpenseScreen() {
           spentOn: date,
           amount: minor!,
           currency,
-          vendor: vendor || null,
-          description: note || null,
+          vendor: vendor.trim() || null,
+          description: note.trim() || null,
           categoryId,
           paymentMethod: method,
         },
@@ -121,234 +117,263 @@ export default function NewExpenseScreen() {
       {
         onSuccess: ({ receiptError }) => {
           if (receiptError)
-            Alert.alert(
-              "Saved without the receipt",
-              `${errorMessage(receiptError)} You can attach it on the web.`
+            toast.error(
+              `Expense saved without the receipt: ${errorMessage(receiptError)} Attach it on the web.`
             )
+          else
+            toast.success(photo ? "Expense and receipt saved" : "Expense saved")
           router.back()
         },
-        onError: (e) =>
-          Alert.alert("Couldn't save the expense", errorMessage(e)),
+        onError: (e) => toast.error(errorMessage(e)),
       }
     )
   }
 
+  const close = async () => {
+    if (
+      dirty &&
+      !(await confirm({
+        title: "Discard this expense?",
+        message: "What you've entered isn't saved.",
+        confirmLabel: "Discard",
+        destructive: true,
+      }))
+    )
+      return
+    router.back()
+  }
+
   return (
-    <Screen>
-      {/* An iOS sheet leaves room at the top; Android shows it full screen. */}
-      <SafeAreaView
-        style={styles.flex}
-        edges={Platform.OS === "android" ? ["top", "bottom"] : ["bottom"]}
-      >
-        <KeyboardAvoid>
-          <View style={styles.header}>
-            <Title>New expense</Title>
-            <Button
-              title="Cancel"
-              variant="link"
-              onPress={() => router.back()}
-            />
-          </View>
-          <ScrollView
-            contentContainerStyle={styles.content}
-            keyboardShouldPersistTaps="handled"
-            automaticallyAdjustKeyboardInsets
-          >
-            {canAttach ? (
-              photo ? (
-                <View style={styles.photoWrap}>
-                  <Image
-                    source={{ uri: photo.uri }}
-                    style={[
-                      styles.photo,
-                      { aspectRatio: photo.width / photo.height || 0.75 },
-                    ]}
-                    contentFit="contain"
-                    accessibilityLabel="Receipt photo"
-                  />
-                  <View style={styles.row}>
-                    <View style={styles.flex}>
-                      <Button
-                        title={
-                          photo.source === "camera"
-                            ? "Retake"
-                            : "Choose another"
-                        }
-                        variant="secondary"
-                        loading={picking !== null}
-                        onPress={() => pick(photo.source)}
-                      />
-                    </View>
-                    <View style={styles.flex}>
-                      <Button
-                        title="Remove"
-                        variant="secondary"
-                        onPress={() => setPhoto(null)}
-                      />
-                    </View>
-                  </View>
-                </View>
-              ) : (
-                <View
-                  style={[
-                    styles.dropzone,
-                    {
-                      borderColor: t.border,
-                      backgroundColor: t.backgroundElement,
-                    },
-                  ]}
-                >
-                  <Body muted style={styles.center}>
-                    Add a photo of the receipt
-                  </Body>
-                  <View style={styles.row}>
-                    <View style={styles.flex}>
-                      <Button
-                        title="Take photo"
-                        loading={picking === "camera"}
-                        disabled={picking !== null}
-                        onPress={() => pick("camera")}
-                      />
-                    </View>
-                    <View style={styles.flex}>
-                      <Button
-                        title="Choose photo"
-                        variant="secondary"
-                        loading={picking === "library"}
-                        disabled={picking !== null}
-                        onPress={() => pick("library")}
-                      />
-                    </View>
-                  </View>
-                </View>
-              )
-            ) : null}
-
-            <Field
-              label={`Amount (${currency}, tax included)`}
-              value={amount}
-              onChangeText={setAmount}
-              keyboardType="decimal-pad"
-              placeholder={formatMoney({ amount: 0, currency }, locale)}
-              error={amountError}
-            />
-
-            <View style={styles.gap}>
-              <Field
-                label="Date"
-                value={date}
-                onChangeText={setSpentOn}
-                keyboardType="numbers-and-punctuation"
-                autoCorrect={false}
-                maxLength={10}
-                error={dateError}
-              />
-              {today ? (
-                <View style={styles.chips}>
-                  {[
-                    ["Today", today],
-                    ["Yesterday", addDays(today, -1)],
-                  ].map(([label, value]) => (
-                    <Chip
-                      key={label}
-                      label={label!}
-                      selected={date === value}
-                      onPress={() => setSpentOn(value!)}
-                    />
-                  ))}
-                </View>
-              ) : null}
-            </View>
-
-            <Field
-              label="Vendor"
-              value={vendor}
-              onChangeText={setVendor}
-              placeholder="Who you paid"
-              maxLength={200}
-            />
-
-            {categories.data && categories.data.length > 0 ? (
-              <View style={styles.gap}>
-                <Text style={[Type.small, styles.label, { color: t.text }]}>
-                  Category
-                </Text>
-                <View style={styles.wrap}>
-                  {categories.data.map((c) => (
-                    <Chip
-                      key={c.id}
-                      label={c.name}
-                      selected={categoryId === c.id}
-                      onPress={() =>
-                        setCategoryId(categoryId === c.id ? null : c.id)
-                      }
-                    />
-                  ))}
+    <View style={[styles.flex, { backgroundColor: t.surface }]}>
+      <SheetHeader title="Add expense" onClose={close} />
+      <KeyboardAvoid>
+        <ScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets
+        >
+          {canAttach ? (
+            photo ? (
+              <View style={[styles.photo, { borderColor: t.border }]}>
+                <Image
+                  source={{ uri: photo.uri }}
+                  style={styles.image}
+                  contentFit="cover"
+                  accessibilityLabel="The receipt"
+                />
+                <View style={[styles.photoBar, { backgroundColor: t.scrim }]}>
+                  <Text variant="label" style={{ color: t.onScrim, flex: 1 }}>
+                    Receipt attached
+                  </Text>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Take another photo"
+                    onPress={() => void pick("camera")}
+                    style={styles.overlayBtn}
+                  >
+                    <Icon name="camera" size={22} color={t.onScrim} />
+                  </Pressable>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Remove the receipt"
+                    onPress={() => setPhoto(null)}
+                    style={styles.overlayBtn}
+                  >
+                    <Icon name="trash" size={22} color={t.onScrim} />
+                  </Pressable>
                 </View>
               </View>
-            ) : null}
+            ) : (
+              <View
+                style={[
+                  styles.drop,
+                  {
+                    borderColor: t.borderStrong,
+                    backgroundColor: t.surfaceMuted,
+                  },
+                ]}
+              >
+                <Icon name="receipt" size={32} tone="muted" />
+                <Text variant="callout" tone="muted" style={styles.center}>
+                  Snap the receipt first. It's saved with the expense.
+                </Text>
+                <View style={styles.row}>
+                  <Pressable
+                    accessibilityRole="button"
+                    disabled={picking}
+                    onPress={() => void pick("camera")}
+                    style={({ pressed }) => [
+                      styles.pick,
+                      {
+                        backgroundColor: t.primary,
+                        opacity: pressed || picking ? 0.8 : 1,
+                      },
+                    ]}
+                  >
+                    <Icon name="camera" size={20} color={t.onPrimary} />
+                    <Text
+                      variant="label"
+                      style={{ color: t.onPrimary, fontWeight: "600" }}
+                    >
+                      Take photo
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    accessibilityRole="button"
+                    disabled={picking}
+                    onPress={() => void pick("library")}
+                    style={({ pressed }) => [
+                      styles.pick,
+                      {
+                        backgroundColor: t.surface,
+                        borderColor: t.borderStrong,
+                        borderWidth: 1,
+                        opacity: pressed || picking ? 0.8 : 1,
+                      },
+                    ]}
+                  >
+                    <Icon name="image" size={20} tone="default" />
+                    <Text variant="label" style={{ fontWeight: "600" }}>
+                      Gallery
+                    </Text>
+                  </Pressable>
+                </View>
+              </View>
+            )
+          ) : null}
 
-            <View style={styles.gap}>
-              <Text style={[Type.small, styles.label, { color: t.text }]}>
-                Paid with
+          <MoneyInput
+            value={amount}
+            onChangeText={change(setAmount)}
+            currency={currency}
+            tone="out"
+            decimals={displayDigits(currency) > 0}
+            error={amountError}
+          />
+          <Text variant="caption" tone="muted">
+            Tax included. Other currencies are on the web.
+          </Text>
+
+          {today ? (
+            <DateField
+              label="Date"
+              value={date}
+              onChange={(d) => change(setSpentOn)(d ?? today)}
+              today={today}
+              locale={locale}
+            />
+          ) : null}
+
+          <TextField
+            label="Paid to"
+            icon="building"
+            value={vendor}
+            onChangeText={change(setVendor)}
+            placeholder="e.g. City Mart, Grab"
+            autoCapitalize="words"
+            maxLength={200}
+          />
+
+          {categories.data && categories.data.length > 0 ? (
+            <View style={styles.group}>
+              <Text variant="label" tone="muted">
+                Category
               </Text>
               <View style={styles.wrap}>
-                {METHODS.map((m) => (
+                {categories.data.map((c) => (
                   <Chip
-                    key={m}
-                    label={EXPENSE_PAYMENT_METHOD_LABELS[m]}
-                    selected={method === m}
-                    onPress={() => setMethod(m)}
+                    key={c.id}
+                    label={c.name}
+                    selected={categoryId === c.id}
+                    onPress={() =>
+                      change(setCategoryId)(categoryId === c.id ? null : c.id)
+                    }
                   />
                 ))}
               </View>
             </View>
+          ) : null}
 
-            <Field
-              label="Note"
-              value={note}
-              onChangeText={setNote}
-              placeholder="Optional"
-              maxLength={1000}
-              multiline
-            />
+          <View style={styles.group}>
+            <Text variant="label" tone="muted">
+              Paid with
+            </Text>
+            <View style={styles.wrap}>
+              {METHODS.map((m) => (
+                <Chip
+                  key={m}
+                  label={EXPENSE_PAYMENT_METHOD_LABELS[m]}
+                  selected={method === m}
+                  onPress={() => change(setMethod)(m)}
+                />
+              ))}
+            </View>
+          </View>
 
-            <Button
-              title={photo ? "Save expense and receipt" : "Save expense"}
-              loading={save.isPending}
-              disabled={!today}
-              onPress={submit}
-            />
-          </ScrollView>
-        </KeyboardAvoid>
-      </SafeAreaView>
-    </Screen>
+          <TextField
+            label="Note"
+            value={note}
+            onChangeText={change(setNote)}
+            placeholder="Optional"
+            maxLength={500}
+            multiline
+          />
+        </ScrollView>
+        <SheetFooter>
+          <Button
+            title={photo ? "Save expense and receipt" : "Save expense"}
+            loading={save.isPending}
+            onPress={submit}
+          />
+        </SheetFooter>
+      </KeyboardAvoid>
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  header: {
-    flexDirection: "row",
+  content: { padding: Space[4], gap: Space[4], paddingBottom: Space[8] },
+  center: { textAlign: "center" },
+  drop: {
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: Spacing.four,
-    paddingTop: Spacing.four,
-  },
-  content: { padding: Spacing.four, gap: Spacing.four },
-  photoWrap: { gap: Spacing.two },
-  photo: { width: "100%", maxHeight: 360, borderRadius: Radius.md },
-  dropzone: {
-    borderWidth: 1,
+    gap: Space[3],
+    padding: Space[5],
+    borderWidth: 1.5,
     borderStyle: "dashed",
     borderRadius: Radius.lg,
-    padding: Spacing.three,
-    gap: Spacing.three,
   },
-  center: { textAlign: "center" },
-  row: { flexDirection: "row", gap: Spacing.two },
-  gap: { gap: Spacing.two },
-  label: { fontWeight: "600" },
-  chips: { flexDirection: "row", gap: Spacing.two },
-  wrap: { flexDirection: "row", flexWrap: "wrap", gap: Spacing.two },
+  row: { flexDirection: "row", gap: Space[3] },
+  pick: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Space[2],
+    height: 44,
+    paddingHorizontal: Space[4],
+    borderRadius: Radius.md,
+  },
+  photo: {
+    height: 220,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    overflow: "hidden",
+  },
+  image: { width: "100%", height: "100%" },
+  photoBar: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingLeft: Space[4],
+  },
+  overlayBtn: {
+    width: 48,
+    height: 48,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  group: { gap: Space[2] },
+  wrap: { flexDirection: "row", flexWrap: "wrap", gap: Space[2] },
 })

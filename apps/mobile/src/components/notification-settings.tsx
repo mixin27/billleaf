@@ -1,23 +1,22 @@
 import { PUSH_TYPES } from "@workspace/contracts"
 import * as React from "react"
-import {
-  Alert,
-  AppState,
-  Linking,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native"
+import { AppState, Linking, StyleSheet, View } from "react-native"
 
-import { Body, Button, Section, Toggle } from "@/components/ui"
-import { Spacing, Type } from "@/constants/theme"
+import {
+  Button,
+  ErrorState,
+  ListGroup,
+  SectionHeader,
+  SwitchRow,
+  Text,
+  toast,
+} from "@/components/ui"
+import { Space } from "@/constants/theme"
 import { useMe } from "@/features/me"
 import {
   useNotificationSettings,
   useSetNotificationSetting,
 } from "@/features/notifications"
-import { useTheme } from "@/hooks/use-theme"
 import { errorMessage } from "@/lib/api"
 import {
   PROJECT_ID,
@@ -50,7 +49,6 @@ function usePushPermission() {
  * account, so they follow you to every phone.
  */
 export function NotificationSettings() {
-  const t = useTheme()
   const [permission, setPermission] = usePushPermission()
   const [asking, setAsking] = React.useState(false)
   const settings = useNotificationSettings()
@@ -64,7 +62,7 @@ export function NotificationSettings() {
       const result = await registerForPush({ ask: true })
       setPermission(result === "unavailable" ? "granted" : result)
     } catch (e) {
-      Alert.alert("Couldn't turn on notifications", errorMessage(e))
+      toast.error(errorMessage(e))
     } finally {
       setAsking(false)
     }
@@ -81,87 +79,77 @@ export function NotificationSettings() {
 
   return (
     <View style={styles.gap}>
-      <Section title="Notifications">
+      <SectionHeader title="Notifications" />
+      <ListGroup>
         <View style={styles.status}>
-          <Body muted={permission !== "granted"} style={Type.small}>
+          <Text
+            variant="callout"
+            tone={permission === "granted" ? "default" : "muted"}
+          >
             {permission ? status : " "}
-          </Body>
+          </Text>
           {permission === "undetermined" ? (
             <Button
               title="Turn on notifications"
+              icon="bell"
               loading={asking}
               onPress={turnOn}
             />
           ) : permission === "denied" ? (
-            <Pressable
-              accessibilityRole="link"
+            <Button
+              title="Open Settings"
+              icon="external"
+              variant="secondary"
               onPress={() => void Linking.openSettings()}
-              style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
-            >
-              <Text style={[Type.body, { color: t.primary }]}>
-                Open Settings ↗
-              </Text>
-            </Pressable>
+            />
           ) : null}
         </View>
-
-        {settings.error ? (
-          <Body muted style={[Type.small, styles.status]}>
-            {errorMessage(settings.error)}
-          </Body>
-        ) : (
-          (settings.data?.items ?? []).map((item) => {
-            const permissionKey = PUSH_TYPES.find(
-              (p) => p.type === item.type
-            )?.permission
-            const here =
-              !me.data ||
-              !permissionKey ||
-              me.data.permissions.includes(permissionKey)
-            return (
-              <View
-                key={item.type}
-                style={[styles.row, { borderTopColor: t.border }]}
-              >
-                <View style={styles.flex}>
-                  <Text style={[Type.body, { color: t.text }]}>
-                    {item.label}
-                  </Text>
-                  {here ? null : (
-                    <Text style={[Type.small, { color: t.textSecondary }]}>
-                      {`Not in ${workspace?.name ?? "this workspace"}`}
-                    </Text>
-                  )}
-                </View>
-                <Toggle
-                  label={item.label}
-                  value={item.enabled}
-                  onValueChange={(enabled) =>
-                    set.mutate({ type: item.type, enabled })
-                  }
-                />
-              </View>
-            )
-          })
-        )}
-      </Section>
-      <Body muted style={Type.small}>
+        {settings.error && !settings.data ? (
+          <View style={styles.status}>
+            <ErrorState
+              compact
+              error={settings.error}
+              onRetry={() => void settings.refetch()}
+            />
+          </View>
+        ) : null}
+        {(settings.data?.items ?? []).map((item) => {
+          const permissionKey = PUSH_TYPES.find(
+            (p) => p.type === item.type
+          )?.permission
+          const here =
+            !me.data ||
+            !permissionKey ||
+            me.data.permissions.includes(permissionKey)
+          return (
+            <SwitchRow
+              key={item.type}
+              title={item.label}
+              subtitle={
+                here
+                  ? undefined
+                  : `Not in ${workspace?.name ?? "this workspace"}`
+              }
+              value={item.enabled}
+              onValueChange={(enabled) =>
+                set.mutate(
+                  { type: item.type, enabled },
+                  { onError: (e) => toast.error(errorMessage(e)) }
+                )
+              }
+            />
+          )
+        })}
+      </ListGroup>
+      <Text variant="caption" tone="muted">
         These choices are saved on your account, for every phone and workspace.
         You're never notified about what you did yourself.
-      </Body>
+      </Text>
     </View>
   )
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1 },
-  gap: { gap: Spacing.two },
-  status: { gap: Spacing.three, paddingVertical: Spacing.three },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.three,
-    paddingVertical: Spacing.two + 2,
-    borderTopWidth: StyleSheet.hairlineWidth,
-  },
+  gap: { gap: Space[2] },
+  status: { gap: Space[3], padding: Space[4] - 2 },
 })
