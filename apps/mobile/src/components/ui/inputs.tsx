@@ -26,6 +26,7 @@ export function TextField({
   hint,
   error,
   icon,
+  trailing,
   style,
   ...input
 }: TextInputProps & {
@@ -33,6 +34,8 @@ export function TextField({
   hint?: string
   error?: string
   icon?: IconName
+  /** At the end of the box (a show-password button). */
+  trailing?: React.ReactNode
 }) {
   const t = useTheme()
   const [focused, setFocused] = React.useState(false)
@@ -70,6 +73,7 @@ export function TextField({
           }}
           style={[styles.input, TextVariants.body, { color: t.text }, style]}
         />
+        {trailing}
       </View>
       {error ? (
         <Text variant="caption" tone="out">
@@ -81,6 +85,38 @@ export function TextField({
         </Text>
       ) : null}
     </View>
+  )
+}
+
+/**
+ * A password with a show / hide button at the end, so you can check what
+ * you typed. Hidden again whenever the screen mounts.
+ */
+export function PasswordField(
+  props: Omit<
+    React.ComponentProps<typeof TextField>,
+    "secureTextEntry" | "trailing"
+  >
+) {
+  const [shown, setShown] = React.useState(false)
+  return (
+    <TextField
+      autoCapitalize="none"
+      autoCorrect={false}
+      {...props}
+      secureTextEntry={!shown}
+      trailing={
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={shown ? "Hide password" : "Show password"}
+          onPress={() => setShown((s) => !s)}
+          hitSlop={8}
+          style={styles.eye}
+        >
+          <Icon name={shown ? "eyeOff" : "eye"} size={20} tone="muted" />
+        </Pressable>
+      }
+    />
   )
 }
 
@@ -405,6 +441,13 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md,
   },
   input: { flex: 1, paddingVertical: Space[2] + 2 },
+  eye: {
+    width: 40,
+    height: 40,
+    marginRight: -Space[2],
+    alignItems: "center",
+    justifyContent: "center",
+  },
   search: {
     flexDirection: "row",
     alignItems: "center",

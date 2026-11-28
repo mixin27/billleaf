@@ -4,7 +4,6 @@ import * as React from "react"
 import {
   Alert,
   Pressable,
-  RefreshControl,
   ScrollView,
   SectionList,
   StyleSheet,
@@ -15,7 +14,14 @@ import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { CashbookEntryRow } from "@/components/cashbook-entry-row"
 import { useMiniPlayerInset } from "@/components/nav/mini-player"
-import { Body, Chip, ClearableInput, Screen } from "@/components/ui"
+import {
+  Body,
+  Chip,
+  ClearableInput,
+  Screen,
+  ErrorState,
+  RefreshControl,
+} from "@/components/ui"
 import { Radius, Spacing, Type } from "@/constants/theme"
 import {
   can,
@@ -142,8 +148,12 @@ export default function BookScreen() {
         }}
       />
       <SafeAreaView style={styles.flex} edges={["bottom"]}>
-        {book.error ? (
-          <Body style={styles.pad}>{errorMessage(book.error)}</Body>
+        {book.error && !book.data ? (
+          <ErrorState
+            compact
+            error={book.error}
+            onRetry={() => void book.refetch()}
+          />
         ) : (
           <SectionList
             sections={sections}
@@ -320,8 +330,12 @@ export default function BookScreen() {
               </View>
             )}
             ListEmptyComponent={
-              entries.error ? (
-                <Body>{errorMessage(entries.error)}</Body>
+              entries.error && !entries.data ? (
+                <ErrorState
+                  compact
+                  error={entries.error}
+                  onRetry={() => void entries.refetch()}
+                />
               ) : entries.isPending ? undefined : (
                 <Body muted style={styles.empty}>
                   {filtered

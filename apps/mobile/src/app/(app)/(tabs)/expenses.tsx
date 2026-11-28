@@ -5,7 +5,6 @@ import * as React from "react"
 import {
   Alert,
   Pressable,
-  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -16,7 +15,15 @@ import { create } from "zustand"
 
 import { CashbookBooks } from "@/components/cashbook-books"
 import { useMiniPlayerInset } from "@/components/nav/mini-player"
-import { Body, Button, Chip, Screen, Title } from "@/components/ui"
+import {
+  Body,
+  Button,
+  Chip,
+  Screen,
+  Title,
+  ErrorState,
+  RefreshControl,
+} from "@/components/ui"
 import { Radius, Spacing, Type } from "@/constants/theme"
 import { cashbookKeys, type MoneyPane, moneyPanes } from "@/features/cashbook"
 import { useRecentExpenses } from "@/features/expenses"
@@ -133,8 +140,12 @@ function ExpensesPane({
       <Text style={[Type.small, styles.heading, { color: t.textSecondary }]}>
         RECENT
       </Text>
-      {list.error ? (
-        <Body>{errorMessage(list.error)}</Body>
+      {list.error && !list.data ? (
+        <ErrorState
+          compact
+          error={list.error}
+          onRetry={() => void list.refetch()}
+        />
       ) : !list.data ? (
         <Body muted>Loading…</Body>
       ) : list.data.items.length === 0 ? (

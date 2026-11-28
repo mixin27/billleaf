@@ -4,7 +4,6 @@ import * as React from "react"
 import {
   Alert,
   Pressable,
-  RefreshControl,
   ScrollView,
   type StyleProp,
   StyleSheet,
@@ -20,9 +19,11 @@ import {
   Body,
   Button,
   Chip,
+  ErrorState,
   KeyboardAvoid,
   Screen,
   Title,
+  RefreshControl,
 } from "@/components/ui"
 import { Radius, Spacing, Type } from "@/constants/theme"
 import {
@@ -140,7 +141,8 @@ export default function TimeScreen() {
                 onDay={(d) => setPicked(d === today ? null : d)}
                 entries={entries.data?.items}
                 total={entries.data?.totalSeconds}
-                error={entries.error}
+                error={entries.data ? null : entries.error}
+                onRetry={() => void entries.refetch()}
               />
             ) : null}
             {day && today ? <WeekCard day={day} today={today} /> : null}
@@ -551,6 +553,7 @@ function DayEntries({
   entries,
   total,
   error,
+  onRetry,
 }: {
   day: string
   today: string
@@ -558,6 +561,7 @@ function DayEntries({
   entries: TimeEntry[] | undefined
   total: number | undefined
   error: unknown
+  onRetry: () => void
 }) {
   const t = useTheme()
   const resume = useContinueEntry()
@@ -602,7 +606,7 @@ function DayEntries({
         ) : null}
       </View>
       {error ? (
-        <Body>{errorMessage(error)}</Body>
+        <ErrorState compact error={error} onRetry={onRetry} />
       ) : !entries ? (
         <Body muted>Loading…</Body>
       ) : entries.length === 0 ? (

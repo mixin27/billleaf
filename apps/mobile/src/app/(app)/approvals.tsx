@@ -1,16 +1,16 @@
 import { addDays, formatDuration } from "@workspace/contracts"
 import { router } from "expo-router"
 import * as React from "react"
-import {
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native"
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native"
 
-import { Body, Chip, Screen, Section } from "@/components/ui"
+import {
+  Body,
+  Chip,
+  Screen,
+  Section,
+  ErrorState,
+  RefreshControl,
+} from "@/components/ui"
 import { Spacing, Type } from "@/constants/theme"
 import {
   APPROVAL_FILTER_LABELS,
@@ -70,8 +70,12 @@ export default function ApprovalsScreen() {
           ))}
         </View>
 
-        {list.error ? (
-          <Body>{errorMessage(list.error)}</Body>
+        {list.error && !list.data ? (
+          <ErrorState
+            compact
+            error={list.error}
+            onRetry={() => void list.refetch()}
+          />
         ) : !list.data ? (
           <Body muted>Loading…</Body>
         ) : !list.data.enabled ? (

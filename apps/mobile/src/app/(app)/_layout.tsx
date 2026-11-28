@@ -1,14 +1,17 @@
 import { type NativeStackNavigationOptions, Stack } from "expo-router"
 import * as React from "react"
-import { Platform, View } from "react-native"
+import { ActivityIndicator, Platform, StyleSheet, View } from "react-native"
 
 import { MiniPlayer } from "@/components/nav/mini-player"
+import { EmptyState } from "@/components/ui"
+import { Space } from "@/constants/theme"
 
 import {
   useForegroundPushRefresh,
   useNotificationResponse,
   usePushRegistration,
 } from "@/features/notifications"
+import { useSessionExpiry } from "@/features/session-expiry"
 import { useTimerReminder } from "@/features/timer-reminder"
 import { useWorkspaces } from "@/features/workspaces"
 import { useTheme } from "@/hooks/use-theme"
@@ -36,6 +39,12 @@ function useHydrated() {
  * on the picker. The remembered workspace is checked against your current
  * memberships (you may have left it), and a single workspace is picked for you.
  */
+/** Signs out here when the API says the session ended. */
+function SessionWatch() {
+  useSessionExpiry()
+  return null
+}
+
 /** Pushes for whoever is signed in, with or without a workspace open. */
 function PushNotifications() {
   usePushRegistration()
@@ -62,6 +71,11 @@ export default function AppLayout() {
   const workspace = useWorkspaceStore((s) => s.workspace)
   const setWorkspace = useWorkspaceStore((s) => s.setWorkspace)
   const list = workspaces.data
+  // Wait only for the first answer. After that a refetch (which puts a
+  // query with no data back to "pending") mustn't swap the screens out, or
+  // the workspaces screen remounts, refetches and loops.
+  const [settled, setSettled] = React.useState(false)
+  if (!settled && (workspaces.data || workspaces.error)) setSettled(true)
 
   React.useEffect(() => {
     if (!hydrated || !list) return
@@ -87,10 +101,25 @@ export default function AppLayout() {
   }
 
   // Wait for the stored choice (and, without one, the list) before routing.
-  if (!hydrated || (!workspace && workspaces.isPending)) return null
+  if (!hydrated) return null
+  if (!workspace && !settled)
+    return (
+      <View style={[styles.wait, { backgroundColor: t.canvas }]}>
+        {workspaces.fetchStatus === "paused" ? (
+          <EmptyState
+            icon="offline"
+            title="You're offline"
+            body="Your workspaces load as soon as you're back online."
+          />
+        ) : (
+          <ActivityIndicator color={t.primary} accessibilityLabel="Loading" />
+        )}
+      </View>
+    )
 
   return (
     <View style={{ flex: 1, backgroundColor: t.canvas }}>
+      <SessionWatch />
       <PushNotifications />
       {workspace ? <TimerReminder /> : null}
       <Stack screenOptions={{ headerShown: false }}>
@@ -183,3 +212,7 @@ export default function AppLayout() {
     </View>
   )
 }
+
+const styles = StyleSheet.create({
+  wait: { flex: 1, justifyContent: "center", padding: Space[6] },
+})

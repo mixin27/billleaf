@@ -1,6 +1,13 @@
-import { describe, expect, it } from "vitest"
+import { onlineManager } from "@tanstack/react-query"
+import { afterEach, describe, expect, it } from "vitest"
 
-import { ApiError, errorMessage, unwrap } from "./api-error"
+import {
+  ApiError,
+  errorKind,
+  errorMessage,
+  isRetryable,
+  unwrap,
+} from "./api-error"
 
 const res = (status: number) => new Response(null, { status })
 
@@ -37,12 +44,72 @@ describe("errorMessage", () => {
       title: "Invalid",
       errors: [{ path: "description", message: "Too long" }],
     } as never)
-    expect(errorMessage(e)).toBe("description: Too long")
+    expect(errorMessage(e)).toBe("Description: Too long")
     expect(e.fieldErrors).toEqual({ description: "Too long" })
   })
 
-  it("falls back for unknown errors", () => {
-    expect(errorMessage(new Error("boom"))).toBe("boom")
-    expect(errorMessage("nope")).toBe("Something went wrong")
+  it("labels nested fields in words", () => {
+    const e = new ApiError(422, {
+      errors: [{ path: "lines.0.unitPrice", message: "Required" }],
+    } as never)
+    expect(errorMessage(e)).toBe("Unit price: Required")
+  })
+
+  it("keeps our own messages and hides runtime ones", () => {
+    expect(errorMessage(new Error("Pick a book first"))).toBe(
+      "Pick a book first"
+    )
+    expect(errorMessage(new Error("undefined is not an object"))).toBe(
+      "Something went wrong. Try again."
+    )
+    expect(errorMessage("nope")).toBe("Something went wrong. Try again.")
+  })
+})
+
+describe("connection problems", () => {
+  afterEach(() => onlineManager.setOnline(true))
+  const dns = new TypeError(
+    'fetch failed: java.net.UnknownHostException: Unable to resolve host "api.billleaf.com": No address associated with hostname'
+  )
+
+  it("says you're offline when the phone is", () => {
+    onlineManager.setOnline(false)
+    expect(errorKind(dns)).toBe("offline")
+    expect(errorMessage(dns)).toBe(
+      "You're offline. Connect to the internet and try again."
+    )
+  })
+
+  it("says Billleaf can't be reached when the phone is online", () => {
+    expect(errorKind(new TypeError("Network request failed"))).toBe(
+      "unreachable"
+    )
+    expect(errorMessage(dns)).not.toMatch(/java|Exception/)
+  })
+
+  it("never shows a server fault's internals", () => {
+    const e = new ApiError(500, {
+      title: "Internal Server Error",
+      detail: "pg: deadlock",
+    })
+    expect(errorMessage(e)).toBe(
+      "Something went wrong on Billleaf's side. Try again in a moment."
+    )
+    expect(isRetryable(e)).toBe(true)
+  })
+
+  it.each([
+    [401, "session"],
+    [403, "forbidden"],
+    [404, "notFound"],
+    [429, "rateLimited"],
+    [504, "timeout"],
+  ])("%i is %s", (status, kind) =>
+    expect(errorKind(new ApiError(status, {}))).toBe(kind)
+  )
+
+  it("doesn't offer Retry for a permission or validation error", () => {
+    expect(isRetryable(new ApiError(403, {}))).toBe(false)
+    expect(isRetryable(new ApiError(422, {}))).toBe(false)
   })
 })

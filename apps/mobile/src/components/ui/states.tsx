@@ -10,11 +10,12 @@ import Animated, {
 
 import { Radius, Space } from "@/constants/theme"
 import { useTheme } from "@/hooks/use-theme"
-import { errorMessage } from "@/lib/api"
+import { errorKind, errorMessage, isRetryable } from "@/lib/api"
+import type { ErrorKind } from "@/lib/api-error"
 
 import { Button } from "./controls"
 import { IconTile } from "./list"
-import { type IconName, Text } from "./text"
+import { Icon, type IconName, Text } from "./text"
 
 /**
  * What a list shows before it has anything: what it is for, in one
@@ -57,7 +58,21 @@ export function EmptyState({
   )
 }
 
-/** A failed load: what happened and a Retry that calls `onRetry`. */
+const TITLES: Partial<Record<ErrorKind, string>> = {
+  offline: "You're offline",
+  unreachable: "Can't reach Billleaf",
+  timeout: "Taking too long",
+  server: "Billleaf had a problem",
+  forbidden: "Not for your role",
+  notFound: "Not found",
+  session: "Signed out",
+}
+
+/**
+ * A failed load: what happened in plain words, and Try again when trying
+ * again can help (not for a permission or a missing item). `compact` fits
+ * inside a card or a list.
+ */
 export function ErrorState({
   error,
   onRetry,
@@ -68,31 +83,63 @@ export function ErrorState({
   compact?: boolean
 }) {
   const t = useTheme()
+  const kind = errorKind(error)
+  const icon: IconName =
+    kind === "offline"
+      ? "offline"
+      : kind === "unreachable" || kind === "timeout" || kind === "server"
+        ? "cloudOff"
+        : "alert"
+  const retry =
+    onRetry && isRetryable(error) ? (
+      <Button
+        title="Try again"
+        icon="refresh"
+        variant="secondary"
+        size="sm"
+        fullWidth={false}
+        onPress={onRetry}
+      />
+    ) : null
+  if (compact)
+    return (
+      <View
+        accessibilityRole="alert"
+        style={[
+          styles.compact,
+          { backgroundColor: t.surface, borderColor: t.border },
+        ]}
+      >
+        <View style={styles.compactRow}>
+          <Icon
+            name={icon}
+            size={20}
+            tone={kind === "offline" ? "muted" : "out"}
+          />
+          <Text variant="callout" tone="muted" style={styles.flex}>
+            {errorMessage(error)}
+          </Text>
+        </View>
+        {retry}
+      </View>
+    )
   return (
     <View
-      style={[
-        compact ? styles.compact : styles.box,
-        { borderColor: t.outSoft },
-      ]}
+      accessibilityRole="alert"
+      style={[styles.box, { borderColor: t.borderStrong }]}
     >
-      {compact ? null : <IconTile icon="alert" tone="out" size={48} />}
-      <Text
-        variant="callout"
-        tone="muted"
-        style={compact ? undefined : styles.center}
-      >
+      <IconTile
+        icon={icon}
+        tone={kind === "offline" ? "neutral" : "out"}
+        size={48}
+      />
+      <Text variant="headline" style={styles.center}>
+        {TITLES[kind] ?? "Couldn't load this"}
+      </Text>
+      <Text variant="callout" tone="muted" style={styles.center}>
         {errorMessage(error)}
       </Text>
-      {onRetry ? (
-        <Button
-          title="Try again"
-          icon="refresh"
-          variant="secondary"
-          size="sm"
-          fullWidth={false}
-          onPress={onRetry}
-        />
-      ) : null}
+      {retry}
     </View>
   )
 }
@@ -165,7 +212,15 @@ const styles = StyleSheet.create({
     borderStyle: "dashed",
     borderRadius: Radius.lg,
   },
-  compact: { gap: Space[2], alignItems: "flex-start" },
+  compact: {
+    gap: Space[3],
+    alignItems: "flex-start",
+    padding: Space[4],
+    borderWidth: 1,
+    borderRadius: Radius.lg - 2,
+  },
+  compactRow: { flexDirection: "row", gap: Space[3], alignItems: "flex-start" },
+  flex: { flex: 1 },
   center: { textAlign: "center" },
   rows: { borderWidth: 1, borderRadius: Radius.lg - 2, overflow: "hidden" },
   row: {

@@ -9,6 +9,19 @@ export function setApiWorkspace(id: string | null) {
   workspaceId = id
 }
 
+/** No answer by then is a timeout (React Native's fetch would wait forever). */
+const TIMEOUT_MS = 20_000
+
+function fetchWithTimeout(request: Request): Promise<Response> {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
+  // Still cancel when the caller does (a query that's no longer needed).
+  request.signal?.addEventListener("abort", () => controller.abort())
+  return fetch(new Request(request, { signal: controller.signal })).finally(
+    () => clearTimeout(timer)
+  )
+}
+
 /**
  * Typed API client. Native fetch has no shared cookie jar, so
  * `credentials: "omit"` and the session cookie from the keychain is sent
@@ -17,6 +30,7 @@ export function setApiWorkspace(id: string | null) {
 export const api = createApiClient({
   baseUrl: API_URL,
   credentials: "omit",
+  fetch: fetchWithTimeout,
   getWorkspaceId: () => workspaceId,
 })
 
@@ -41,4 +55,10 @@ api.use({
   },
 })
 
-export { ApiError, errorMessage, unwrap } from "./api-error"
+export {
+  ApiError,
+  errorKind,
+  errorMessage,
+  isRetryable,
+  unwrap,
+} from "./api-error"

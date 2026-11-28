@@ -14,7 +14,7 @@ import {
   View,
 } from "react-native"
 
-import { Body, Chip, Screen, Section } from "@/components/ui"
+import { Body, Chip, Screen, Section, ErrorState } from "@/components/ui"
 import { Spacing, Type } from "@/constants/theme"
 import {
   can,
@@ -79,8 +79,12 @@ export default function BookMembersScreen() {
         contentContainerStyle={styles.content}
         contentInsetAdjustmentBehavior="automatic"
       >
-        {members.error ? (
-          <Body>{errorMessage(members.error)}</Body>
+        {members.error && !members.data ? (
+          <ErrorState
+            compact
+            error={members.error}
+            onRetry={() => void members.refetch()}
+          />
         ) : (
           <Section title={book.data?.name ?? "Members"}>
             {(members.data ?? []).map((m, i) => (

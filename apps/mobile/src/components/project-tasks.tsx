@@ -9,7 +9,7 @@ import {
   View,
 } from "react-native"
 
-import { Body, Section } from "@/components/ui"
+import { Body, Section, ErrorState } from "@/components/ui"
 import { Radius, Spacing, Type } from "@/constants/theme"
 import {
   useAddTask,
@@ -92,10 +92,14 @@ export function ProjectTasks({
     })
   }
 
-  if (tasks.error)
+  if (tasks.error && !tasks.data)
     return (
       <Section title="Tasks">
-        <Body style={styles.pad}>{errorMessage(tasks.error)}</Body>
+        <ErrorState
+          compact
+          error={tasks.error}
+          onRetry={() => void tasks.refetch()}
+        />
       </Section>
     )
   if (!tasks.data) return null

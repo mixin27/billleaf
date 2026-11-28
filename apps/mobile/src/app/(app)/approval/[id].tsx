@@ -6,16 +6,17 @@ import {
 } from "@workspace/contracts"
 import { router, Stack, useLocalSearchParams } from "expo-router"
 import * as React from "react"
-import {
-  Alert,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native"
+import { Alert, ScrollView, StyleSheet, Text, View } from "react-native"
 
-import { Body, Button, Field, Screen, Section } from "@/components/ui"
+import {
+  Body,
+  Button,
+  Field,
+  Screen,
+  Section,
+  ErrorState,
+  RefreshControl,
+} from "@/components/ui"
 import { Spacing, Type } from "@/constants/theme"
 import {
   APPROVAL_STATUS_LABELS,
@@ -104,8 +105,12 @@ export default function ApprovalScreen() {
           />
         }
       >
-        {approval.error ? (
-          <Body>{errorMessage(approval.error)}</Body>
+        {approval.error && !approval.data ? (
+          <ErrorState
+            compact
+            error={approval.error}
+            onRetry={() => void approval.refetch()}
+          />
         ) : !a ? (
           <Body muted>Loading…</Body>
         ) : (

@@ -12,6 +12,7 @@ import {
   KeyboardAvoid,
   Screen,
   Title,
+  ErrorState,
 } from "@/components/ui"
 import { Spacing, Type } from "@/constants/theme"
 import {
@@ -100,8 +101,12 @@ export default function ContractStepScreen() {
             keyboardShouldPersistTaps="handled"
             automaticallyAdjustKeyboardInsets
           >
-            {contract.error ? (
-              <Body>{errorMessage(contract.error)}</Body>
+            {contract.error && !contract.data ? (
+              <ErrorState
+                compact
+                error={contract.error}
+                onRetry={() => void contract.refetch()}
+              />
             ) : !c ? (
               <Body muted>Loading…</Body>
             ) : isVoid ? (

@@ -4,7 +4,6 @@ import * as React from "react"
 import {
   Alert,
   Pressable,
-  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -12,7 +11,14 @@ import {
 } from "react-native"
 
 import { ContractText } from "@/components/contract-text"
-import { Body, Button, Screen, Section } from "@/components/ui"
+import {
+  Body,
+  Button,
+  Screen,
+  Section,
+  ErrorState,
+  RefreshControl,
+} from "@/components/ui"
 import { Spacing, Type } from "@/constants/theme"
 import {
   CONTRACT_STATUS_LABELS,
@@ -125,8 +131,12 @@ export default function ContractScreen() {
           />
         }
       >
-        {contract.error ? (
-          <Body>{errorMessage(contract.error)}</Body>
+        {contract.error && !contract.data ? (
+          <ErrorState
+            compact
+            error={contract.error}
+            onRetry={() => void contract.refetch()}
+          />
         ) : !c ? (
           <Body muted>Loading…</Body>
         ) : (

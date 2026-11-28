@@ -69,6 +69,10 @@ const ICONS = {
   timer: "Timer02Icon",
   briefcase: "Briefcase01Icon",
   tag: "SaleTag02Icon",
+  offline: "WifiOff01Icon",
+  eye: "ViewIcon",
+  eyeOff: "ViewOffSlashIcon",
+  cloudOff: "CloudOffIcon",
 }
 
 const out = path.join(

@@ -12,7 +12,6 @@ import * as React from "react"
 import {
   Alert,
   Pressable,
-  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -20,7 +19,14 @@ import {
 } from "react-native"
 
 import { ProjectTasks } from "@/components/project-tasks"
-import { Body, Button, Screen, Section } from "@/components/ui"
+import {
+  Body,
+  Button,
+  Screen,
+  Section,
+  ErrorState,
+  RefreshControl,
+} from "@/components/ui"
 import { Radius, Spacing, Type } from "@/constants/theme"
 import { useDashboard } from "@/features/dashboard"
 import { useMe } from "@/features/me"
@@ -139,8 +145,12 @@ export default function ProjectScreen() {
           />
         }
       >
-        {project.error ? (
-          <Body>{errorMessage(project.error)}</Body>
+        {project.error && !project.data ? (
+          <ErrorState
+            compact
+            error={project.error}
+            onRetry={() => void project.refetch()}
+          />
         ) : !p ? (
           <Body muted>Loading…</Body>
         ) : (
@@ -177,8 +187,12 @@ export default function ProjectScreen() {
               onStart={startTimer}
             />
 
-            {summary.error ? (
-              <Body>{errorMessage(summary.error)}</Body>
+            {summary.error && !summary.data ? (
+              <ErrorState
+                compact
+                error={summary.error}
+                onRetry={() => void summary.refetch()}
+              />
             ) : s ? (
               <Section title="Time">
                 <TimeRows summary={s} money={money} />
