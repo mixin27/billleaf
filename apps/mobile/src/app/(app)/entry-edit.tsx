@@ -403,7 +403,9 @@ export default function EntryScreen() {
                 value={billable ?? true}
                 onValueChange={setBillable}
                 disabled={Boolean(locked)}
-                trackColor={{ true: t.primary }}
+                trackColor={{ true: t.primary, false: t.borderStrong }}
+                thumbColor={t.surface}
+                ios_backgroundColor={t.borderStrong}
                 importantForAccessibility="no-hide-descendants"
                 accessibilityElementsHidden
               />

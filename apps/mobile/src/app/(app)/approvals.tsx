@@ -55,20 +55,27 @@ export default function ApprovalsScreen() {
           />
         }
       >
-        <View style={styles.chips}>
-          {APPROVAL_FILTERS.map((f) => (
-            <Chip
-              key={f}
-              label={
-                f === "submitted" && list.data?.pendingCount
-                  ? `${APPROVAL_FILTER_LABELS[f]} · ${list.data.pendingCount}`
-                  : APPROVAL_FILTER_LABELS[f]
-              }
-              selected={filter === f}
-              onPress={() => setFilter(f)}
-            />
-          ))}
-        </View>
+        {list.data && !list.data.enabled ? null : (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.bleed}
+            contentContainerStyle={styles.chips}
+          >
+            {APPROVAL_FILTERS.map((f) => (
+              <Chip
+                key={f}
+                label={
+                  f === "submitted" && list.data?.pendingCount
+                    ? `${APPROVAL_FILTER_LABELS[f]} · ${list.data.pendingCount}`
+                    : APPROVAL_FILTER_LABELS[f]
+                }
+                selected={filter === f}
+                onPress={() => setFilter(f)}
+              />
+            ))}
+          </ScrollView>
+        )}
 
         {list.error && !list.data ? (
           <ErrorState
@@ -153,7 +160,8 @@ export default function ApprovalsScreen() {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   content: { padding: Spacing.four, gap: Spacing.four },
-  chips: { flexDirection: "row", flexWrap: "wrap", gap: Spacing.two },
+  bleed: { marginHorizontal: -Spacing.four, flexGrow: 0 },
+  chips: { gap: Spacing.two, paddingHorizontal: Spacing.four },
   row: {
     flexDirection: "row",
     alignItems: "center",

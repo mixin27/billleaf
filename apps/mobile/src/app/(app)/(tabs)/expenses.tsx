@@ -16,7 +16,12 @@ import {
   SegmentedControl,
 } from "@/components/ui"
 import { Space } from "@/constants/theme"
-import { cashbookKeys, type MoneyPane, moneyPanes } from "@/features/cashbook"
+import {
+  cashbookKeys,
+  type MoneyPane,
+  moneyPanes,
+  useCashbooks,
+} from "@/features/cashbook"
 import { useRecentExpenses } from "@/features/expenses"
 import { useMe } from "@/features/me"
 import { useWorkspaceProfile } from "@/features/workspaces"
@@ -63,6 +68,7 @@ export default function MoneyScreen() {
     ? picked
     : (panes[0] ?? "cashbook")
   const expenses = useRecentExpenses(pane === "expenses")
+  const books = useCashbooks({ enabled: pane === "cashbook" })
   const locale =
     useWorkspaceProfile().data?.locale ??
     Intl.DateTimeFormat().resolvedOptions().locale
@@ -72,9 +78,11 @@ export default function MoneyScreen() {
   const split = bp === "expanded" && pane === "cashbook"
 
   const addBook = () => router.push("/book-new")
+  // No books yet: the empty state's own "Add book" is the one action.
+  const hasBooks = (books.data?.length ?? 0) > 0
   const fab =
     pane === "cashbook"
-      ? canCreateBook
+      ? canCreateBook && hasBooks
         ? { label: "Add book", onPress: addBook }
         : null
       : has("expense.create")

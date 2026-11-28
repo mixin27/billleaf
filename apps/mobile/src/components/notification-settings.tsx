@@ -6,12 +6,11 @@ import {
   Linking,
   Pressable,
   StyleSheet,
-  Switch,
   Text,
   View,
 } from "react-native"
 
-import { Body, Button, Section } from "@/components/ui"
+import { Body, Button, Section, Toggle } from "@/components/ui"
 import { Spacing, Type } from "@/constants/theme"
 import { useMe } from "@/features/me"
 import {
@@ -134,13 +133,12 @@ export function NotificationSettings() {
                     </Text>
                   )}
                 </View>
-                <Switch
-                  accessibilityLabel={item.label}
+                <Toggle
+                  label={item.label}
                   value={item.enabled}
                   onValueChange={(enabled) =>
                     set.mutate({ type: item.type, enabled })
                   }
-                  trackColor={{ true: t.primary }}
                 />
               </View>
             )

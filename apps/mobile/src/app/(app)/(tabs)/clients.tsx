@@ -223,7 +223,11 @@ function ClientRow({ client: c, first }: { client: Client; first: boolean }) {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  content: { padding: Spacing.four, gap: Spacing.three },
+  content: {
+    paddingHorizontal: Spacing.four,
+    paddingTop: Spacing.two,
+    gap: Spacing.three,
+  },
   card: {
     borderWidth: 1,
     borderRadius: Radius.lg,
