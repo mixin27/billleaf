@@ -36,11 +36,11 @@ type Item = {
 
 const sales = (pane: SalesPane) => () => {
   useSalesPane.getState().setPane(pane)
-  router.navigate("/invoices")
+  router.push("/sales")
 }
 const work = (pane: WorkPane) => () => {
   useWorkPane.getState().setPane(pane)
-  router.navigate("/clients")
+  router.push("/work")
 }
 
 /**

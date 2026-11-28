@@ -5,17 +5,27 @@ import {
 } from "@workspace/contracts"
 import { Stack, useLocalSearchParams } from "expo-router"
 import * as React from "react"
-import {
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native"
+import { ScrollView, StyleSheet, View } from "react-native"
 
-import { Body, Chip, Screen, Section, ErrorState } from "@/components/ui"
-import { Spacing, Type } from "@/constants/theme"
+import { useMiniPlayerInset } from "@/components/nav/mini-player"
+import {
+  Avatar,
+  Badge,
+  confirm,
+  ErrorState,
+  Icon,
+  initialsOf,
+  KeyValue,
+  ListGroup,
+  ListItem,
+  SectionHeader,
+  SegmentedControl,
+  showActions,
+  SkeletonRows,
+  Text,
+  toast,
+} from "@/components/ui"
+import { Space } from "@/constants/theme"
 import {
   can,
   useBookMember,
@@ -26,13 +36,16 @@ import {
 import { useMe } from "@/features/me"
 import { useTheme } from "@/hooks/use-theme"
 import { errorMessage } from "@/lib/api"
+import { MAX_CONTENT_WIDTH } from "@/lib/breakpoint"
 
 const ROLES = Object.keys(CASHBOOK_ROLES) as CashbookRole[]
+const fail = (e: unknown) => toast.error(errorMessage(e))
 
 /** Who can use the book and how. Owners add, change and remove people. */
 export default function BookMembersScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
   const t = useTheme()
+  const playerInset = useMiniPlayerInset()
   const me = useMe()
   const book = useCashbook(id)
   const members = useCashbookMembers(id)
@@ -42,195 +55,193 @@ export default function BookMembersScreen() {
   const workspace = useWorkspaceMembers(canListWorkspace)
   const { add, setRole, remove } = useBookMember(id)
   const [role, setNewRole] = React.useState<CashbookRole>("operator")
-  const fail = (title: string) => (e: unknown) =>
-    Alert.alert(title, errorMessage(e))
   const inBook = new Set(members.data?.map((m) => m.memberId))
   const others = (workspace.data ?? []).filter((m) => !inBook.has(m.id))
+  const isMe = (m: CashbookMember) => m.email === me.data?.user.email
 
-  const manageMember = (m: CashbookMember) =>
-    Alert.alert(
-      m.name,
-      `${CASHBOOK_ROLES[m.role].label}: ${CASHBOOK_ROLES[m.role].description}`,
+  const menu = (m: CashbookMember) =>
+    showActions(
       [
         ...ROLES.filter((r) => r !== m.role).map((r) => ({
-          text: `Make ${CASHBOOK_ROLES[r].label.toLowerCase()}`,
+          label: `Make ${CASHBOOK_ROLES[r].label.toLowerCase()}`,
           onPress: () =>
             setRole.mutate(
               { memberId: m.memberId, role: r },
-              { onError: fail("Couldn't change the role") }
+              {
+                onSuccess: () =>
+                  toast.success(
+                    `${m.name} is now ${CASHBOOK_ROLES[r].label.toLowerCase()}`
+                  ),
+                onError: fail,
+              }
             ),
         })),
         {
-          text: "Remove from book",
-          style: "destructive" as const,
-          onPress: () =>
-            remove.mutate(m.memberId, {
-              onError: fail("Couldn't remove them"),
-            }),
+          label: "Remove from book",
+          icon: "trash" as const,
+          destructive: true,
+          onPress: async () => {
+            if (
+              await confirm({
+                title: `Remove ${m.name}?`,
+                message:
+                  "They won't see this book any more. Their entries stay.",
+                confirmLabel: "Remove",
+                destructive: true,
+              })
+            )
+              remove.mutate(m.memberId, {
+                onSuccess: () => toast.success(`${m.name} removed`),
+                onError: fail,
+              })
+          },
         },
-        { text: "Cancel", style: "cancel" as const },
-      ]
+      ],
+      `${m.name} · ${CASHBOOK_ROLES[m.role].label}`
     )
 
   return (
-    <Screen>
+    <View style={[styles.flex, { backgroundColor: t.canvas }]}>
       <Stack.Screen options={{ title: "Members" }} />
       <ScrollView
-        contentContainerStyle={styles.content}
-        contentInsetAdjustmentBehavior="automatic"
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: Space[8] + playerInset },
+        ]}
       >
-        {members.error && !members.data ? (
-          <ErrorState
-            compact
-            error={members.error}
-            onRetry={() => void members.refetch()}
-          />
-        ) : (
-          <Section title={book.data?.name ?? "Members"}>
-            {(members.data ?? []).map((m, i) => (
-              <Pressable
-                key={m.memberId}
-                accessibilityRole={own ? "button" : undefined}
-                disabled={!own}
-                onPress={() => manageMember(m)}
-                style={({ pressed }) => [
-                  styles.line,
-                  i > 0 && { borderTopWidth: 1, borderTopColor: t.border },
-                  { opacity: pressed ? 0.6 : 1 },
-                ]}
-              >
-                <View style={styles.flex}>
-                  <Text style={[Type.body, { color: t.text }]}>
-                    {m.email === me.data?.user.email
-                      ? `${m.name} (you)`
-                      : m.name}
-                  </Text>
-                  <Text
-                    style={[Type.small, { color: t.textSecondary }]}
-                    numberOfLines={1}
-                  >
-                    {m.email}
-                  </Text>
-                </View>
-                <Text style={[Type.small, styles.role, { color: t.primary }]}>
-                  {CASHBOOK_ROLES[m.role].label}
-                </Text>
-              </Pressable>
-            ))}
-          </Section>
-        )}
-
-        <Section title="Roles">
-          {ROLES.map((r, i) => (
-            <View
-              key={r}
-              style={[
-                styles.roleLine,
-                i > 0 && { borderTopWidth: 1, borderTopColor: t.border },
-              ]}
-            >
-              <Text style={[Type.body, styles.bold, { color: t.text }]}>
-                {CASHBOOK_ROLES[r].label}
-              </Text>
-              <Text style={[Type.small, { color: t.textSecondary }]}>
-                {CASHBOOK_ROLES[r].description}
-              </Text>
-            </View>
-          ))}
-        </Section>
+        <View>
+          <SectionHeader title={book.data?.name ?? "In this book"} />
+          {members.error && !members.data ? (
+            <ErrorState
+              compact
+              error={members.error}
+              onRetry={() => void members.refetch()}
+            />
+          ) : !members.data ? (
+            <SkeletonRows rows={2} />
+          ) : (
+            <ListGroup>
+              {members.data.map((m) => (
+                <ListItem
+                  key={m.memberId}
+                  title={isMe(m) ? `${m.name} (you)` : m.name}
+                  subtitle={m.email}
+                  leading={
+                    <Avatar label={initialsOf(m.name)} size={40} round />
+                  }
+                  trailing={
+                    <Badge
+                      label={CASHBOOK_ROLES[m.role].label}
+                      tone={m.role === "owner" ? "primary" : "neutral"}
+                    />
+                  }
+                  onPress={own && !isMe(m) ? () => menu(m) : undefined}
+                  accessibilityHint={
+                    own && !isMe(m)
+                      ? "Change their role or remove them"
+                      : undefined
+                  }
+                />
+              ))}
+            </ListGroup>
+          )}
+        </View>
 
         {own ? (
           canListWorkspace ? (
-            <View style={styles.gap}>
-              <Text
-                style={[Type.small, styles.bold, { color: t.textSecondary }]}
-              >
-                ADD SOMEONE FROM YOUR WORKSPACE
-              </Text>
-              <View style={styles.wrap}>
-                {ROLES.map((r) => (
-                  <Chip
-                    key={r}
-                    label={`As ${CASHBOOK_ROLES[r].label.toLowerCase()}`}
-                    selected={role === r}
-                    onPress={() => setNewRole(r)}
+            <View style={styles.group}>
+              <SectionHeader title="Add from your workspace" />
+              {others.length > 0 ? (
+                <>
+                  <SegmentedControl
+                    options={ROLES.map((r) => ({
+                      value: r,
+                      label: CASHBOOK_ROLES[r].label,
+                    }))}
+                    value={role}
+                    onChange={setNewRole}
                   />
-                ))}
-              </View>
+                  <Text variant="caption" tone="muted">
+                    {CASHBOOK_ROLES[role].description}
+                  </Text>
+                </>
+              ) : null}
               {workspace.isPending ? (
-                <Body muted>Loading…</Body>
+                <SkeletonRows rows={2} />
               ) : others.length === 0 ? (
-                <Body muted>
+                <Text variant="callout" tone="muted">
                   Everyone in the workspace is already in this book. Invite
                   people to the workspace on the web first.
-                </Body>
+                </Text>
               ) : (
-                <Section title="Workspace members">
-                  {others.map((m, i) => (
-                    <Pressable
+                <ListGroup>
+                  {others.map((m) => (
+                    <ListItem
                       key={m.id}
-                      accessibilityRole="button"
-                      accessibilityHint={`Adds them as ${CASHBOOK_ROLES[role].label.toLowerCase()}`}
-                      onPress={() =>
-                        add.mutate(
-                          { memberId: m.id, role },
-                          { onError: fail("Couldn't add them") }
-                        )
+                      title={m.name}
+                      subtitle={m.email}
+                      leading={
+                        <Avatar
+                          label={initialsOf(m.name)}
+                          size={40}
+                          round
+                          tone="neutral"
+                        />
                       }
-                      style={({ pressed }) => [
-                        styles.line,
-                        i > 0 && {
-                          borderTopWidth: 1,
-                          borderTopColor: t.border,
-                        },
-                        { opacity: pressed ? 0.6 : 1 },
-                      ]}
-                    >
-                      <View style={styles.flex}>
-                        <Text style={[Type.body, { color: t.text }]}>
-                          {m.name}
-                        </Text>
-                        <Text
-                          style={[Type.small, { color: t.textSecondary }]}
-                          numberOfLines={1}
-                        >
-                          {m.email}
-                        </Text>
-                      </View>
-                      <Text
-                        style={[Type.body, styles.bold, { color: t.primary }]}
-                      >
-                        Add
-                      </Text>
-                    </Pressable>
+                      trailing={<Icon name="plus" size={20} tone="primary" />}
+                      accessibilityLabel={`Add ${m.name} as ${CASHBOOK_ROLES[role].label.toLowerCase()}`}
+                      onPress={
+                        add.isPending
+                          ? undefined
+                          : () =>
+                              add.mutate(
+                                { memberId: m.id, role },
+                                {
+                                  onSuccess: () =>
+                                    toast.success(`${m.name} added`),
+                                  onError: fail,
+                                }
+                              )
+                      }
+                    />
                   ))}
-                </Section>
+                </ListGroup>
               )}
             </View>
           ) : (
-            <Body muted style={Type.small}>
+            <Text variant="callout" tone="muted">
               Your workspace role can't list members, so add people to this book
               on the web.
-            </Body>
+            </Text>
           )
         ) : null}
+
+        <View>
+          <SectionHeader title="Roles" />
+          <ListGroup>
+            {ROLES.map((r) => (
+              <KeyValue
+                key={r}
+                stacked
+                label={CASHBOOK_ROLES[r].label}
+                value={CASHBOOK_ROLES[r].description}
+              />
+            ))}
+          </ListGroup>
+        </View>
       </ScrollView>
-    </Screen>
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  content: { padding: Spacing.four, gap: Spacing.four },
-  gap: { gap: Spacing.two },
-  wrap: { flexDirection: "row", flexWrap: "wrap", gap: Spacing.two },
-  line: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.three,
-    paddingVertical: Spacing.two + 4,
+  content: {
+    padding: Space[4],
+    gap: Space[5],
+    width: "100%",
+    maxWidth: MAX_CONTENT_WIDTH,
+    alignSelf: "center",
   },
-  roleLine: { paddingVertical: Spacing.two + 2, gap: 2 },
-  role: { fontWeight: "600" },
-  bold: { fontWeight: "600" },
+  group: { gap: Space[2] },
 })

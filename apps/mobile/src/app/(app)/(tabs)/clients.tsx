@@ -1,8 +1,7 @@
 import type { Client, ProjectStatus } from "@workspace/contracts"
-import { router } from "expo-router"
+import { router, Stack } from "expo-router"
 import * as React from "react"
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native"
-import { SafeAreaView } from "react-native-safe-area-context"
 
 import { ProjectRow } from "@/components/project-row"
 import { useMiniPlayerInset } from "@/components/nav/mini-player"
@@ -10,10 +9,10 @@ import {
   Body,
   Chip,
   Field,
-  Screen,
-  Title,
   ErrorState,
   RefreshControl,
+  AppBar,
+  SegmentedControl,
 } from "@/components/ui"
 import { Radius, Spacing, Type } from "@/constants/theme"
 import { useClients } from "@/features/clients"
@@ -49,6 +48,11 @@ const PROJECT_FILTERS: { value: ProjectStatus; label: string }[] = [
  * shows with its permission. Add and edit them on the web.
  */
 export default function ClientsScreen() {
+  return <WorkView />
+}
+
+/** Clients and projects. `stacked`: pushed from More or Home, with a back button. */
+export function WorkView({ stacked }: { stacked?: boolean }) {
   const playerInset = useMiniPlayerInset()
   const t = useTheme()
   const me = useMe()
@@ -75,114 +79,113 @@ export default function ClientsScreen() {
   const [refreshing, setRefreshing] = React.useState(false)
   const list = view === "clients" ? clients : projects
   const noun = view === "clients" ? "clients" : "projects"
+  const viewTitle = view === "clients" ? "Clients" : "Projects"
 
   return (
-    <Screen>
-      <SafeAreaView style={styles.flex} edges={["top"]}>
-        <ScrollView
-          contentContainerStyle={[
-            styles.content,
-            { paddingBottom: Spacing.four + playerInset },
-          ]}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={async () => {
-                setRefreshing(true)
-                await list.refetch()
-                setRefreshing(false)
-              }}
-            />
-          }
-        >
-          <Title>{view === "clients" ? "Clients" : "Projects"}</Title>
-          {canClients && canProjects ? (
-            <View style={styles.chips}>
-              <Chip
-                label="Clients"
-                selected={view === "clients"}
-                onPress={() => setPicked("clients")}
-              />
-              <Chip
-                label="Projects"
-                selected={view === "projects"}
-                onPress={() => setPicked("projects")}
-              />
-            </View>
-          ) : null}
-          <Field
-            label="Search"
-            value={search}
-            onChangeText={setSearch}
-            placeholder={view === "clients" ? "Name or email" : "Project name"}
-            autoCapitalize="none"
-            autoCorrect={false}
-            returnKeyType="search"
-            clearButtonMode="while-editing"
+    <View style={[styles.flex, { backgroundColor: t.canvas }]}>
+      {stacked ? (
+        <Stack.Screen options={{ title: viewTitle }} />
+      ) : (
+        <AppBar title={viewTitle} />
+      )}
+      <ScrollView
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: Spacing.four + playerInset },
+        ]}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={async () => {
+              setRefreshing(true)
+              await list.refetch()
+              setRefreshing(false)
+            }}
           />
-          {view === "projects" ? (
-            <View style={styles.chips}>
-              {PROJECT_FILTERS.map((f) => (
-                <Chip
-                  key={f.value}
-                  label={f.label}
-                  selected={status === f.value}
-                  onPress={() => setStatus(f.value)}
-                />
-              ))}
-            </View>
-          ) : null}
+        }
+      >
+        {canClients && canProjects ? (
+          <SegmentedControl
+            options={[
+              { value: "clients", label: "Clients" },
+              { value: "projects", label: "Projects" },
+            ]}
+            value={view}
+            onChange={setPicked}
+          />
+        ) : null}
+        <Field
+          label="Search"
+          value={search}
+          onChangeText={setSearch}
+          placeholder={view === "clients" ? "Name or email" : "Project name"}
+          autoCapitalize="none"
+          autoCorrect={false}
+          returnKeyType="search"
+          clearButtonMode="while-editing"
+        />
+        {view === "projects" ? (
+          <View style={styles.chips}>
+            {PROJECT_FILTERS.map((f) => (
+              <Chip
+                key={f.value}
+                label={f.label}
+                selected={status === f.value}
+                onPress={() => setStatus(f.value)}
+              />
+            ))}
+          </View>
+        ) : null}
 
-          {list.error && !list.data ? (
-            <ErrorState
-              compact
-              error={list.error}
-              onRetry={() => void list.refetch()}
-            />
-          ) : !list.data ? (
-            <Body muted>Loading…</Body>
-          ) : list.data.items.length === 0 ? (
-            <Body muted>
-              {q
-                ? `No ${noun} match “${q}”.`
-                : view === "clients"
-                  ? "No clients yet. Add one on the web."
-                  : status === "active"
-                    ? "No active projects. Add one on the web."
-                    : `No ${PROJECT_FILTERS.find((f) => f.value === status)!.label.toLowerCase()} projects.`}
-            </Body>
-          ) : (
-            <View
-              style={[
-                styles.card,
-                { backgroundColor: t.backgroundElement, borderColor: t.border },
-              ]}
-            >
-              {view === "clients"
-                ? clients.data?.items.map((c, i) => (
-                    <ClientRow key={c.id} client={c} first={i === 0} />
-                  ))
-                : projects.data?.items.map((p, i) => (
-                    <ProjectRow
-                      key={p.id}
-                      project={p}
-                      first={i === 0}
-                      locale={locale}
-                      today={today}
-                    />
-                  ))}
-            </View>
-          )}
-          {list.data && list.data.total > list.data.items.length ? (
-            <Body muted style={Type.small}>
-              {`Showing ${list.data.items.length} of ${list.data.total}. Search to find the rest.`}
-            </Body>
-          ) : null}
-        </ScrollView>
-      </SafeAreaView>
-    </Screen>
+        {list.error && !list.data ? (
+          <ErrorState
+            compact
+            error={list.error}
+            onRetry={() => void list.refetch()}
+          />
+        ) : !list.data ? (
+          <Body muted>Loading…</Body>
+        ) : list.data.items.length === 0 ? (
+          <Body muted>
+            {q
+              ? `No ${noun} match “${q}”.`
+              : view === "clients"
+                ? "No clients yet. Add one on the web."
+                : status === "active"
+                  ? "No active projects. Add one on the web."
+                  : `No ${PROJECT_FILTERS.find((f) => f.value === status)!.label.toLowerCase()} projects.`}
+          </Body>
+        ) : (
+          <View
+            style={[
+              styles.card,
+              { backgroundColor: t.backgroundElement, borderColor: t.border },
+            ]}
+          >
+            {view === "clients"
+              ? clients.data?.items.map((c, i) => (
+                  <ClientRow key={c.id} client={c} first={i === 0} />
+                ))
+              : projects.data?.items.map((p, i) => (
+                  <ProjectRow
+                    key={p.id}
+                    project={p}
+                    first={i === 0}
+                    locale={locale}
+                    today={today}
+                  />
+                ))}
+          </View>
+        )}
+        {list.data && list.data.total > list.data.items.length ? (
+          <Body muted style={Type.small}>
+            {`Showing ${list.data.items.length} of ${list.data.total}. Search to find the rest.`}
+          </Body>
+        ) : null}
+      </ScrollView>
+    </View>
   )
 }
 

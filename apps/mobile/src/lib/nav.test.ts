@@ -104,6 +104,7 @@ describe("miniPlayerPlacement", () => {
     ["/invoice/abc", "screen"],
     ["/timer", "hidden"],
     ["/cashbook-entry-edit", "hidden"],
+    ["/cashbook-entry", "hidden"],
     ["/workspaces", "hidden"],
   ])("%s → %s while running", (path, where) =>
     expect(miniPlayerPlacement(path, true)).toBe(where)

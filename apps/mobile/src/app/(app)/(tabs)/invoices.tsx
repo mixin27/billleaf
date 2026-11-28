@@ -1,7 +1,7 @@
 import { formatMoney, type Permission } from "@workspace/contracts"
+import { Stack } from "expo-router"
 import * as React from "react"
 import { ScrollView, StyleSheet, Text, View } from "react-native"
-import { SafeAreaView } from "react-native-safe-area-context"
 
 import { ContractRow } from "@/components/contract-row"
 import { InvoiceRow, totalsByCurrency } from "@/components/invoice-row"
@@ -10,10 +10,10 @@ import { useMiniPlayerInset } from "@/components/nav/mini-player"
 import {
   Body,
   Chip,
-  Screen,
-  Title,
   ErrorState,
   RefreshControl,
+  AppBar,
+  SegmentedControl,
 } from "@/components/ui"
 import { Radius, Spacing, Type } from "@/constants/theme"
 import {
@@ -71,6 +71,11 @@ const PANE_LABELS: Record<Pane, string> = {
  * on iPhone).
  */
 export default function InvoicesScreen() {
+  return <SalesView />
+}
+
+/** Who owes you what, and your quotes and contracts. `stacked`: pushed from More or Home, with a back button. */
+export function SalesView({ stacked }: { stacked?: boolean }) {
   const playerInset = useMiniPlayerInset()
   const t = useTheme()
   const me = useMe()
@@ -117,225 +122,222 @@ export default function InvoicesScreen() {
       : []
 
   return (
-    <Screen>
-      <SafeAreaView style={styles.flex} edges={["top"]}>
-        <ScrollView
-          contentContainerStyle={[
-            styles.content,
-            { paddingBottom: Spacing.four + playerInset },
-          ]}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={async () => {
-                setRefreshing(true)
-                await (pane === "quotes"
-                  ? quotes.refetch()
-                  : pane === "contracts"
-                    ? contracts.refetch()
-                    : list.refetch())
-                setRefreshing(false)
-              }}
-            />
-          }
-        >
-          <Title>{PANE_LABELS[pane]}</Title>
-          {panes.length > 1 ? (
-            <View style={styles.panes}>
-              {panes.map((p) => (
+    <View style={[styles.flex, { backgroundColor: t.canvas }]}>
+      {stacked ? (
+        <Stack.Screen options={{ title: PANE_LABELS[pane] }} />
+      ) : (
+        <AppBar title={PANE_LABELS[pane]} />
+      )}
+      <ScrollView
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: Spacing.four + playerInset },
+        ]}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={async () => {
+              setRefreshing(true)
+              await (pane === "quotes"
+                ? quotes.refetch()
+                : pane === "contracts"
+                  ? contracts.refetch()
+                  : list.refetch())
+              setRefreshing(false)
+            }}
+          />
+        }
+      >
+        {panes.length > 1 ? (
+          <SegmentedControl
+            options={panes.map((p) => ({ value: p, label: PANE_LABELS[p] }))}
+            value={pane}
+            onChange={setPane}
+          />
+        ) : null}
+        {pane === "contracts" ? (
+          <>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.bleed}
+              contentContainerStyle={styles.chips}
+            >
+              {CONTRACT_FILTERS.map((f) => (
                 <Chip
-                  key={p}
-                  label={PANE_LABELS[p]}
-                  selected={pane === p}
-                  onPress={() => setPane(p)}
+                  key={f.value}
+                  label={f.label}
+                  selected={contractFilter === f.value}
+                  onPress={() => setContractFilter(f.value)}
                 />
               ))}
-            </View>
-          ) : null}
-          {pane === "contracts" ? (
-            <>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={styles.bleed}
-                contentContainerStyle={styles.chips}
+            </ScrollView>
+            {contracts.error && !contracts.data ? (
+              <ErrorState
+                compact
+                error={contracts.error}
+                onRetry={() => void contracts.refetch()}
+              />
+            ) : !contracts.data ? (
+              <Body muted>Loading…</Body>
+            ) : contracts.data.items.length === 0 ? (
+              <Body muted>{CONTRACTS_EMPTY[contractFilter]}</Body>
+            ) : (
+              <View
+                style={[
+                  styles.card,
+                  {
+                    backgroundColor: t.backgroundElement,
+                    borderColor: t.border,
+                  },
+                ]}
               >
-                {CONTRACT_FILTERS.map((f) => (
-                  <Chip
-                    key={f.value}
-                    label={f.label}
-                    selected={contractFilter === f.value}
-                    onPress={() => setContractFilter(f.value)}
+                {contracts.data.items.map((c, i) => (
+                  <ContractRow
+                    key={c.id}
+                    contract={c}
+                    locale={locale}
+                    today={today}
+                    first={i === 0}
                   />
                 ))}
-              </ScrollView>
-              {contracts.error && !contracts.data ? (
-                <ErrorState
-                  compact
-                  error={contracts.error}
-                  onRetry={() => void contracts.refetch()}
+              </View>
+            )}
+            {contracts.data &&
+            contracts.data.total > contracts.data.items.length ? (
+              <Body muted style={Type.small}>
+                Showing the latest 50. Find older contracts on the web.
+              </Body>
+            ) : null}
+          </>
+        ) : pane === "quotes" ? (
+          <>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.bleed}
+              contentContainerStyle={styles.chips}
+            >
+              {QUOTE_FILTERS.map((f) => (
+                <Chip
+                  key={f.value}
+                  label={f.label}
+                  selected={quoteFilter === f.value}
+                  onPress={() => setQuoteFilter(f.value)}
                 />
-              ) : !contracts.data ? (
-                <Body muted>Loading…</Body>
-              ) : contracts.data.items.length === 0 ? (
-                <Body muted>{CONTRACTS_EMPTY[contractFilter]}</Body>
-              ) : (
-                <View
-                  style={[
-                    styles.card,
-                    {
-                      backgroundColor: t.backgroundElement,
-                      borderColor: t.border,
-                    },
-                  ]}
-                >
-                  {contracts.data.items.map((c, i) => (
-                    <ContractRow
-                      key={c.id}
-                      contract={c}
-                      locale={locale}
-                      today={today}
-                      first={i === 0}
-                    />
-                  ))}
-                </View>
-              )}
-              {contracts.data &&
-              contracts.data.total > contracts.data.items.length ? (
-                <Body muted style={Type.small}>
-                  Showing the latest 50. Find older contracts on the web.
-                </Body>
-              ) : null}
-            </>
-          ) : pane === "quotes" ? (
-            <>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={styles.bleed}
-                contentContainerStyle={styles.chips}
+              ))}
+            </ScrollView>
+            {quotes.error && !quotes.data ? (
+              <ErrorState
+                compact
+                error={quotes.error}
+                onRetry={() => void quotes.refetch()}
+              />
+            ) : !quotes.data ? (
+              <Body muted>Loading…</Body>
+            ) : quotes.data.items.length === 0 ? (
+              <Body muted>{QUOTES_EMPTY[quoteFilter]}</Body>
+            ) : (
+              <View
+                style={[
+                  styles.card,
+                  {
+                    backgroundColor: t.backgroundElement,
+                    borderColor: t.border,
+                  },
+                ]}
               >
-                {QUOTE_FILTERS.map((f) => (
-                  <Chip
-                    key={f.value}
-                    label={f.label}
-                    selected={quoteFilter === f.value}
-                    onPress={() => setQuoteFilter(f.value)}
+                {quotes.data.items.map((q, i) => (
+                  <QuoteRow
+                    key={q.id}
+                    quote={q}
+                    locale={locale}
+                    today={today}
+                    first={i === 0}
                   />
                 ))}
-              </ScrollView>
-              {quotes.error && !quotes.data ? (
-                <ErrorState
-                  compact
-                  error={quotes.error}
-                  onRetry={() => void quotes.refetch()}
+              </View>
+            )}
+            {quotes.data && quotes.data.total > quotes.data.items.length ? (
+              <Body muted style={Type.small}>
+                Showing the latest 50. Find older quotes on the web.
+              </Body>
+            ) : null}
+          </>
+        ) : (
+          <>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              // Scroll edge to edge, lined up with the content.
+              style={styles.bleed}
+              contentContainerStyle={styles.chips}
+            >
+              {INVOICE_FILTERS.map((f) => (
+                <Chip
+                  key={f.value}
+                  label={f.label}
+                  selected={filter === f.value}
+                  onPress={() => setFilter(f.value)}
                 />
-              ) : !quotes.data ? (
-                <Body muted>Loading…</Body>
-              ) : quotes.data.items.length === 0 ? (
-                <Body muted>{QUOTES_EMPTY[quoteFilter]}</Body>
-              ) : (
-                <View
-                  style={[
-                    styles.card,
-                    {
-                      backgroundColor: t.backgroundElement,
-                      borderColor: t.border,
-                    },
-                  ]}
-                >
-                  {quotes.data.items.map((q, i) => (
-                    <QuoteRow
-                      key={q.id}
-                      quote={q}
-                      locale={locale}
-                      today={today}
-                      first={i === 0}
-                    />
-                  ))}
-                </View>
-              )}
-              {quotes.data && quotes.data.total > quotes.data.items.length ? (
-                <Body muted style={Type.small}>
-                  Showing the latest 50. Find older quotes on the web.
-                </Body>
-              ) : null}
-            </>
-          ) : (
-            <>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                // Scroll edge to edge, lined up with the content.
-                style={styles.bleed}
-                contentContainerStyle={styles.chips}
-              >
-                {INVOICE_FILTERS.map((f) => (
-                  <Chip
-                    key={f.value}
-                    label={f.label}
-                    selected={filter === f.value}
-                    onPress={() => setFilter(f.value)}
-                  />
-                ))}
-              </ScrollView>
+              ))}
+            </ScrollView>
 
-              {owed.length > 0 ? (
-                <Text
-                  style={[Type.small, { color: t.textSecondary }]}
-                  accessibilityRole="summary"
-                >
-                  {owed
-                    .map(
-                      (o) =>
-                        `${formatMoney({ amount: o.amount, currency: o.currency }, locale)} due`
-                    )
-                    .join(" · ")}
-                  {` on ${list.items!.length} invoice${list.items!.length === 1 ? "" : "s"}`}
-                </Text>
-              ) : null}
+            {owed.length > 0 ? (
+              <Text
+                style={[Type.small, { color: t.textSecondary }]}
+                accessibilityRole="summary"
+              >
+                {owed
+                  .map(
+                    (o) =>
+                      `${formatMoney({ amount: o.amount, currency: o.currency }, locale)} due`
+                  )
+                  .join(" · ")}
+                {` on ${list.items!.length} invoice${list.items!.length === 1 ? "" : "s"}`}
+              </Text>
+            ) : null}
 
-              {list.error && !list.items ? (
-                <ErrorState
-                  compact
-                  error={list.error}
-                  onRetry={() => void list.refetch()}
-                />
-              ) : !list.items ? (
-                <Body muted>Loading…</Body>
-              ) : list.items.length === 0 ? (
-                <Body muted>{EMPTY[filter]}</Body>
-              ) : (
-                <View
-                  style={[
-                    styles.card,
-                    {
-                      backgroundColor: t.backgroundElement,
-                      borderColor: t.border,
-                    },
-                  ]}
-                >
-                  {list.items.map((inv, i) => (
-                    <InvoiceRow
-                      key={inv.id}
-                      invoice={inv}
-                      locale={locale}
-                      today={today}
-                      first={i === 0}
-                    />
-                  ))}
-                </View>
-              )}
-              {list.more ? (
-                <Body muted style={Type.small}>
-                  Showing the latest 50. Find older invoices on the web.
-                </Body>
-              ) : null}
-            </>
-          )}
-        </ScrollView>
-      </SafeAreaView>
-    </Screen>
+            {list.error && !list.items ? (
+              <ErrorState
+                compact
+                error={list.error}
+                onRetry={() => void list.refetch()}
+              />
+            ) : !list.items ? (
+              <Body muted>Loading…</Body>
+            ) : list.items.length === 0 ? (
+              <Body muted>{EMPTY[filter]}</Body>
+            ) : (
+              <View
+                style={[
+                  styles.card,
+                  {
+                    backgroundColor: t.backgroundElement,
+                    borderColor: t.border,
+                  },
+                ]}
+              >
+                {list.items.map((inv, i) => (
+                  <InvoiceRow
+                    key={inv.id}
+                    invoice={inv}
+                    locale={locale}
+                    today={today}
+                    first={i === 0}
+                  />
+                ))}
+              </View>
+            )}
+            {list.more ? (
+              <Body muted style={Type.small}>
+                Showing the latest 50. Find older invoices on the web.
+              </Body>
+            ) : null}
+          </>
+        )}
+      </ScrollView>
+    </View>
   )
 }
 

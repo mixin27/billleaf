@@ -16,6 +16,8 @@ export default function TabsLayout() {
   return (
     <Tabs
       tabBar={(props) => <TabBar {...props} />}
+      // Android back goes to the tab you came from, then Home, then exits.
+      backBehavior="history"
       screenOptions={{
         headerShown: false,
         tabBarPosition: bp === "compact" ? "bottom" : "left",

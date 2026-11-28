@@ -12477,7 +12477,7 @@ export interface operations {
       query: {
         from: string
         to: string
-        memberId?: string | string[]
+        memberId?: "me" | string | ("me" | string)[]
         projectId?: string | string[]
         clientId?: string | string[]
         tagId?: string | string[]
@@ -12508,7 +12508,7 @@ export interface operations {
       query: {
         from: string
         to: string
-        memberId?: string | string[]
+        memberId?: "me" | string | ("me" | string)[]
         projectId?: string | string[]
         clientId?: string | string[]
         tagId?: string | string[]
@@ -12541,7 +12541,7 @@ export interface operations {
       query: {
         from: string
         to: string
-        memberId?: string | string[]
+        memberId?: "me" | string | ("me" | string)[]
         projectId?: string | string[]
         clientId?: string | string[]
         tagId?: string | string[]

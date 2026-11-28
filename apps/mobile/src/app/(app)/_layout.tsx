@@ -150,10 +150,8 @@ export default function AppLayout() {
             name="book/[id]"
             options={{ ...pushed, title: "Cashbook", headerBackTitle: "Back" }}
           />
-          <Stack.Screen
-            name="cashbook-entry"
-            options={{ ...pushed, title: "Entry", headerBackTitle: "Back" }}
-          />
+          <Stack.Screen name="cashbook-entry" options={sheet} />
+          <Stack.Screen name="home-actions" options={sheet} />
           <Stack.Screen
             name="book-settings"
             options={{
@@ -185,6 +183,14 @@ export default function AppLayout() {
           <Stack.Screen
             name="client/[id]"
             options={{ ...pushed, title: "Client", headerBackTitle: "Back" }}
+          />
+          <Stack.Screen
+            name="sales"
+            options={{ ...pushed, title: "Invoices", headerBackTitle: "Back" }}
+          />
+          <Stack.Screen
+            name="work"
+            options={{ ...pushed, title: "Clients", headerBackTitle: "Back" }}
           />
           <Stack.Screen
             name="approvals"

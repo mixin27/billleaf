@@ -1,17 +1,24 @@
-import { formatMoney } from "@workspace/contracts"
 import { Stack, useLocalSearchParams } from "expo-router"
 import * as React from "react"
-import { Alert, ScrollView, StyleSheet, Text, View } from "react-native"
+import { ScrollView, StyleSheet, View } from "react-native"
 
+import { useMiniPlayerInset } from "@/components/nav/mini-player"
 import {
-  Body,
+  Amount,
+  BottomActionBar,
   Button,
+  Card,
   Chip,
-  Screen,
-  Section,
+  EmptyState,
   ErrorState,
+  ListGroup,
+  ListItem,
+  SegmentedControl,
+  SkeletonRows,
+  Text,
+  toast,
 } from "@/components/ui"
-import { Spacing, Type } from "@/constants/theme"
+import { Space } from "@/constants/theme"
 import {
   shareCashbookFile,
   toApiFilter,
@@ -22,18 +29,21 @@ import {
 import { useWorkspaceProfile } from "@/features/workspaces"
 import { useTheme } from "@/hooks/use-theme"
 import { errorMessage } from "@/lib/api"
+import { MAX_CONTENT_WIDTH } from "@/lib/breakpoint"
 import { dayHeading, type Duration, DURATIONS, nowIn } from "@/lib/cashbook"
+import { signedAmount } from "@/lib/money-display"
 
-type View_ = "day" | "category" | "mode"
+type Breakdown = "day" | "category" | "mode"
 
 /**
- * Reports for a period: opening and closing balance, totals, and the
- * entries summed by day, category or payment mode. Share them as a PDF
- * statement or a CSV for Excel. Uses the book's other filters too.
+ * A period's report: opening and closing balance, totals, and the entries
+ * summed by day, category or payment mode. Share it as the PDF statement
+ * or a CSV for Excel. The book's other filters apply too.
  */
 export default function BookReportScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
   const t = useTheme()
+  const playerInset = useMiniPlayerInset()
   const profile = useWorkspaceProfile()
   const locale =
     profile.data?.locale ?? Intl.DateTimeFormat().resolvedOptions().locale
@@ -43,13 +53,21 @@ export default function BookReportScreen() {
   const [duration, setDuration] = React.useState<Duration>(
     bookFilters.duration === "all" ? "this_month" : bookFilters.duration
   )
-  const [by, setBy] = React.useState<View_>("day")
+  const [by, setBy] = React.useState<Breakdown>("day")
   const [sharing, setSharing] = React.useState<"pdf" | "csv" | null>(null)
   const filter = toApiFilter({ ...bookFilters, duration }, today)
   const report = useCashbookReport(id, filter)
   const r = report.data
   const currency = book.data?.currency ?? "USD"
-  const money = (n: number) => formatMoney({ amount: n, currency }, locale)
+  const plain = (n: number, sign: "auto" | "none" = "auto") =>
+    signedAmount(n, currency, locale, sign).text
+  const otherFilters = Boolean(
+    filter.type ||
+    filter.categoryId ||
+    filter.modeId ||
+    filter.memberId ||
+    filter.q
+  )
 
   const share = async (kind: "pdf" | "csv") => {
     if (!book.data) return
@@ -57,7 +75,7 @@ export default function BookReportScreen() {
     try {
       await shareCashbookFile(book.data, filter, kind)
     } catch (e) {
-      Alert.alert("Couldn't get the file", errorMessage(e))
+      toast.error(errorMessage(e))
     } finally {
       setSharing(null)
     }
@@ -73,24 +91,26 @@ export default function BookReportScreen() {
             name: dayHeading(d.date, locale, today),
             totalIn: d.totalIn,
             totalOut: d.totalOut,
-            sub: `Balance ${money(d.balance)}`,
+            sub: `Balance ${plain(d.balance)}`,
           }))
       : ((by === "category" ? r?.byCategory : r?.byMode) ?? []).map((c) => ({
           key: c.id ?? "none",
           name: c.name,
           totalIn: c.totalIn,
           totalOut: c.totalOut,
-          sub: `Net ${money(c.totalIn - c.totalOut)}`,
+          sub: `Net ${plain(c.totalIn - c.totalOut)}`,
         }))
 
   return (
-    <Screen>
+    <View style={[styles.flex, { backgroundColor: t.canvas }]}>
       <Stack.Screen
-        options={{ title: `${book.data?.name ?? "Book"} reports` }}
+        options={{ title: book.data ? `${book.data.name} report` : "Report" }}
       />
       <ScrollView
-        contentContainerStyle={styles.content}
-        contentInsetAdjustmentBehavior="automatic"
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: Space[6] + playerInset },
+        ]}
       >
         <ScrollView
           horizontal
@@ -109,6 +129,7 @@ export default function BookReportScreen() {
           {bookFilters.duration === "custom" ? (
             <Chip
               label={`${bookFilters.from ?? "…"} – ${bookFilters.to ?? "…"}`}
+              icon="calendar"
               selected={duration === "custom"}
               onPress={() => setDuration("custom")}
             />
@@ -117,209 +138,162 @@ export default function BookReportScreen() {
 
         {report.error && !report.data ? (
           <ErrorState
-            compact
             error={report.error}
             onRetry={() => void report.refetch()}
           />
         ) : !r ? (
-          <Body muted>Loading…</Body>
+          <SkeletonRows rows={4} />
         ) : (
           <>
-            <Section title="Summary">
-              <Line label="Opening balance" value={money(r.openingBalance)} />
-              <Line
-                label="Total in (+)"
-                value={money(r.totalIn)}
-                color={t.primary}
-                border
-              />
-              <Line
-                label="Total out (−)"
-                value={money(r.totalOut)}
-                color={t.danger}
-                border
-              />
-              <Line
-                label="Closing balance"
-                value={money(r.closingBalance)}
-                bold
-                border
-              />
-            </Section>
-
-            <View style={styles.row}>
-              <View style={styles.flex}>
-                <Button
-                  title="Share PDF"
-                  loading={sharing === "pdf"}
-                  disabled={sharing !== null}
-                  onPress={() => share("pdf")}
+            <Card>
+              <View style={styles.line}>
+                <Text variant="callout" tone="muted">
+                  Opening balance
+                </Text>
+                <Amount
+                  value={r.openingBalance}
+                  currency={currency}
+                  locale={locale}
+                  sign="auto"
                 />
               </View>
-              <View style={styles.flex}>
-                <Button
-                  title="Excel (CSV)"
-                  variant="secondary"
-                  loading={sharing === "csv"}
-                  disabled={sharing !== null}
-                  onPress={() => share("csv")}
+              <View style={styles.split}>
+                <View style={styles.flex}>
+                  <Text variant="caption" tone="muted">
+                    Total in
+                  </Text>
+                  <Amount
+                    value={r.totalIn}
+                    currency={currency}
+                    locale={locale}
+                    sign="in"
+                  />
+                </View>
+                <View style={styles.flex}>
+                  <Text variant="caption" tone="muted">
+                    Total out
+                  </Text>
+                  <Amount
+                    value={r.totalOut}
+                    currency={currency}
+                    locale={locale}
+                    sign="out"
+                  />
+                </View>
+              </View>
+              <View style={[styles.closing, { borderTopColor: t.border }]}>
+                <Text variant="label" tone="muted">
+                  {`Closing balance · ${currency}`}
+                </Text>
+                <Amount
+                  value={r.closingBalance}
+                  currency={currency}
+                  locale={locale}
+                  sign="auto"
+                  size="xl"
                 />
               </View>
-            </View>
-
-            <View style={styles.chipsRow}>
-              <Chip
-                label="Day-wise"
-                selected={by === "day"}
-                onPress={() => setBy("day")}
-              />
-              <Chip
-                label="By category"
-                selected={by === "category"}
-                onPress={() => setBy("category")}
-              />
-              <Chip
-                label="By mode"
-                selected={by === "mode"}
-                onPress={() => setBy("mode")}
-              />
-            </View>
-
-            {rows.length === 0 ? (
-              <Body muted>No entries in this period.</Body>
-            ) : (
-              <Section
-                title={
-                  by === "day"
-                    ? "Day-wise"
-                    : by === "category"
-                      ? "By category"
-                      : "By payment mode"
-                }
-              >
-                {rows.map((x, i) => (
-                  <View
-                    key={x.key}
-                    style={[
-                      styles.item,
-                      i > 0 && { borderTopWidth: 1, borderTopColor: t.border },
-                    ]}
-                  >
-                    <View style={styles.flex}>
-                      <Text style={[Type.body, { color: t.text }]}>
-                        {x.name}
-                      </Text>
-                      <Text style={[Type.small, { color: t.textSecondary }]}>
-                        {x.sub}
-                      </Text>
-                    </View>
-                    <View style={styles.right}>
-                      {x.totalIn ? (
-                        <Text
-                          style={[Type.small, styles.num, { color: t.primary }]}
-                        >
-                          {`+${money(x.totalIn)}`}
-                        </Text>
-                      ) : null}
-                      {x.totalOut ? (
-                        <Text
-                          style={[Type.small, styles.num, { color: t.danger }]}
-                        >
-                          {`−${money(x.totalOut)}`}
-                        </Text>
-                      ) : null}
-                    </View>
-                  </View>
-                ))}
-              </Section>
-            )}
-            {r.openingBalance === 0 &&
-            filter.from &&
-            (filter.type ||
-              filter.categoryId ||
-              filter.modeId ||
-              filter.memberId ||
-              filter.q) ? (
-              <Body muted style={Type.small}>
+            </Card>
+            {otherFilters && r.openingBalance === 0 && filter.from ? (
+              <Text variant="caption" tone="muted">
                 With filters other than the date, the opening balance starts at
                 zero.
-              </Body>
+              </Text>
             ) : null}
+
+            <SegmentedControl
+              options={[
+                { value: "day", label: "By day" },
+                { value: "category", label: "Category" },
+                { value: "mode", label: "Mode" },
+              ]}
+              value={by}
+              onChange={setBy}
+            />
+
+            {rows.length === 0 ? (
+              <EmptyState
+                icon="report"
+                title="No entries in this period"
+                body="Pick another period above."
+              />
+            ) : (
+              <ListGroup>
+                {rows.map((x) => (
+                  <ListItem
+                    key={x.key}
+                    title={x.name}
+                    subtitle={x.sub}
+                    trailing={
+                      <>
+                        {x.totalIn ? (
+                          <Amount
+                            value={x.totalIn}
+                            currency={currency}
+                            locale={locale}
+                            sign="in"
+                            size="s"
+                          />
+                        ) : null}
+                        {x.totalOut ? (
+                          <Amount
+                            value={x.totalOut}
+                            currency={currency}
+                            locale={locale}
+                            sign="out"
+                            size="s"
+                          />
+                        ) : null}
+                      </>
+                    }
+                  />
+                ))}
+              </ListGroup>
+            )}
           </>
         )}
       </ScrollView>
-    </Screen>
-  )
-}
-
-function Line({
-  label,
-  value,
-  color,
-  bold,
-  border,
-}: {
-  label: string
-  value: string
-  color?: string
-  bold?: boolean
-  border?: boolean
-}) {
-  const t = useTheme()
-  return (
-    <View
-      style={[
-        styles.line,
-        border && { borderTopWidth: 1, borderTopColor: t.border },
-      ]}
-    >
-      <Text
-        style={[
-          Type.body,
-          { color: t.textSecondary },
-          bold && { color: t.text, fontWeight: "600" },
-        ]}
-      >
-        {label}
-      </Text>
-      <Text
-        style={[
-          Type.body,
-          styles.num,
-          { color: color ?? t.text },
-          bold && styles.bold,
-        ]}
-      >
-        {value}
-      </Text>
+      <BottomActionBar>
+        <Button
+          title="CSV"
+          icon="share"
+          variant="secondary"
+          loading={sharing === "csv"}
+          disabled={sharing !== null || !r}
+          onPress={() => share("csv")}
+        />
+        <Button
+          title="Share PDF"
+          icon="share"
+          loading={sharing === "pdf"}
+          disabled={sharing !== null || !r}
+          onPress={() => share("pdf")}
+        />
+      </BottomActionBar>
     </View>
   )
 }
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  content: { padding: Spacing.four, gap: Spacing.four },
-  bleed: { marginHorizontal: -Spacing.four },
-  chips: {
-    flexDirection: "row",
-    gap: Spacing.two,
-    paddingHorizontal: Spacing.four,
+  content: {
+    padding: Space[4],
+    gap: Space[4],
+    width: "100%",
+    maxWidth: MAX_CONTENT_WIDTH,
+    alignSelf: "center",
   },
-  chipsRow: { flexDirection: "row", flexWrap: "wrap", gap: Spacing.two },
-  row: { flexDirection: "row", gap: Spacing.two },
+  bleed: { marginHorizontal: -Space[4] },
+  chips: { flexDirection: "row", gap: Space[2], paddingHorizontal: Space[4] },
   line: {
     flexDirection: "row",
+    alignItems: "center",
     justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: Spacing.two + 2,
   },
-  item: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.three,
-    paddingVertical: Spacing.two + 2,
+  split: { flexDirection: "row", gap: Space[4] },
+  closing: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingTop: Space[3],
+    gap: Space[1],
   },
-  right: { alignItems: "flex-end", gap: 2 },
-  num: { fontVariant: ["tabular-nums"], fontWeight: "600" },
-  bold: { fontWeight: "700" },
 })

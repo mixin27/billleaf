@@ -118,9 +118,11 @@ export const SHEET_ROUTES = [
   "payment-void",
   "book-new",
   "book-filters",
+  "cashbook-entry",
   "cashbook-entry-edit",
   "cashbook-transfer",
   "workspaces",
+  "home-actions",
 ] as const
 
 const TAB_PATHS = new Set([

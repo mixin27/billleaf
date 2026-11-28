@@ -88,7 +88,11 @@ export function Fab({
       ]}
     >
       <Icon name={icon} size={22} color={t.onPrimary} />
-      <Text variant="label" style={{ color: t.onPrimary, fontWeight: "600" }}>
+      <Text
+        variant="label"
+        numberOfLines={1}
+        style={{ color: t.onPrimary, fontWeight: "600", flexShrink: 0 }}
+      >
         {label}
       </Text>
     </Pressable>

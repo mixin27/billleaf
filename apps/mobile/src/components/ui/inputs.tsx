@@ -170,6 +170,7 @@ export function MoneyInput({
   decimals,
   autoFocus,
   error,
+  inputRef,
 }: {
   value: string
   onChangeText: (s: string) => void
@@ -178,6 +179,8 @@ export function MoneyInput({
   decimals: boolean
   autoFocus?: boolean
   error?: string
+  /** To focus it again ("Save and add new"). */
+  inputRef?: React.Ref<React.ComponentRef<typeof TextInput>>
 }) {
   const t = useTheme()
   const ring = tone === "out" ? t.outFill : tone === "in" ? t.inFill : t.primary
@@ -197,6 +200,7 @@ export function MoneyInput({
           {currency}
         </Text>
         <TextInput
+          ref={inputRef}
           accessibilityLabel={`Amount in ${currency}`}
           value={value}
           onChangeText={onChangeText}
