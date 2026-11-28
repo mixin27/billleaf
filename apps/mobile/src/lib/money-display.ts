@@ -20,6 +20,7 @@ export function signedAmount(
     maximumFractionDigits: digits,
   })
   const abs = nf.format(Number(fromMinorUnits(Math.abs(minor), currency)))
+  if (minor === 0) return { text: abs, tone: "default" }
   if (sign === "in") return { text: `+${abs}`, tone: "in" }
   if (sign === "out") return { text: `−${abs}`, tone: "out" }
   if (sign === "auto")

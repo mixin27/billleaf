@@ -118,6 +118,7 @@ export const SHEET_ROUTES = [
   "payment-void",
   "book-new",
   "book-filters",
+  "cashbook-entry",
   "cashbook-entry-edit",
   "cashbook-transfer",
   "workspaces",

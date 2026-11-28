@@ -1,25 +1,18 @@
 import { router } from "expo-router"
 import * as React from "react"
-import {
-  Alert,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native"
-import { SafeAreaView } from "react-native-safe-area-context"
+import { ScrollView, StyleSheet, View } from "react-native"
 
 import {
-  Body,
   Button,
   Chip,
-  Field,
   KeyboardAvoid,
-  Screen,
-  Title,
+  SheetFooter,
+  SheetHeader,
+  Text,
+  TextField,
+  toast,
 } from "@/components/ui"
-import { Spacing, Type } from "@/constants/theme"
+import { Space } from "@/constants/theme"
 import { useCreateCashbook } from "@/features/cashbook"
 import { useWorkspaceProfile } from "@/features/workspaces"
 import { useTheme } from "@/hooks/use-theme"
@@ -52,110 +45,89 @@ export default function NewBookScreen() {
       { name: name.trim(), currency: code },
       {
         onSuccess: (book) => {
+          toast.success(`${book.name} added`)
           router.back()
           router.push({ pathname: "/book/[id]", params: { id: book.id } })
         },
-        onError: (e) => Alert.alert("Couldn't add the book", errorMessage(e)),
+        onError: (e) => toast.error(errorMessage(e)),
       }
     )
   }
 
   return (
-    <Screen>
-      <SafeAreaView
-        style={styles.flex}
-        edges={Platform.OS === "android" ? ["top", "bottom"] : ["bottom"]}
-      >
-        <KeyboardAvoid>
-          <View style={styles.header}>
-            <Title>Add new book</Title>
-            <Button
-              title="Cancel"
-              variant="link"
-              onPress={() => router.back()}
+    <View style={[styles.flex, { backgroundColor: t.surface }]}>
+      <SheetHeader title="New book" onClose={() => router.back()} />
+      <KeyboardAvoid>
+        <ScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.group}>
+            <TextField
+              label="Book name"
+              value={name}
+              onChangeText={setName}
+              placeholder="e.g. Shop, Home, November"
+              autoFocus
+              maxLength={80}
+              returnKeyType="done"
+              onSubmitEditing={submit}
+              error={nameError}
+            />
+            <View style={styles.wrap}>
+              {BOOK_NAME_IDEAS.map((idea) => (
+                <Chip
+                  key={idea}
+                  label={idea}
+                  selected={name === idea}
+                  onPress={() => setName(idea)}
+                />
+              ))}
+            </View>
+          </View>
+
+          <View style={styles.group}>
+            <Text variant="label" tone="muted">
+              Currency
+            </Text>
+            <View style={styles.wrap}>
+              {currencies.map((c) => (
+                <Chip
+                  key={c}
+                  label={c}
+                  selected={code === c}
+                  onPress={() => setCurrency(c)}
+                />
+              ))}
+            </View>
+            <TextField
+              label="Other currency"
+              value={currencies.includes(code) ? "" : code}
+              onChangeText={(v) => setCurrency(v.toUpperCase())}
+              placeholder="3-letter code"
+              autoCapitalize="characters"
+              autoCorrect={false}
+              maxLength={3}
+              error={codeError}
+              hint="Every entry in the book uses its currency. It can't change once the book has entries."
             />
           </View>
-          <ScrollView
-            contentContainerStyle={styles.content}
-            keyboardShouldPersistTaps="handled"
-          >
-            <View style={styles.gap}>
-              <Field
-                label="Book name"
-                value={name}
-                onChangeText={setName}
-                placeholder="e.g. Shop, Home, November"
-                autoFocus
-                maxLength={80}
-                returnKeyType="done"
-                onSubmitEditing={submit}
-                error={nameError}
-              />
-              <View style={styles.wrap}>
-                {BOOK_NAME_IDEAS.map((idea) => (
-                  <Chip
-                    key={idea}
-                    label={idea}
-                    selected={name === idea}
-                    onPress={() => setName(idea)}
-                  />
-                ))}
-              </View>
-            </View>
-
-            <View style={styles.gap}>
-              <Text style={[Type.small, styles.label, { color: t.text }]}>
-                Currency
-              </Text>
-              <View style={styles.wrap}>
-                {currencies.map((c) => (
-                  <Chip
-                    key={c}
-                    label={c}
-                    selected={code === c}
-                    onPress={() => setCurrency(c)}
-                  />
-                ))}
-              </View>
-              <Field
-                label="Other currency"
-                value={currencies.includes(code) ? "" : code}
-                onChangeText={(v) => setCurrency(v.toUpperCase())}
-                placeholder="3-letter code"
-                autoCapitalize="characters"
-                autoCorrect={false}
-                maxLength={3}
-                error={codeError}
-              />
-              <Body muted style={Type.small}>
-                All entries in a book use its currency. It can't change once the
-                book has entries.
-              </Body>
-            </View>
-
-            <Button
-              title="Add book"
-              loading={create.isPending}
-              onPress={submit}
-            />
-          </ScrollView>
-        </KeyboardAvoid>
-      </SafeAreaView>
-    </Screen>
+        </ScrollView>
+        <SheetFooter>
+          <Button
+            title="Add book"
+            loading={create.isPending}
+            onPress={submit}
+          />
+        </SheetFooter>
+      </KeyboardAvoid>
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: Spacing.four,
-    paddingTop: Spacing.four,
-  },
-  content: { padding: Spacing.four, gap: Spacing.four },
-  gap: { gap: Spacing.two },
-  wrap: { flexDirection: "row", flexWrap: "wrap", gap: Spacing.two },
-  label: { fontWeight: "600" },
+  content: { padding: Space[4], gap: Space[5], paddingBottom: Space[8] },
+  group: { gap: Space[2] },
+  wrap: { flexDirection: "row", flexWrap: "wrap", gap: Space[2] },
 })

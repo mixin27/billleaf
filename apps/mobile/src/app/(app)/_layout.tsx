@@ -150,10 +150,7 @@ export default function AppLayout() {
             name="book/[id]"
             options={{ ...pushed, title: "Cashbook", headerBackTitle: "Back" }}
           />
-          <Stack.Screen
-            name="cashbook-entry"
-            options={{ ...pushed, title: "Entry", headerBackTitle: "Back" }}
-          />
+          <Stack.Screen name="cashbook-entry" options={sheet} />
           <Stack.Screen
             name="book-settings"
             options={{

@@ -1,26 +1,29 @@
-import { type CashbookFields, type CashbookOption } from "@workspace/contracts"
+import type { CashbookFields, CashbookOption } from "@workspace/contracts"
 import { router, Stack, useLocalSearchParams } from "expo-router"
 import * as React from "react"
-import {
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  View,
-} from "react-native"
+import { ScrollView, StyleSheet, View } from "react-native"
 
+import { useMiniPlayerInset } from "@/components/nav/mini-player"
 import {
-  Body,
+  Badge,
   Button,
-  Field,
-  KeyboardAvoid,
-  Screen,
-  Section,
+  confirm,
   ErrorState,
+  IconButton,
+  IconTile,
+  KeyboardAvoid,
+  KeyValue,
+  ListGroup,
+  ListItem,
+  SectionHeader,
+  showActions,
+  SkeletonRows,
+  SwitchRow,
+  Text,
+  TextField,
+  toast,
 } from "@/components/ui"
-import { Spacing, Type } from "@/constants/theme"
+import { Space } from "@/constants/theme"
 import {
   can,
   type OptionKind,
@@ -36,17 +39,21 @@ import {
 import { useMe } from "@/features/me"
 import { useTheme } from "@/hooks/use-theme"
 import { errorMessage } from "@/lib/api"
+import { MAX_CONTENT_WIDTH } from "@/lib/breakpoint"
 
 const FIELD_LABELS: Record<keyof CashbookFields, string> = {
-  contact: "Contact name",
+  contact: "Contact",
   category: "Category",
   mode: "Payment mode",
 }
+
+const fail = (e: unknown) => toast.error(errorMessage(e))
 
 /** A book's name, entry fields, categories, modes, members and archiving. */
 export default function BookSettingsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
   const t = useTheme()
+  const playerInset = useMiniPlayerInset()
   const me = useMe()
   const book = useCashbook(id)
   const b = book.data
@@ -58,197 +65,210 @@ export default function BookSettingsScreen() {
   const manage = can.manage(b)
   const own = can.own(b)
   const myRow = members.data?.find((m) => m.email === me.data?.user.email)
+  const renamed = name !== null && name.trim() && name.trim() !== b?.name
 
-  const patch = (
-    body: Parameters<typeof update.mutate>[0],
-    done?: () => void
-  ) =>
-    update.mutate(body, {
-      onSuccess: () => done?.(),
-      onError: (e) => Alert.alert("Couldn't save", errorMessage(e)),
-    })
+  const patch = (body: Parameters<typeof update.mutate>[0], done: string) =>
+    update.mutate(body, { onSuccess: () => toast.success(done), onError: fail })
 
-  const confirmDelete = () =>
-    Alert.alert(
-      `Delete ${b?.name}?`,
-      "Every entry and attachment in this book is deleted for everyone. This can't be undone. Archive it instead to keep the history.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete book",
-          style: "destructive",
-          onPress: () =>
-            destroy.mutate(undefined, {
-              onSuccess: () => router.dismissTo("/(tabs)/expenses"),
-              onError: (e) => Alert.alert("Couldn't delete", errorMessage(e)),
-            }),
-        },
-      ]
+  const askDelete = async () => {
+    if (
+      !(await confirm({
+        title: `Delete ${b?.name}?`,
+        message:
+          "Every entry and photo in this book is deleted for everyone, and it can't be undone. Archive it instead to keep the history.",
+        confirmLabel: "Delete book",
+        destructive: true,
+      }))
     )
-
-  const leave = () =>
-    myRow &&
-    Alert.alert(`Leave ${b?.name}?`, "You won't see this book any more.", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Leave",
-        style: "destructive",
-        onPress: () =>
-          removeMember.mutate(myRow.memberId, {
-            onSuccess: () => router.dismissTo("/(tabs)/expenses"),
-            onError: (e) => Alert.alert("Couldn't leave", errorMessage(e)),
-          }),
+      return
+    destroy.mutate(undefined, {
+      onSuccess: () => {
+        toast.success(`${b?.name} deleted`)
+        router.dismissTo("/(tabs)/expenses")
       },
-    ])
+      onError: fail,
+    })
+  }
+
+  const askLeave = async () => {
+    if (!myRow) return
+    if (
+      !(await confirm({
+        title: `Leave ${b?.name}?`,
+        message: "You won't see this book any more.",
+        confirmLabel: "Leave",
+        destructive: true,
+      }))
+    )
+      return
+    removeMember.mutate(myRow.memberId, {
+      onSuccess: () => {
+        toast.success(`You left ${b?.name}`)
+        router.dismissTo("/(tabs)/expenses")
+      },
+      onError: fail,
+    })
+  }
 
   return (
-    <Screen>
+    <View style={[styles.flex, { backgroundColor: t.canvas }]}>
       <Stack.Screen options={{ title: "Book settings" }} />
       <KeyboardAvoid>
         <ScrollView
-          contentContainerStyle={styles.content}
-          contentInsetAdjustmentBehavior="automatic"
+          contentContainerStyle={[
+            styles.content,
+            { paddingBottom: Space[8] + playerInset },
+          ]}
           keyboardShouldPersistTaps="handled"
         >
           {book.error && !book.data ? (
             <ErrorState
-              compact
               error={book.error}
               onRetry={() => void book.refetch()}
             />
           ) : !b ? (
-            <Body muted>Loading…</Body>
+            <SkeletonRows rows={4} />
           ) : (
             <>
               {manage ? (
-                <View style={styles.gap}>
-                  <Field
+                <View style={styles.group}>
+                  <TextField
                     label="Book name"
                     value={name ?? b.name}
                     onChangeText={setName}
                     maxLength={80}
                     returnKeyType="done"
                     onSubmitEditing={() =>
-                      name?.trim() && name.trim() !== b.name
-                        ? patch({ name: name.trim() }, () => setName(null))
+                      renamed
+                        ? update.mutate(
+                            { name: name!.trim() },
+                            {
+                              onSuccess: () => {
+                                setName(null)
+                                toast.success("Name saved")
+                              },
+                              onError: fail,
+                            }
+                          )
                         : undefined
                     }
                   />
-                  {name !== null && name.trim() && name.trim() !== b.name ? (
+                  {renamed ? (
                     <Button
                       title="Save name"
                       loading={update.isPending}
                       onPress={() =>
-                        patch({ name: name.trim() }, () => setName(null))
+                        update.mutate(
+                          { name: name!.trim() },
+                          {
+                            onSuccess: () => {
+                              setName(null)
+                              toast.success("Name saved")
+                            },
+                            onError: fail,
+                          }
+                        )
                       }
                     />
                   ) : null}
                 </View>
               ) : null}
 
-              <Section title="Members">
-                <Pressable
-                  accessibilityRole="button"
-                  onPress={() =>
-                    router.push({ pathname: "/book-members", params: { id } })
-                  }
-                  style={({ pressed }) => [
-                    styles.line,
-                    { opacity: pressed ? 0.6 : 1 },
-                  ]}
-                >
-                  <Text style={[Type.body, { color: t.text }]}>
-                    {`${b.memberCount} ${b.memberCount === 1 ? "member" : "members"} · you're ${b.role}`}
-                  </Text>
-                  <Text style={[Type.body, { color: t.primary }]}>›</Text>
-                </Pressable>
-              </Section>
+              <View>
+                <SectionHeader title="People" />
+                <ListGroup>
+                  <ListItem
+                    title={`${b.memberCount} ${b.memberCount === 1 ? "member" : "members"}`}
+                    subtitle={`You're ${b.role}`}
+                    leading={<IconTile icon="people" tone="primary" />}
+                    chevron
+                    onPress={() =>
+                      router.push({ pathname: "/book-members", params: { id } })
+                    }
+                  />
+                </ListGroup>
+              </View>
 
-              <Section title="Entry fields">
-                {(Object.keys(FIELD_LABELS) as (keyof CashbookFields)[]).map(
-                  (k, i) => (
-                    <View
-                      key={k}
-                      style={[
-                        styles.line,
-                        i > 0 && {
-                          borderTopWidth: 1,
-                          borderTopColor: t.border,
-                        },
-                      ]}
-                    >
-                      <Text style={[Type.body, { color: t.text }]}>
-                        {FIELD_LABELS[k]}
-                      </Text>
-                      <Switch
-                        accessibilityLabel={`Show ${FIELD_LABELS[k]}`}
+              <View>
+                <SectionHeader title="Entry fields" />
+                <ListGroup>
+                  {(Object.keys(FIELD_LABELS) as (keyof CashbookFields)[]).map(
+                    (k) => (
+                      <SwitchRow
+                        key={k}
+                        title={FIELD_LABELS[k]}
                         value={b.fields[k]}
                         disabled={!manage || update.isPending}
-                        onValueChange={(v) => patch({ fields: { [k]: v } })}
-                        trackColor={{ true: t.primary }}
+                        onValueChange={(v) =>
+                          patch(
+                            { fields: { [k]: v } },
+                            `${FIELD_LABELS[k]} ${v ? "shown" : "hidden"}`
+                          )
+                        }
                       />
-                    </View>
-                  )
-                )}
-              </Section>
-              <Body muted style={[Type.small, styles.hint]}>
-                Turn off what this book doesn't need; the entry form gets
-                shorter.
-              </Body>
+                    )
+                  )}
+                </ListGroup>
+                <Text variant="caption" tone="muted" style={styles.hint}>
+                  Turn off what this book doesn't need; the entry form gets
+                  shorter.
+                </Text>
+              </View>
 
-              <Options
-                bookId={id}
-                kind="categories"
-                title="Categories"
-                canEdit={manage}
-              />
-              <Options
-                bookId={id}
-                kind="modes"
-                title="Payment modes"
-                canEdit={manage}
-              />
+              <Options bookId={id} kind="categories" canEdit={manage} />
+              <Options bookId={id} kind="modes" canEdit={manage} />
 
-              <Section title="Currency">
-                <View style={styles.line}>
-                  <Text style={[Type.body, { color: t.text }]}>
-                    {b.currency}
-                  </Text>
-                  <Text style={[Type.small, { color: t.textSecondary }]}>
-                    {b.entryCount
-                      ? "Fixed: the book has entries"
-                      : "Set when the book was added"}
-                  </Text>
-                </View>
-              </Section>
+              <View>
+                <SectionHeader title="Currency" />
+                <ListGroup>
+                  <KeyValue
+                    label={
+                      b.entryCount
+                        ? "Fixed: the book has entries"
+                        : "Set when the book was added"
+                    }
+                    value={b.currency}
+                  />
+                </ListGroup>
+              </View>
 
               {own ? (
-                <View style={styles.gap}>
+                <View style={styles.group}>
+                  <SectionHeader title="Archive or delete" />
                   <Button
                     title={b.archivedAt ? "Unarchive book" : "Archive book"}
+                    icon="folder"
                     variant="secondary"
                     loading={update.isPending}
-                    onPress={() => patch({ archived: !b.archivedAt })}
+                    onPress={() =>
+                      patch(
+                        { archived: !b.archivedAt },
+                        b.archivedAt ? "Book unarchived" : "Book archived"
+                      )
+                    }
                   />
                   <Button
                     title="Delete book"
+                    icon="trash"
                     variant="danger"
                     loading={destroy.isPending}
-                    onPress={confirmDelete}
+                    onPress={askDelete}
                   />
                 </View>
               ) : myRow ? (
                 <Button
                   title="Leave book"
+                  icon="logout"
                   variant="secondary"
-                  onPress={leave}
+                  loading={removeMember.isPending}
+                  onPress={askLeave}
                 />
               ) : null}
             </>
           )}
         </ScrollView>
       </KeyboardAvoid>
-    </Screen>
+    </View>
   )
 }
 
@@ -256,15 +276,12 @@ export default function BookSettingsScreen() {
 function Options({
   bookId,
   kind,
-  title,
   canEdit,
 }: {
   bookId: string
   kind: OptionKind
-  title: string
   canEdit: boolean
 }) {
-  const t = useTheme()
   const list = useCashbookOptions(bookId, kind)
   const save = useSaveOption(bookId, kind)
   const remove = useDeleteOption(bookId, kind)
@@ -273,113 +290,126 @@ function Options({
     id: string
     name: string
   } | null>(null)
+  const title = kind === "categories" ? "Categories" : "Payment modes"
   const noun = kind === "categories" ? "category" : "payment mode"
 
-  const fail = (e: unknown) => Alert.alert("Couldn't save", errorMessage(e))
-  const add = () =>
-    adding.trim() &&
+  const add = () => {
+    const n = adding.trim()
+    if (!n) return
     save.mutate(
-      { name: adding.trim() },
-      { onSuccess: () => setAdding(""), onError: fail }
+      { name: n },
+      {
+        onSuccess: () => {
+          setAdding("")
+          toast.success(`${n} added`)
+        },
+        onError: fail,
+      }
+    )
+  }
+  const rename = () => {
+    if (!editing?.name.trim()) return
+    save.mutate(
+      { id: editing.id, name: editing.name.trim() },
+      { onSuccess: () => setEditing(null), onError: fail }
+    )
+  }
+
+  const menu = (o: CashbookOption) =>
+    showActions(
+      [
+        {
+          label: "Rename",
+          icon: "edit",
+          onPress: () => setEditing({ id: o.id, name: o.name }),
+        },
+        {
+          label: o.archived ? "Show again" : "Hide from the entry form",
+          icon: "folder",
+          onPress: () =>
+            save.mutate({ id: o.id, archived: !o.archived }, { onError: fail }),
+        },
+        {
+          label: "Delete",
+          icon: "trash",
+          destructive: true,
+          onPress: async () => {
+            if (
+              await confirm({
+                title: `Delete ${o.name}?`,
+                message: `Entries keep their amounts but lose this ${noun}.`,
+                confirmLabel: "Delete",
+                destructive: true,
+              })
+            )
+              remove.mutate(o.id, {
+                onSuccess: () => toast.success(`${o.name} deleted`),
+                onError: fail,
+              })
+          },
+        },
+      ],
+      o.name
     )
 
-  const actions = (o: CashbookOption) =>
-    Alert.alert(o.name, undefined, [
-      { text: "Rename", onPress: () => setEditing({ id: o.id, name: o.name }) },
-      {
-        text: o.archived ? "Show again" : "Hide",
-        onPress: () =>
-          save.mutate({ id: o.id, archived: !o.archived }, { onError: fail }),
-      },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: () =>
-          Alert.alert(
-            `Delete ${o.name}?`,
-            `Entries keep their amounts but lose this ${noun}.`,
-            [
-              { text: "Cancel", style: "cancel" },
-              {
-                text: "Delete",
-                style: "destructive",
-                onPress: () => remove.mutate(o.id, { onError: fail }),
-              },
-            ]
-          ),
-      },
-      { text: "Cancel", style: "cancel" },
-    ])
-
   return (
-    <Section title={title}>
-      {(list.data ?? []).map((o, i) => (
-        <View
-          key={o.id}
-          style={[i > 0 && { borderTopWidth: 1, borderTopColor: t.border }]}
-        >
-          {editing?.id === o.id ? (
-            <View style={[styles.edit]}>
-              <View style={styles.flex}>
-                <Field
-                  label={`Rename ${noun}`}
-                  value={editing.name}
-                  onChangeText={(name) => setEditing({ id: o.id, name })}
-                  autoFocus
-                  maxLength={60}
-                />
-              </View>
-              <View style={styles.small}>
+    <View style={styles.group}>
+      <SectionHeader title={title} />
+      {list.data && list.data.length > 0 ? (
+        <ListGroup>
+          {list.data.map((o) =>
+            editing?.id === o.id ? (
+              <View key={o.id} style={styles.edit}>
+                <View style={styles.flex}>
+                  <TextField
+                    label={`Rename ${noun}`}
+                    value={editing.name}
+                    onChangeText={(n) => setEditing({ id: o.id, name: n })}
+                    autoFocus
+                    maxLength={60}
+                    returnKeyType="done"
+                    onSubmitEditing={rename}
+                  />
+                </View>
                 <Button
                   title="Save"
                   variant="secondary"
-                  onPress={() =>
-                    editing.name.trim() &&
-                    save.mutate(
-                      { id: o.id, name: editing.name.trim() },
-                      { onSuccess: () => setEditing(null), onError: fail }
-                    )
-                  }
+                  fullWidth={false}
+                  loading={save.isPending}
+                  onPress={rename}
                 />
               </View>
-            </View>
-          ) : (
-            <Pressable
-              accessibilityRole={canEdit ? "button" : undefined}
-              disabled={!canEdit}
-              onPress={() => actions(o)}
-              style={({ pressed }) => [
-                styles.line,
-                { opacity: pressed ? 0.6 : 1 },
-              ]}
-            >
-              <Text
-                style={[
-                  Type.body,
-                  { color: o.archived ? t.textSecondary : t.text },
-                ]}
-              >
-                {o.archived ? `${o.name} (hidden)` : o.name}
-              </Text>
-              {canEdit ? (
-                <Text style={[Type.body, { color: t.textSecondary }]}>⋯</Text>
-              ) : null}
-            </Pressable>
+            ) : (
+              <ListItem
+                key={o.id}
+                title={o.name}
+                trailing={
+                  <View style={styles.trail}>
+                    {o.archived ? <Badge label="Hidden" /> : null}
+                    {canEdit ? (
+                      <IconButton
+                        icon="more"
+                        label={`${o.name} options`}
+                        tone="muted"
+                        onPress={() => menu(o)}
+                      />
+                    ) : null}
+                  </View>
+                }
+              />
+            )
           )}
-        </View>
-      ))}
-      {list.data?.length === 0 ? (
-        <Body
-          muted
-          style={styles.empty}
-        >{`No ${title.toLowerCase()} yet.`}</Body>
+        </ListGroup>
+      ) : list.data ? (
+        <Text
+          variant="callout"
+          tone="muted"
+        >{`No ${title.toLowerCase()} yet.`}</Text>
       ) : null}
       {canEdit ? (
-        <View
-          style={[styles.edit, { borderTopWidth: 1, borderTopColor: t.border }]}
-        >
+        <View style={styles.addRow}>
           <View style={styles.flex}>
-            <Field
+            <TextField
               label={`New ${noun}`}
               value={adding}
               onChangeText={setAdding}
@@ -393,39 +423,37 @@ function Options({
               onSubmitEditing={add}
             />
           </View>
-          <View style={styles.small}>
-            <Button
-              title="Add"
-              variant="secondary"
-              loading={save.isPending}
-              onPress={add}
-            />
-          </View>
+          <Button
+            title="Add"
+            icon="plus"
+            variant="secondary"
+            fullWidth={false}
+            loading={save.isPending && !editing}
+            onPress={add}
+          />
         </View>
       ) : null}
-    </Section>
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  content: { padding: Spacing.four, gap: Spacing.four },
-  gap: { gap: Spacing.two },
-  line: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: Spacing.three,
-    paddingVertical: Spacing.two + 4,
-    minHeight: 48,
+  content: {
+    padding: Space[4],
+    gap: Space[5],
+    width: "100%",
+    maxWidth: MAX_CONTENT_WIDTH,
+    alignSelf: "center",
   },
+  group: { gap: Space[2] },
+  hint: { marginTop: Space[2] },
   edit: {
     flexDirection: "row",
     alignItems: "flex-end",
-    gap: Spacing.two,
-    paddingVertical: Spacing.two,
+    gap: Space[2],
+    padding: Space[3],
   },
-  small: { width: 84 },
-  hint: { marginTop: -Spacing.three },
-  empty: { paddingVertical: Spacing.two },
+  addRow: { flexDirection: "row", alignItems: "flex-end", gap: Space[2] },
+  trail: { flexDirection: "row", alignItems: "center", gap: Space[1] },
 })
