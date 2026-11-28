@@ -72,6 +72,8 @@ const ICONS = {
   offline: "WifiOff01Icon",
   eye: "ViewIcon",
   eyeOff: "ViewOffSlashIcon",
+  hourglass: "HourglassIcon",
+  grid: "GridViewIcon",
   cloudOff: "CloudOffIcon",
 }
 

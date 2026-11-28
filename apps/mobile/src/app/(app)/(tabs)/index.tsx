@@ -1,322 +1,193 @@
-import { formatDuration, formatMoney } from "@workspace/contracts"
 import { router } from "expo-router"
 import * as React from "react"
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native"
-import { SafeAreaView } from "react-native-safe-area-context"
+import { Pressable, ScrollView, StyleSheet, View } from "react-native"
 
+import {
+  AttentionCard,
+  BooksCard,
+  OwedCard,
+  ReceivedCard,
+  TimeCard,
+} from "@/components/home/cards"
+import { QuickActions } from "@/components/home/quick-actions"
+import { TimeWalletCard, WalletCard } from "@/components/home/wallet-card"
 import { useMiniPlayerInset } from "@/components/nav/mini-player"
 import {
-  Body,
+  AppBar,
+  Avatar,
   EmptyState,
   ErrorState,
-  Screen,
-  Title,
   RefreshControl,
+  SkeletonRows,
 } from "@/components/ui"
-import { Radius, Spacing, Type } from "@/constants/theme"
-import { useDashboard, useWeekTime } from "@/features/dashboard"
-import { useInvoiceFilter } from "@/features/invoices"
+import { Space } from "@/constants/theme"
+import { useDashboard, useMyTimeSummary } from "@/features/dashboard"
 import { useMe } from "@/features/me"
 import { useWorkspaceProfile } from "@/features/workspaces"
 import { useTheme } from "@/hooks/use-theme"
-import { errorMessage } from "@/lib/api"
 import { authClient } from "@/lib/auth-client"
+import { MAX_CONTENT_WIDTH } from "@/lib/breakpoint"
+import { nowIn } from "@/lib/cashbook"
 import { initials } from "@/lib/format"
+import { periodRange } from "@/lib/home"
+import { canTrackTime, moneyPanes } from "@/lib/nav"
+import { queryClient } from "@/lib/query-client"
 import { useWorkspaceStore } from "@/stores/workspace-store"
 
-/** Home: this week's time and what you're owed, for the active workspace. */
-export default function DashboardScreen() {
-  const playerInset = useMiniPlayerInset()
+/** By the phone's own clock: it's where you are, not the workspace. */
+function greeting() {
+  const h = new Date().getHours()
+  return h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening"
+}
+
+/**
+ * Home: your money at a glance (wallet card), one-tap actions, what needs
+ * you, your time, what you're owed and received, and your books. Only
+ * the cards your role and plan can use show.
+ */
+export default function HomeScreen() {
   const t = useTheme()
+  const playerInset = useMiniPlayerInset()
   const session = authClient.useSession()
-  const workspace = useWorkspaceStore((s) => s.workspace)
+  const ws = useWorkspaceStore((s) => s.workspace?.id)
   const me = useMe()
-  // Money reads the way it does on your invoices (the workspace locale).
+  const profile = useWorkspaceProfile()
   const locale =
-    useWorkspaceProfile().data?.locale ??
-    Intl.DateTimeFormat().resolvedOptions().locale
+    profile.data?.locale ?? Intl.DateTimeFormat().resolvedOptions().locale
   const dashboard = useDashboard()
-  const tracksTime = me.data?.plan.features.timeTracking ?? false
-  const week = useWeekTime(tracksTime ? dashboard.data?.today : undefined)
+  const d = dashboard.data
+  const today = d?.today
+  const now = nowIn(profile.data?.timezone)
+  const has = (p: string) =>
+    (me.data?.permissions as string[] | undefined)?.includes(p) ?? false
+  const cashbook = moneyPanes(me.data?.permissions).includes("cashbook")
+  const canTrack = canTrackTime(me.data)
+  // A role without cashbooks sees its week where the wallet card would be.
+  const week = useMyTimeSummary(
+    today ? periodRange("week", today) : undefined,
+    canTrack && !cashbook
+  )
   const [refreshing, setRefreshing] = React.useState(false)
 
   const refresh = async () => {
     setRefreshing(true)
-    // refetch() ignores `enabled`, so only refresh the week when it's shown.
     await Promise.all([
       me.refetch(),
       dashboard.refetch(),
-      tracksTime && dashboard.data ? week.refetch() : null,
+      queryClient.invalidateQueries({ queryKey: ["cashbooks", ws] }),
+      queryClient.invalidateQueries({ queryKey: ["time", ws] }),
+      queryClient.invalidateQueries({ queryKey: ["approvals", ws] }),
     ])
     setRefreshing(false)
   }
 
-  const d = dashboard.data
-  // Only a load with nothing to show is an error: a failed refresh keeps
-  // what was loaded before.
-  const failed = [me, dashboard, week].find((q) => q.error && !q.data)
-  const error = failed?.error
-  const firstName = session.data?.user.name?.split(" ")[0]
+  const user = session.data?.user
+  const firstName = user?.name?.split(" ")[0]
+  const dateLine = new Intl.DateTimeFormat(locale, {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    timeZone: "UTC",
+  }).format(new Date(`${today ?? now.date}T00:00:00Z`))
+  const nothing =
+    d && me.data && !cashbook && !canTrack && !d.receivables && !d.received
 
   return (
-    <Screen>
-      <SafeAreaView style={styles.flex} edges={["top"]}>
-        <ScrollView
-          contentContainerStyle={[
-            styles.content,
-            { paddingBottom: Spacing.four + playerInset },
-          ]}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={refresh} />
-          }
-        >
-          <View style={styles.top}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`Workspace ${workspace?.name}. Switch workspace`}
-              onPress={() => router.push("/workspaces")}
-              style={({ pressed }) => [
-                styles.switcher,
-                { borderColor: t.border, opacity: pressed ? 0.7 : 1 },
-              ]}
-            >
-              <Text
-                style={[Type.small, styles.bold, { color: t.text }]}
-                numberOfLines={1}
-              >
-                {workspace?.name}
-              </Text>
-              <Text style={[Type.small, { color: t.textSecondary }]}>
-                Switch ▾
-              </Text>
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Account"
-              accessibilityHint="Your account, the timer reminder and signing out"
-              onPress={() => router.push("/account")}
-              hitSlop={6}
-              style={({ pressed }) => [
-                styles.avatar,
-                { backgroundColor: t.primary, opacity: pressed ? 0.7 : 1 },
-              ]}
-            >
-              <Text style={[Type.small, styles.bold, { color: t.onPrimary }]}>
-                {initials(session.data?.user.name, session.data?.user.email)}
-              </Text>
-            </Pressable>
-          </View>
-          <Title>{firstName ? `Hi, ${firstName}` : "Hi there"}</Title>
-
-          {error ? (
-            <ErrorState error={error} onRetry={() => void refresh()} />
-          ) : !d && dashboard.fetchStatus === "paused" ? (
-            <EmptyState
-              icon="offline"
-              title="You're offline"
-              body="Home fills in as soon as you're back online."
-            />
-          ) : null}
-
-          {tracksTime ? (
-            <Card title="This week">
-              {week.data ? (
-                <View style={styles.stats}>
-                  <Stat
-                    label="Tracked"
-                    value={formatDuration(week.data.totalSeconds)}
-                  />
-                  <Stat
-                    label="Billable"
-                    value={formatDuration(week.data.billableSeconds)}
-                  />
-                </View>
-              ) : (
-                <Body muted>Loading…</Body>
-              )}
-            </Card>
-          ) : null}
-
-          {d?.receivables ? (
-            <Card
-              title="Outstanding"
-              // Opens the unpaid invoices (when you can see them).
-              onPress={
-                me.data?.permissions.includes("invoice.read")
-                  ? () => {
-                      useInvoiceFilter.getState().setFilter("unpaid")
-                      router.push("/sales")
-                    }
-                  : undefined
-              }
-            >
-              {d.receivables.totals.length === 0 ? (
-                <Body muted>Nothing owed right now.</Body>
-              ) : (
-                d.receivables.totals.map((r) => (
-                  <View key={r.currency} style={styles.stats}>
-                    <Stat
-                      label={`${r.openCount} open`}
-                      value={formatMoney(
-                        { amount: r.outstanding, currency: r.currency },
-                        locale
-                      )}
-                    />
-                    <Stat
-                      label={`${r.overdueCount} overdue`}
-                      value={formatMoney(
-                        { amount: r.overdue, currency: r.currency },
-                        locale
-                      )}
-                      tone={r.overdue > 0 ? "danger" : undefined}
-                    />
-                  </View>
-                ))
-              )}
-            </Card>
-          ) : null}
-
-          {d?.received ? (
-            <Card title="Received this month">
-              {d.received.thisMonth.length === 0 ? (
-                <Body muted>No payments yet this month.</Body>
-              ) : (
-                d.received.thisMonth.map((r) => (
-                  <Stat
-                    key={r.currency}
-                    label={`${r.count} payment${r.count === 1 ? "" : "s"}`}
-                    value={formatMoney(
-                      { amount: r.amount, currency: r.currency },
-                      locale
-                    )}
-                  />
-                ))
-              )}
-            </Card>
-          ) : null}
-
-          {d && !tracksTime && !d.receivables && !d.received ? (
-            <Body muted>
-              Nothing to show for your role here yet. Open Billleaf on the web
-              for everything else.
-            </Body>
-          ) : null}
-        </ScrollView>
-      </SafeAreaView>
-    </Screen>
-  )
-}
-
-function Card({
-  title,
-  onPress,
-  children,
-}: {
-  title?: string
-  /** Makes the whole card a button (with a › after the title). */
-  onPress?: () => void
-  children: React.ReactNode
-}) {
-  const t = useTheme()
-  return (
-    <Pressable
-      disabled={!onPress}
-      onPress={onPress}
-      accessibilityRole={onPress ? "button" : undefined}
-      accessibilityHint={onPress ? `Opens ${title}` : undefined}
-      style={({ pressed }) => [
-        styles.card,
-        {
-          backgroundColor: t.backgroundElement,
-          borderColor: t.border,
-          opacity: pressed ? 0.7 : 1,
-        },
-      ]}
-    >
-      {title ? (
-        <View style={styles.cardHead}>
-          <Text
-            accessibilityRole="header"
-            style={[Type.small, styles.bold, { color: t.textSecondary }]}
+    <View style={[styles.flex, { backgroundColor: t.canvas }]}>
+      <AppBar
+        title={firstName ? `${greeting()}, ${firstName}` : greeting()}
+        subtitle={dateLine}
+        trailing={
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Account"
+            accessibilityHint="Appearance, notifications, the timer reminder and signing out"
+            onPress={() => router.push("/account")}
+            hitSlop={6}
           >
-            {title.toUpperCase()}
-          </Text>
-          {onPress ? (
-            <Text style={[Type.small, styles.bold, { color: t.primary }]}>
-              View ›
-            </Text>
-          ) : null}
-        </View>
-      ) : null}
-      {children}
-    </Pressable>
-  )
-}
-
-function Stat({
-  label,
-  value,
-  tone,
-}: {
-  label: string
-  value: string
-  tone?: "danger"
-}) {
-  const t = useTheme()
-  return (
-    <View
-      style={styles.stat}
-      accessible
-      accessibilityLabel={`${label}: ${value}`}
-    >
-      <Text
-        style={[styles.value, { color: tone === "danger" ? t.danger : t.text }]}
-        adjustsFontSizeToFit
-        numberOfLines={1}
+            <Avatar
+              label={initials(user?.name, user?.email)}
+              size={40}
+              round
+              tone="solid"
+            />
+          </Pressable>
+        }
+      />
+      <ScrollView
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: Space[8] + playerInset },
+        ]}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={refresh} />
+        }
       >
-        {value}
-      </Text>
-      <Text style={[Type.small, { color: t.textSecondary }]}>{label}</Text>
+        {dashboard.error && !d ? (
+          <ErrorState
+            error={dashboard.error}
+            onRetry={() => void dashboard.refetch()}
+          />
+        ) : !d && dashboard.fetchStatus === "paused" ? (
+          <EmptyState
+            icon="offline"
+            title="You're offline"
+            body="Home fills in as soon as you're back online."
+          />
+        ) : null}
+
+        {cashbook ? (
+          <WalletCard locale={locale} today={today} />
+        ) : canTrack ? (
+          <TimeWalletCard
+            total={week.data?.totalSeconds}
+            billable={week.data?.billableSeconds}
+            todaySeconds={
+              week.data
+                ? (week.data.byDay.find((x) => x.date === today)?.seconds ?? 0)
+                : undefined
+            }
+          />
+        ) : null}
+
+        <QuickActions />
+
+        <AttentionCard
+          dashboard={d}
+          locale={locale}
+          today={today}
+          canApprove={has("time.approve")}
+          canTrack={canTrack}
+        />
+
+        {canTrack ? <TimeCard today={today} locale={locale} /> : null}
+
+        {!d && !dashboard.error ? <SkeletonRows rows={3} /> : null}
+        {d?.receivables ? <OwedCard dashboard={d} locale={locale} /> : null}
+        {d?.received ? <ReceivedCard dashboard={d} locale={locale} /> : null}
+
+        {cashbook ? <BooksCard locale={locale} /> : null}
+
+        {nothing ? (
+          <EmptyState
+            icon="home"
+            title="Nothing here for your role yet"
+            body="Open Billleaf on the web for everything else."
+          />
+        ) : null}
+      </ScrollView>
     </View>
   )
 }
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  content: { padding: Spacing.four, gap: Spacing.three },
-  bold: { fontWeight: "600" },
-  cardHead: { flexDirection: "row", justifyContent: "space-between" },
-  switcher: {
-    alignSelf: "flex-start",
-    flexDirection: "row",
-    gap: Spacing.two,
-    alignItems: "center",
-    borderWidth: 1,
-    borderRadius: Radius.full,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.one + 2,
-    flexShrink: 1,
-  },
-  card: {
-    borderWidth: 1,
-    borderRadius: Radius.lg,
-    padding: Spacing.three,
-    gap: Spacing.three,
-  },
-  stats: { flexDirection: "row", gap: Spacing.three },
-  stat: { flex: 1, gap: Spacing.half },
-  value: { fontSize: 24, fontWeight: "700", fontVariant: ["tabular-nums"] },
-  top: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: Spacing.three,
-  },
-  avatar: {
-    width: 36,
-    height: 36,
-    borderRadius: Radius.full,
-    alignItems: "center",
-    justifyContent: "center",
+  content: {
+    paddingHorizontal: Space[4],
+    paddingTop: Space[2],
+    gap: Space[5],
+    width: "100%",
+    maxWidth: MAX_CONTENT_WIDTH,
+    alignSelf: "center",
   },
 })

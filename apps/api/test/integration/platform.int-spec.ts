@@ -2276,6 +2276,18 @@ describe("timesheet, reports and Clockify import", () => {
       (await member.get(`/v1/time/reports/summary?${range}`)).body.totalSeconds
     ).toBe(3600)
     const ownerMemberId = detailed.items[0].memberId
+    // "me" is whoever asks: the owner (time.read) gets only their own time.
+    expect(
+      (await owner.get(`/v1/time/reports/summary?${range}`)).body.totalSeconds
+    ).toBe(4.5 * 3600)
+    expect(
+      (await owner.get(`/v1/time/reports/summary?${range}&memberId=me`)).body
+        .totalSeconds
+    ).toBe(3.5 * 3600)
+    expect(
+      (await member.get(`/v1/time/reports/summary?${range}&memberId=me`)).body
+        .totalSeconds
+    ).toBe(3600)
     expect(
       (
         await member.get(

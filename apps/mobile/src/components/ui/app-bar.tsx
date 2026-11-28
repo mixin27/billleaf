@@ -15,9 +15,12 @@ import { Icon, Text } from "./text"
  */
 export function AppBar({
   title,
+  subtitle,
   trailing,
 }: {
   title: string
+  /** A line under the title (Home's date). */
+  subtitle?: string
   trailing?: React.ReactNode
 }) {
   const t = useTheme()
@@ -52,9 +55,16 @@ export function AppBar({
         </Pressable>
         <View style={styles.actions}>{trailing}</View>
       </View>
-      <Text variant="title" accessibilityRole="header">
-        {title}
-      </Text>
+      <View>
+        <Text variant="title" accessibilityRole="header">
+          {title}
+        </Text>
+        {subtitle ? (
+          <Text variant="callout" tone="muted">
+            {subtitle}
+          </Text>
+        ) : null}
+      </View>
     </View>
   )
 }
