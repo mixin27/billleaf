@@ -37,6 +37,8 @@ export default function WorkspacesScreen() {
   const active = useWorkspaceStore((s) => s.workspace)
   const setWorkspace = useWorkspaceStore((s) => s.setWorkspace)
   const [signingOut, setSigningOut] = React.useState(false)
+  // Only a pull shows the spinner, not the refresh when the sheet opens.
+  const [refreshing, setRefreshing] = React.useState(false)
   const switching = Boolean(active)
 
   const pick = (w: { id: string; name: string; slug: string }) => {
@@ -53,8 +55,12 @@ export default function WorkspacesScreen() {
       contentContainerStyle={styles.content}
       refreshControl={
         <RefreshControl
-          refreshing={workspaces.isRefetching}
-          onRefresh={() => void workspaces.refetch()}
+          refreshing={refreshing}
+          onRefresh={async () => {
+            setRefreshing(true)
+            await workspaces.refetch()
+            setRefreshing(false)
+          }}
         />
       }
     >

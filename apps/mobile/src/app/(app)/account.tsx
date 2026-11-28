@@ -125,6 +125,7 @@ export default function AccountScreen() {
             <ListItem
               title="Profile and security"
               subtitle="Name, password, two-factor and sessions, on the web"
+              subtitleLines={2}
               leading={<IconTile icon="lock" />}
               trailing={<Icon name="external" size={18} tone="muted" />}
               accessibilityHint="Opens Billleaf in your browser"

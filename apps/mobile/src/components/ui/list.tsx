@@ -83,6 +83,7 @@ export function ListItem({
   accessibilityLabel,
   accessibilityHint,
   titleLines = 1,
+  subtitleLines = 1,
 }: {
   title: React.ReactNode
   subtitle?: React.ReactNode
@@ -95,6 +96,7 @@ export function ListItem({
   accessibilityLabel?: string
   accessibilityHint?: string
   titleLines?: number
+  subtitleLines?: number
 }) {
   const t = useTheme()
   const body = (
@@ -110,7 +112,7 @@ export function ListItem({
         )}
         {subtitle ? (
           typeof subtitle === "string" ? (
-            <Text variant="callout" tone="muted" numberOfLines={1}>
+            <Text variant="callout" tone="muted" numberOfLines={subtitleLines}>
               {subtitle}
             </Text>
           ) : (
@@ -170,6 +172,8 @@ export function SwitchRow({
     <ListItem
       title={title}
       subtitle={subtitle}
+      titleLines={3}
+      subtitleLines={2}
       trailing={
         <Toggle
           label={title}
