@@ -1,33 +1,40 @@
 import { addDays, formatDuration } from "@workspace/contracts"
-import { router } from "expo-router"
+import { router, Stack } from "expo-router"
 import * as React from "react"
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native"
+import { ScrollView, StyleSheet, View } from "react-native"
 
+import { useMiniPlayerInset } from "@/components/nav/mini-player"
 import {
-  Body,
+  Avatar,
+  Badge,
   Chip,
-  Screen,
-  Section,
+  EmptyState,
   ErrorState,
+  initialsOf,
+  ListGroup,
+  ListItem,
   RefreshControl,
+  SkeletonRows,
 } from "@/components/ui"
-import { Spacing, Type } from "@/constants/theme"
+import { Space } from "@/constants/theme"
 import {
   APPROVAL_FILTER_LABELS,
   APPROVAL_FILTERS,
   APPROVAL_STATUS_LABELS,
   type ApprovalFilter,
+  STATUS_TONE,
   useTimesheetApprovals,
 } from "@/features/approvals"
 import { useDashboard } from "@/features/dashboard"
 import { useWorkspaceProfile } from "@/features/workspaces"
 import { useTheme } from "@/hooks/use-theme"
-import { errorMessage } from "@/lib/api"
+import { MAX_CONTENT_WIDTH } from "@/lib/breakpoint"
 import { shortDate } from "@/lib/format"
 
 /** Weeks members submitted: waiting ones first, to approve or send back. */
 export default function ApprovalsScreen() {
   const t = useTheme()
+  const playerInset = useMiniPlayerInset()
   const [filter, setFilter] = React.useState<ApprovalFilter>("submitted")
   const list = useTimesheetApprovals(filter)
   const today = useDashboard().data?.today
@@ -38,12 +45,16 @@ export default function ApprovalsScreen() {
   const week = (start: string) =>
     `${shortDate(start, locale, today)} – ${shortDate(addDays(start, 6), locale, today)}`
   const items = list.data?.items ?? []
+  const off = list.data && !list.data.enabled
 
   return (
-    <Screen>
+    <View style={[styles.flex, { backgroundColor: t.canvas }]}>
+      <Stack.Screen options={{ title: "Approvals" }} />
       <ScrollView
-        contentContainerStyle={styles.content}
-        contentInsetAdjustmentBehavior="automatic"
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: Space[8] + playerInset },
+        ]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -55,7 +66,7 @@ export default function ApprovalsScreen() {
           />
         }
       >
-        {list.data && !list.data.enabled ? null : (
+        {off ? null : (
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -78,94 +89,71 @@ export default function ApprovalsScreen() {
         )}
 
         {list.error && !list.data ? (
-          <ErrorState
-            compact
-            error={list.error}
-            onRetry={() => void list.refetch()}
-          />
+          <ErrorState error={list.error} onRetry={() => void list.refetch()} />
         ) : !list.data ? (
-          <Body muted>Loading…</Body>
-        ) : !list.data.enabled ? (
-          <Body muted>
-            Timesheet approvals are off for this workspace. Turn them on in the
-            web app under Settings → General.
-          </Body>
+          <SkeletonRows rows={3} />
+        ) : off ? (
+          <EmptyState
+            icon="checklist"
+            title="Approvals are off"
+            body="Turn timesheet approvals on in the web app under Settings → General."
+          />
         ) : items.length === 0 ? (
-          <Body muted>
-            {filter === "submitted"
-              ? "No timesheets are waiting for approval."
-              : "Nothing here yet."}
-          </Body>
+          <EmptyState
+            icon="checkCircle"
+            title={
+              filter === "submitted" ? "Nothing waiting" : "Nothing here yet"
+            }
+            body={
+              filter === "submitted"
+                ? "Weeks your team submits show here for you to approve."
+                : "Reviewed weeks show here."
+            }
+          />
         ) : (
-          <Section title={APPROVAL_FILTER_LABELS[filter]}>
-            {items.map((a, i) => {
-              const status = APPROVAL_STATUS_LABELS[a.status]
+          <ListGroup>
+            {items.map((a) => {
               const sub = `${week(a.weekStart)} · ${formatDuration(a.totalSeconds)}`
               return (
-                <Pressable
+                <ListItem
                   key={a.id}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${a.memberName}, ${status}, ${sub}`}
+                  title={a.memberName}
+                  subtitle={sub}
+                  leading={
+                    <Avatar label={initialsOf(a.memberName)} size={40} round />
+                  }
+                  trailing={
+                    <Badge
+                      label={APPROVAL_STATUS_LABELS[a.status]}
+                      tone={STATUS_TONE[a.status]}
+                    />
+                  }
+                  accessibilityLabel={`${a.memberName}, ${APPROVAL_STATUS_LABELS[a.status]}, ${sub}`}
                   onPress={() =>
                     router.push({
                       pathname: "/approval/[id]",
                       params: { id: a.id },
                     })
                   }
-                  style={({ pressed }) => [
-                    styles.row,
-                    i > 0 && { borderTopWidth: 1, borderTopColor: t.border },
-                    { opacity: pressed ? 0.6 : 1 },
-                  ]}
-                >
-                  <View style={styles.flex}>
-                    <Text
-                      style={[Type.body, { color: t.text }]}
-                      numberOfLines={1}
-                    >
-                      {a.memberName}
-                    </Text>
-                    <Text
-                      style={[Type.small, { color: t.textSecondary }]}
-                      numberOfLines={1}
-                    >
-                      {sub}
-                    </Text>
-                  </View>
-                  <Text
-                    style={[
-                      Type.small,
-                      {
-                        color:
-                          a.status === "approved"
-                            ? t.primary
-                            : a.status === "rejected"
-                              ? t.danger
-                              : t.textSecondary,
-                      },
-                    ]}
-                  >
-                    {status}
-                  </Text>
-                </Pressable>
+                />
               )
             })}
-          </Section>
+          </ListGroup>
         )}
       </ScrollView>
-    </Screen>
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  content: { padding: Spacing.four, gap: Spacing.four },
-  bleed: { marginHorizontal: -Spacing.four, flexGrow: 0 },
-  chips: { gap: Spacing.two, paddingHorizontal: Spacing.four },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.three,
-    paddingVertical: Spacing.two + 2,
+  content: {
+    padding: Space[4],
+    gap: Space[4],
+    width: "100%",
+    maxWidth: MAX_CONTENT_WIDTH,
+    alignSelf: "center",
   },
+  bleed: { marginHorizontal: -Space[4], flexGrow: 0 },
+  chips: { gap: Space[2], paddingHorizontal: Space[4] },
 })

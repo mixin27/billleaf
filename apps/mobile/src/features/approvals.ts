@@ -39,6 +39,13 @@ export const APPROVAL_STATUS_LABELS: Record<ApprovalStatus, string> = {
   rejected: "Sent back",
 }
 
+/** Badge colours for a week's status. */
+export const STATUS_TONE: Record<ApprovalStatus, "warning" | "in" | "out"> = {
+  submitted: "warning",
+  approved: "in",
+  rejected: "out",
+}
+
 const useWs = () => useWorkspaceStore((s) => s.workspace?.id)
 
 export function useTimesheetApprovals(filter: ApprovalFilter, enabled = true) {
